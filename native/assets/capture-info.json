@@ -1,0 +1,19 @@
+{
+  "upstream": "jub0t/concat",
+  "version": "0.2.7",
+  "commit": "14b5998d793d90858ac982926374044bba4bf39f",
+  "source": "Real Linux window built from upstream source; Xvfb, software renderer",
+  "shots": [
+    "media",
+    "text",
+    "stickers",
+    "transitions",
+    "effects",
+    "filters",
+    "templates",
+    "video-inspector",
+    "text-inspector",
+    "audio-inspector",
+    "export"
+  ]
+}
