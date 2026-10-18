@@ -1,1 +1,1 @@
-SceneForge interactive UI prototype. AI generation is simulated; no API key needed.
+SceneForge Studio with integrated native Concat UI walkthrough. AI is simulated; native panels are screenshots and videos, not a browser editing engine.

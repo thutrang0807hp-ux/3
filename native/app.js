@@ -1,5 +1,12 @@
 (()=>{
 'use strict';
+if(new URLSearchParams(location.search).get('embedded')==='1'&&window.parent!==window){
+ document.body.classList.add('embedded');
+}
+window.addEventListener('message',event=>{
+ if(event.origin!==location.origin||event.source!==window.parent)return;
+ if(event.data?.type==='sceneforge:pause-preview')document.querySelectorAll('video').forEach(video=>video.pause());
+});
 const screens=[
  ['media','Tư liệu','Kho video và âm thanh, nhóm theo loại. Dự án mẫu có ba clip dọc và một bản nhạc.'],
  ['text','Văn bản','Bảng chữ của Concat gốc: kiểu chữ, mẫu tiêu đề và các công cụ liên quan.'],
