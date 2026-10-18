@@ -7,20 +7,30 @@ const presets={clean:{size:64,color:'FFFFFF',outline:3,border:1,weight:-1,shadow
 let state={cues:defaults.map(c=>({...c})),preset:'clean',size:64,position:20};
 let undo=[],redo=[],active=-1,frame=null,blobUrl=null,pending=null,persistTimer=null,uploadRevision=0;
 
-let samplePromise=null,usingSample=true;
+let samplePromise=null,usingSample=true,selectedCue=null;
 const compact=matchMedia('(max-width:700px)');
 function setLibrary(open){document.body.classList.toggle('library-collapsed',!open);$('#libraryToggle').setAttribute('aria-expanded',String(open));}
 function setInspector(kind,reveal=true){
+ if(kind==='clip')selectedCue=null;
  $('#clipInspector').hidden=kind!=='clip';$('#captionInspector').hidden=kind!=='captions';
  $('#captionToolsToggle').setAttribute('aria-expanded',String(kind==='captions'&&reveal));
  document.body.classList.toggle('inspector-open',reveal);
  $('#captionTimelineVideo').classList.toggle('is-selected',kind==='clip');
  if(kind==='captions')$('#captionStylePanel').open=true;
  if(compact.matches&&reveal)setLibrary(false);
+ updateTimelineControls();
 }
-$('#libraryToggle').onclick=()=>setLibrary(document.body.classList.contains('library-collapsed'));
-$('#captionToolsToggle').onclick=()=>setInspector('captions');
-$('#inspectSubtitles').onclick=()=>setInspector('captions');
+const toolTitles={media:'Tư liệu dự án',text:'Chữ & phụ đề',stickers:'Nhãn dán',transitions:'Chuyển cảnh',effects:'Hiệu ứng',filters:'Bộ lọc màu',templates:'Mẫu chữ',audio:'Âm thanh'};
+function selectTool(tool){
+ if(!toolTitles[tool])return;
+ document.querySelectorAll('[data-tool-panel]').forEach(panel=>panel.hidden=panel.dataset.toolPanel!==tool);
+ document.querySelectorAll('[data-workspace-tool]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.workspaceTool===tool)));
+ $('#toolPanelTitle').textContent=toolTitles[tool];$('#toolPanelCount').hidden=tool!=='media';
+ if(tool==='text')setInspector('captions',!compact.matches);
+ setLibrary(true);
+}
+for(const button of document.querySelectorAll('[data-workspace-tool]'))button.onclick=()=>selectTool(button.dataset.workspaceTool);
+$('#inspectSubtitles').onclick=()=>selectTool('text');
 $('#closeCaptionInspector').onclick=()=>setInspector('clip',false);
 $('#captionMediaCard').onclick=()=>setInspector('clip');
 compact.addEventListener('change',()=>{setLibrary(!compact.matches);if(compact.matches)document.body.classList.remove('inspector-open');});
@@ -48,6 +58,33 @@ async function openSample(force=false){
 document.addEventListener('sceneforge:open-subtitles',()=>openSample());
 $('#captionSampleButton').onclick=()=>openSample(true);
 
+
+function updateTimelineControls(){
+ const cue=selectedCue===null?null:state.cues[selectedCue];
+ $('#timelineDelete').disabled=!cue;$('#timelineDuplicate').disabled=!cue;
+ $('#timelineSplit').disabled=!cue||video.currentTime<=cue.start+.05||video.currentTime>=cue.end-.05;
+}
+$('#timelineUndo').onclick=()=>$('#captionUndo').click();
+$('#timelineRedo').onclick=()=>$('#captionRedo').click();
+$('#timelinePlay').onclick=async()=>{if(!video.paused){video.pause();return;}try{await video.play();}catch{feedback('Chưa phát được video. Kiểm tra tệp đang mở.');}};
+video.addEventListener('play',()=>{$('#timelinePlay').textContent='❚❚';});
+video.addEventListener('pause',()=>{$('#timelinePlay').textContent='▶';});
+$('#timelineFit').onclick=()=>{$('#captionTimelineZoom').value=1;$('#captionTimeline').style.width='100%';$('#captionTimelineScroll').scrollLeft=0;};
+$('#timelineDelete').onclick=()=>{if(selectedCue===null||!state.cues[selectedCue])return;const index=selectedCue;selectedCue=null;commit(()=>state.cues.splice(index,1));feedback('Đã xóa câu phụ đề. Video được giữ nguyên.');};
+$('#timelineSplit').onclick=()=>{
+ const cue=state.cues[selectedCue],time=Math.round(video.currentTime*100)/100;
+ if(!cue||time<=cue.start+.05||time>=cue.end-.05){feedback('Chọn một câu phụ đề và đặt con trỏ vào giữa câu để tách.');return;}
+ const words=cue.text.trim().split(/\s+/),part=Math.max(1,Math.min(words.length-1,Math.round(words.length*(time-cue.start)/(cue.end-cue.start))));
+ const left=words.slice(0,part).join(' '),right=words.slice(part).join(' ')||cue.text;
+ const index=selectedCue;commit(()=>state.cues.splice(index,1,{start:cue.start,end:time,text:left},{start:time,end:cue.end,text:right}));feedback('Đã tách phụ đề tại '+clock(time)+'. Có thể sửa lại chữ của hai đoạn.');
+};
+$('#timelineDuplicate').onclick=()=>{
+ const cue=state.cues[selectedCue];if(!cue)return;
+ const next=state.cues[selectedCue+1],end=cue.end+(cue.end-cue.start);
+ if(end>(next?.start??timelineDuration())+.0005){feedback('Chưa đủ khoảng trống sau câu này để nhân đôi; hãy chỉnh thời gian trước.');return;}
+ commit(()=>state.cues.splice(selectedCue+1,0,{...cue,start:cue.end,end}));feedback('Đã nhân đôi câu vào khoảng trống kế tiếp.');
+};
+
 function snapshot(){return JSON.stringify(state);}
 function feedback(message){$('#captionFeedback').textContent=message;}
 function validate(cues=state.cues){
@@ -64,7 +101,7 @@ function validate(cues=state.cues){
  return null;
 }
 function updateButtons(){
- $('#captionUndo').disabled=!undo.length;$('#captionRedo').disabled=!redo.length;
+ $('#captionUndo').disabled=!undo.length;$('#captionRedo').disabled=!redo.length;$('#timelineUndo').disabled=!undo.length;$('#timelineRedo').disabled=!redo.length;updateTimelineControls();
  const error=validate();$('#captionExportSrt').disabled=!!error;$('#captionExportAss').disabled=!!error;
  list.querySelectorAll('.sub-cue').forEach((row,i)=>row.classList.toggle('is-invalid',error?.index===i));
  return error;
@@ -90,7 +127,7 @@ function applyStyle(){
 }
 function clock(seconds){const ms=Math.max(0,Math.round(seconds*100));return String(Math.floor(ms/6000)).padStart(2,'0')+':'+String(Math.floor(ms/100)%60).padStart(2,'0')+'.'+String(ms%100).padStart(2,'0');}
 function timelineDuration(){return Number.isFinite(video.duration)&&video.duration>0?video.duration:12;}
-function seekCue(index){setInspector('captions');const cue=state.cues[index];if(!cue||!Number.isFinite(cue.start))return;video.pause();video.currentTime=cue.start;sync();const row=list.children[index];if(row){list.scrollTop=row.offsetTop-list.firstElementChild.offsetTop;row.querySelector('textarea')?.focus({preventScroll:true});}}
+function seekCue(index){selectedCue=index;setInspector('captions');const cue=state.cues[index];if(!cue||!Number.isFinite(cue.start))return;video.pause();video.currentTime=cue.start;sync();const row=list.children[index];if(row){list.scrollTop=row.offsetTop-list.firstElementChild.offsetTop;row.querySelector('textarea')?.focus({preventScroll:true});}}
 function renderTimeline(){
  const duration=timelineDuration(),ruler=$('#captionRuler'),track=$('#captionSubtitleTrack');ruler.replaceChildren();track.replaceChildren();
  const step=duration<=20?2:Math.ceil(duration/8);
@@ -104,6 +141,7 @@ $('#captionRuler').onkeydown=event=>{let time=video.currentTime;if(event.key==='
 $('#captionTimelineVideo').onclick=()=>setInspector('clip');
 $('#captionTimelineZoom').oninput=event=>{$('#captionTimeline').style.width=Number(event.target.value)*100+'%';};
 function sync(){
+ updateTimelineControls();
  const t=video.currentTime||0;$('#captionPlayhead').style.left=Math.min(100,t/timelineDuration()*100)+'%';$('#captionRuler').setAttribute('aria-valuenow',String(t));$('#captionClock').textContent=clock(t);
  const index=state.cues.findIndex(c=>Number.isFinite(c.start)&&t>=c.start&&t<c.end);
  if(index!==active){if(active>=0)list.children[active]?.classList.remove('is-current');if(index>=0)list.children[index]?.classList.add('is-current');active=index;$('#captionSubtitleTrack').querySelectorAll('[data-cue]').forEach(button=>button.classList.toggle('is-current',Number(button.dataset.cue)===index));}
@@ -131,7 +169,7 @@ function render(){
  });
  $('#captionCount').textContent=state.cues.length;renderTimeline();updateButtons();sync();
 }
-list.addEventListener('focusin',event=>{if(event.target.dataset.field)pending=snapshot();});
+list.addEventListener('focusin',event=>{if(event.target.dataset.field){pending=snapshot();selectedCue=Number(event.target.closest('[data-index]').dataset.index);updateTimelineControls();}});
 list.addEventListener('input',event=>{
  const field=event.target.dataset.field;if(!field)return;
  const cue=state.cues[Number(event.target.closest('[data-index]').dataset.index)];
