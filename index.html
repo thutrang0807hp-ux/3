@@ -571,7 +571,7 @@ renderAlternate=function(){
  let pane=$('#editorPreviewPane');
  if(!pane){
   pane=document.createElement('section');pane.id='editorPreviewPane';pane.className='alternate-view';
-  pane.innerHTML='<iframe id="standaloneEditorDemo" title="Dựng video · Xem thử Concat gốc" allow="autoplay; fullscreen" src="./native/?embedded=1&amp;v=3808588c73f9"></iframe>';
+  pane.innerHTML='<iframe id="standaloneEditorDemo" title="Dựng video · Xem thử Concat gốc" allow="autoplay; fullscreen" src="./native/?embedded=1&amp;v=1a6fa2a90e07"></iframe>';
   if(new URLSearchParams(location.search).get('tool')==='subtitles'){const frame=pane.querySelector('iframe');const url=new URL(frame.src);url.searchParams.set('tool','subtitles');frame.src=url.href;}
   $('#alternateView').after(pane);
  }

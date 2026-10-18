@@ -1166,6 +1166,23 @@ body.media-collapsed #mediaPanel>.panelHead>div{justify-content:center;width:100
 
 .shared-multitrack-editor.timeline-drag-active .timelineItem{transition:none!important}
 .shared-multitrack-editor.timeline-drag-active .timelineItem.selected{will-change:transform}
+/* Point-of-cut transition blocks and selection feedback. */
+.timelineJoin{position:absolute;top:3px;height:24px;min-width:0;padding:0 7px;background:#31404d;border:1px solid #7396ae;color:#d9eefa;z-index:9;border-radius:5px;cursor:pointer;font-size:10px;overflow:visible;box-shadow:0 1px 5px #0008}
+.timelineJoin.enabled{background:#593b78c9;border-color:#b293d1}
+.timelineJoin.chosen,.timelineJoin.dropTarget{outline:2px solid #43c8f3;outline-offset:2px}
+.timelineJoin span{display:block;overflow:hidden;white-space:nowrap;pointer-events:none}
+.timelineJoin i{position:absolute;top:-2px;bottom:-2px;width:9px;cursor:ew-resize;background:#c7a8e55c;border-radius:3px}
+.timelineJoin [data-join-edge=left]{left:-2px}.timelineJoin [data-join-edge=right]{right:-2px}
+.timelineMarquee{position:fixed;display:none;pointer-events:none;z-index:10000;background:#43bce529;border:1px solid #69d8fa}
+.timelineItem .transMarker{display:none}
+.timeline-drag-active .timelineJoin{pointer-events:none}
+#assembleDialog{width:min(560px,92vw);max-height:85vh;overflow:auto;background:#23262d;color:#e9edf4;border:1px solid #485361;border-radius:12px;padding:22px}
+#assembleDialog::backdrop{background:#000a}#assembleDialog p{font-size:12px;line-height:1.6;color:#aebaca}#assembleDialog h3{margin-top:0}
+.assemblyList{list-style:none;padding:0;max-height:260px;overflow:auto}.assemblyList li{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #38404a}.assemblyList li>span{flex:1;font-size:12px}.assemblyList small{display:block;color:#a6b0bd;margin-top:4px}
+#assembleDialog label{display:flex;align-items:center;gap:12px;font-size:12px;margin:12px 0}#assembleDialog input{width:90px}.assemblyActions{display:flex;justify-content:flex-end;gap:8px}.assemblyActions [data-assembly-apply]{background:#1679a1;color:white}
+/* Leave clip trim handles accessible; only the playhead thumb captures pointers. */
+.timelineJoin{top:-4px;height:18px}
+#playhead{pointer-events:none}#playhead i{pointer-events:auto;cursor:ew-resize}
 </style>
 <header><div><strong>Dựng video <span class="projectDot">/</span> Hành trình bình minh</strong><span class="badge">BẢN XEM THỬ · 9:16</span></div><div class="actions"><div class="workspaceViews" role="group" aria-label="Bố cục làm việc"><button data-workspace-view="balanced" class="active" aria-pressed="true">Mặc định</button><button data-workspace-view="preview" aria-pressed="false">Khung xem</button><button data-workspace-view="timeline" aria-pressed="false">Timeline</button></div><button id="featureHelp">Tính năng</button><button id="restoreDraft" hidden>Khôi phục nháp</button><button id="saveProject">Lưu dự án</button><button id="openProject">Mở dự án</button><button id="export" class="primary">Xuất video ↗</button></div></header>
 <main><div id="creativeToolbar"><nav aria-label="Công cụ sáng tạo"><button data-library="media" class="active" aria-label="Tư liệu"><span data-ui-icon="media"></span><small>Tư liệu</small></button><button data-library="audio" aria-label="Âm thanh"><span data-ui-icon="music"></span><small>Âm thanh</small></button><button data-library="text" aria-label="Văn bản"><span data-ui-icon="text"></span><small>Văn bản</small></button><button data-library="stickers" aria-label="Nhãn dán"><span data-ui-icon="star"></span><small>Nhãn dán</small></button><button data-library="transitions" aria-label="Chuyển cảnh"><span data-ui-icon="transition"></span><small>Chuyển cảnh</small></button><button data-library="filters" aria-label="Bộ lọc"><span data-ui-icon="sliders"></span><small>Bộ lọc</small></button><button data-library="captions" aria-label="Phụ đề"><span data-ui-icon="captions"></span><small>Phụ đề</small></button></nav><div class="toolSearchWrap"><span data-ui-icon="search"></span><input id="toolSearch" placeholder="Tìm công cụ…" aria-label="Tìm công cụ" autocomplete="off"><kbd>⌘ K</kbd><div id="toolSearchResults" hidden role="listbox" aria-label="Kết quả tìm công cụ"></div></div></div><div id="workspace"><section id="mediaPanel" class="panel"><div class="panelHead"><b>Kho tư liệu</b><div><button id="mediaMode" title="Đổi lưới / danh sách">☷</button><button id="collapseMedia" title="Thu gọn kho tư liệu">‹</button></div></div><div class="mediaContent"><label class="assetSearch"><span data-ui-icon="search"></span><input id="assetSearch" placeholder="Tìm tư liệu của bạn…" aria-label="Tìm tư liệu"></label><div id="sourceLibrary"><div class="tabs" id="mediaTabs"><button class="active" data-kind="all">Tất cả</button><button data-kind="video">Video</button><button data-kind="audio">Âm thanh</button><button data-kind="image">Ảnh</button></div><label class="placementChoice"><span>Video tải lên</span><select id="importPlacement" aria-label="Vị trí video sau khi tải lên"><option value="layer">Tự tạo lớp riêng</option><option value="append">Nối cuối track</option><option value="library">Chỉ lưu trong kho</option></select></label><button id="upload" class="primary wide">＋ Nhập tư liệu</button><p class="hint">Kéo tư liệu vào track hoặc bấm ＋. Shift + bấm chọn nhiều mục.</p><div id="assets"></div><button id="newText" class="wide">Ｔ Thêm văn bản</button><div class="assetTools"><button id="importSrt">Nhập SRT</button><button id="exportSrt">Xuất SRT</button><button id="addSticker">★ Nhãn dán</button></div><input id="srtFile" type="file" accept=".srt,text/plain" hidden><p class="hint">Tệp từ máy chỉ lưu trong phiên này. Lưu dự án giữ cài đặt; mở lại cần chọn lại tệp.</p></div></div><div id="creativeLibrary" hidden></div><div class="resizePanel" data-resize="media" title="Kéo để đổi độ rộng kho tư liệu"></div></section>
@@ -1321,7 +1338,7 @@ body.media-collapsed #mediaPanel>.panelHead>div{justify-content:center;width:100
       html += `<div class="sectionTitle">N\u1ED9i dung & ki\u1EC3u ch\u1EEF</div><div class="field"><label>N\u1ED9i dung</label><textarea data-prop="text" id="prop-text" maxlength="500">${esc(i.text)}</textarea></div><div class="pair">${field("C\u1EE1 ch\u1EEF (px / 1080)", "fontSize", i.fontSize, "number", 'min="12" max="200"')}${field("M\xE0u ch\u1EEF", "color", i.color, "color")}</div>${selectField("C\u0103n ch\u1EEF", "align", i.align, [["left", "Tr\xE1i"], ["center", "Gi\u1EEFa"], ["right", "Ph\u1EA3i"]])}<label class="checkLabel"><input type="checkbox" data-prop="bold" ${i.bold ? "checked" : ""}> In \u0111\u1EADm</label><label class="checkLabel"><input type="checkbox" data-prop="textBg" ${i.textBg ? "checked" : ""}> N\u1EC1n sau ch\u1EEF</label>${field("M\xE0u n\u1EC1n", "background", i.background, "color")}<div class="pair">${field("Ngang (%)", "textX", i.textX)}${field("D\u1ECDc (%)", "textY", i.textY)}</div><p class="hint">C\xF3 th\u1EC3 k\xE9o ch\u1EEF tr\u1EF1c ti\u1EBFp tr\xEAn khung xem.</p>`;
     } else {
       if (i.kind !== "image") html += `${field("\u0110i\u1EC3m v\xE0o t\u01B0 li\u1EC7u (s)", "mediaIn", i.mediaIn.toFixed(2), "number", 'min="0"')}${selectField("T\u1ED1c \u0111\u1ED9 ph\xE1t", "speed", i.speed, [[0.25, "0,25\xD7"], [0.5, "0,5\xD7"], [1, "1\xD7"], [1.5, "1,5\xD7"], [2, "2\xD7"], [3, "3\xD7"]])}`;
-      if (i.kind !== "audio") html += `<div class="sectionTitle">Khung h\xECnh & bi\u1EBFn \u0111\u1ED5i</div>${selectField("C\xE1ch l\u1EA5p khung 9:16", "fit", i.fit, [["contain", "Gi\u1EEF \u0111\u1EE7 khung"], ["cover", "L\u1EA5p \u0111\u1EA7y \xB7 c\u1EAFt m\xE9p"]])}<div class="pair">${field("Ph\xF3ng to (%)", "scale", (i.scale * 100).toFixed(0), "number", 'min="10" max="400"')}${field("Xoay (\xB0)", "rotation", i.rotation)}</div><div class="pair">${field("Ngang (%)", "x", i.x)}${field("D\u1ECDc (%)", "y", i.y)}</div>${field("\u0110\u1ED9 trong su\u1ED1t (%)", "opacity", (i.opacity * 100).toFixed(0), "number", 'min="0" max="100"')}<div class="sectionTitle">Chuy\u1EC3n c\u1EA3nh \u1EDF cu\u1ED1i clip</div>${selectField("Ki\u1EC3u chuy\u1EC3n c\u1EA3nh", "transition", i.transition, [["none", "Kh\xF4ng"], ["fade", "M\u1EDD qua \u0111en"], ["slide", "Tr\u01B0\u1EE3t ngang"], ["wipe", "Qu\xE9t khung"]])}${field("Th\u1EDDi l\u01B0\u1EE3ng chuy\u1EC3n (s)", "transitionDuration", i.transitionDuration, "number", 'min="0.1" max="5"')}<button id="applyTransitions" class="wide">\xC1p d\u1EE5ng cho c\xE1c \u0111i\u1EC3m c\u1EAFt c\xF9ng track</button><p class="hint">\xC1p d\u1EE5ng t\u1EA1i \u0111i\u1EC3m c\u1EAFt gi\u1EEFa hai clip li\u1EC1n nhau tr\xEAn c\xF9ng track. Th\u1EDDi l\u01B0\u1EE3ng \u0111\u01B0\u1EE3c gi\u1EDBi h\u1EA1n theo \u0111\u1ED9 d\xE0i hai clip.</p>`;
+      if (i.kind !== "audio") html += `<div class="sectionTitle">Khung h\xECnh & bi\u1EBFn \u0111\u1ED5i</div>${selectField("C\xE1ch l\u1EA5p khung 9:16", "fit", i.fit, [["contain", "Gi\u1EEF \u0111\u1EE7 khung"], ["cover", "L\u1EA5p \u0111\u1EA7y \xB7 c\u1EAFt m\xE9p"]])}<div class="pair">${field("Ph\xF3ng to (%)", "scale", (i.scale * 100).toFixed(0), "number", 'min="10" max="400"')}${field("Xoay (\xB0)", "rotation", i.rotation)}</div><div class="pair">${field("Ngang (%)", "x", i.x)}${field("D\u1ECDc (%)", "y", i.y)}</div>${field("\u0110\u1ED9 trong su\u1ED1t (%)", "opacity", (i.opacity * 100).toFixed(0), "number", 'min="0" max="100"')}<div class="sectionTitle">Chuy\u1EC3n c\u1EA3nh \u1EDF cu\u1ED1i clip</div>${selectField("Ki\u1EC3u chuy\u1EC3n c\u1EA3nh", "transition", i.transition, [["none", "Kh\xF4ng"], ["dissolve", "Hòa hai hình"], ["fade", "M\u1EDD qua \u0111en"], ["slide", "Tr\u01B0\u1EE3t ngang"], ["wipe", "Qu\xE9t khung"]])}${field("Th\u1EDDi l\u01B0\u1EE3ng chuy\u1EC3n (s)", "transitionDuration", i.transitionDuration, "number", 'min="0.1" max="5"')}<button id="applyTransitions" class="wide">\xC1p d\u1EE5ng cho c\xE1c \u0111i\u1EC3m c\u1EAFt c\xF9ng track</button><p class="hint">\xC1p d\u1EE5ng t\u1EA1i \u0111i\u1EC3m c\u1EAFt gi\u1EEFa hai clip li\u1EC1n nhau tr\xEAn c\xF9ng track. Th\u1EDDi l\u01B0\u1EE3ng \u0111\u01B0\u1EE3c gi\u1EDBi h\u1EA1n theo \u0111\u1ED9 d\xE0i hai clip.</p>`;
       if (i.kind !== "image") html += `<div class="sectionTitle">\xC2m thanh</div>${field("\xC2m l\u01B0\u1EE3ng (%)", "volume", (i.volume * 100).toFixed(0), "number", 'min="0" max="100"')}<div class="pair">${field("V\xE0o d\u1EA7n (s)", "fadeIn", i.fadeIn, "number", 'min="0"')}${field("Ra d\u1EA7n (s)", "fadeOut", i.fadeOut, "number", 'min="0"')}</div>${i.kind === "video" ? '<button id="extractAudio" class="wide">\u266B T\xE1ch \xE2m thanh sang track ri\xEAng</button>' : ""}`;
     }
     html += enhancedInspector(i);
@@ -1374,7 +1391,27 @@ body.media-collapsed #mediaPanel>.panelHead>div{justify-content:center;width:100
     items.forEach(mediaNode);
     updateStage(true);
   }
+  // A dissolve has two simultaneously visible sources around the cut.
+  let dissolveFrame=new Map();
+  function prepareDissolveFrame(){
+    dissolveFrame=new Map();const lanes=new Map();
+    for(const i of items)if(['video','image'].includes(i.kind)){if(!lanes.has(i.trackId))lanes.set(i.trackId,[]);lanes.get(i.trackId).push(i);}
+    for(const row of lanes.values()){
+      row.sort((a,b)=>a.start-b.start);
+      for(let n=0;n<row.length-1;n++){
+        const a=row[n],b=row[n+1];if(a.transition!=='dissolve'||Math.abs(b.start-end(a))>=.001)continue;
+        const d=Math.min(5,a.transitionDuration,a.duration,b.duration),join=end(a);
+        if(time>=join-d/2&&time<join+d/2){const window={a,b,d,progress:clamp((time-join+d/2)/d,0,1)};dissolveFrame.set(a.id,window);dissolveFrame.set(b.id,window);}
+      }
+    }
+  }
+  function dissolveWindow(i){return dissolveFrame.get(i.id)||null;}
+  function clipActive(i) {return (time>=i.start&&time<end(i))||!!dissolveWindow(i);}
+  function sourceTime(i) {const raw=i.mediaIn+(time-i.start)*i.speed,d=getAsset(i.assetId)?.duration||Infinity;return clamp(raw,0,Math.max(0,d-.04));}
+  function transitionAudioGain(i) {const w=dissolveWindow(i);return w?(i.id===w.a.id?1-w.progress:w.progress):1;}
   function transitionState(i) {
+    const dissolve=dissolveWindow(i);
+    if(dissolve)return{opacity:i.id===dissolve.b.id?dissolve.progress:1,dx:0,clip:'none'};
     const tr = items.filter((x) => x.trackId === i.trackId && x.id !== i.id && x.kind !== "text" && x.kind !== "audio");
     const next = tr.find((x) => Math.abs(x.start - end(i)) < 0.04), prev = tr.find((x) => Math.abs(end(x) - i.start) < 0.04);
     let out = { opacity: 1, dx: 0, clip: "none" };
@@ -1394,13 +1431,14 @@ body.media-collapsed #mediaPanel>.panelHead>div{justify-content:center;width:100
     return out;
   }
   function updateStage(force = false) {
+    prepareDissolveFrame();
     const ordered = [...items].sort((a, b) => {
       if (a.kind === "text" && b.kind !== "text") return 1;
       if (b.kind === "text" && a.kind !== "text") return -1;
-      return tracks.findIndex((t) => t.id === b.trackId) - tracks.findIndex((t) => t.id === a.trackId);
+      return tracks.findIndex((t) => t.id === b.trackId) - tracks.findIndex((t) => t.id === a.trackId) || a.start-b.start;
     });
     ordered.forEach((i, z) => {
-      const n = mediaNode(i), t = getTrack(i.trackId), values = evaluateProps(i), active = trackVisible(t) && time >= i.start && time < end(i);
+      const n = mediaNode(i), t = getTrack(i.trackId), values = evaluateProps(i), active = trackVisible(t) && clipActive(i);
       if (i.kind !== "audio") n.style.display = active ? "block" : "none";
       if (!active) {
         if (n.pause) routeAudioVolume(i,n,false);
@@ -1431,7 +1469,7 @@ body.media-collapsed #mediaPanel>.panelHead>div{justify-content:center;width:100
         n.style.clipPath = effect.clip;
       }
       if (n.currentTime !== void 0) {
-        const target = i.mediaIn + (time - i.start) * i.speed;
+        const target = sourceTime(i);
         if (force || Math.abs(n.currentTime - target) > 0.22) {
           try {
             n.currentTime = target;
@@ -1439,16 +1477,16 @@ body.media-collapsed #mediaPanel>.panelHead>div{justify-content:center;width:100
           }
         }
         n.playbackRate = i.speed;
-        const elapsed = time - i.start, remaining = end(i) - time;
+        const elapsed = Math.max(0,time - i.start), remaining = Math.max(0,end(i) - time);
         let fade = Math.min(1, i.fadeIn > 0 ? elapsed / i.fadeIn : 1, i.fadeOut > 0 ? remaining / i.fadeOut : 1);
-        n.volume = clamp(values.volume * fade, 0, 1);
+        n.volume = clamp(values.volume * fade * transitionAudioGain(i), 0, 1);
         n.muted = !!t.muted || values.volume === 0;
         routeAudioVolume(i,n,true);
-        if (playing && n.paused && !n.dataset.playPending) {
+        if (playing && sourceTime(i) === i.mediaIn+(time-i.start)*i.speed && n.paused && !n.dataset.playPending) {
           n.dataset.playPending = "1";
           n.play().catch(() => {
           }).finally(() => delete n.dataset.playPending);
-        } else if (!playing && !n.paused) n.pause();
+        } else if ((!playing || sourceTime(i) !== i.mediaIn+(time-i.start)*i.speed) && !n.paused) n.pause();
       }
     });
     updateClock();
@@ -1601,6 +1639,7 @@ body.media-collapsed #mediaPanel>.panelHead>div{justify-content:center;width:100
           t = { id: uid(), kind: "audio", name: "\xC2m thanh " + (tracks.filter((t2) => t2.kind === "audio").length + 1) };
           tracks.push(t);
         }
+        i.linkGroup=i.linkGroup||uid();
         items.push({ ...clone(i), id: uid(), kind: "audio", trackId: t.id, transition: "none", name: i.name + " \xB7 \xE2m thanh" });
         i.volume = 0;
       });
@@ -1662,8 +1701,8 @@ body.media-collapsed #mediaPanel>.panelHead>div{justify-content:center;width:100
   });
   function snapped(n, exclude) {
     if (!snap) return Math.max(0, n);
-    let points = [0, time, ...markers.map(m=>m.at), ...items.filter((i) => i.id !== exclude && !(selectedIds.size>1&&selectedIds.has(i.id))).flatMap((i) => [i.start, end(i)])], best = n;
-    for (let p of points) if (Math.abs(p - n) < 8 / px && Math.abs(p - n) < Math.abs(best - n) + 1e-5) best = p;
+    let points = [0, time, ...markers.map(m=>m.at), ...items.filter((i) => i.id !== exclude && !(selectedIds.size>1&&selectedIds.has(i.id))).flatMap((i) => [i.start, end(i)])], best = n, distance = 8 / px;
+    for (let p of points) if (Math.abs(p - n) < distance) { best = p; distance = Math.abs(p - n); }
     return Math.max(0, best);
   }
   let suppressClick = false;
@@ -1676,9 +1715,9 @@ body.media-collapsed #mediaPanel>.panelHead>div{justify-content:center;width:100
     if(members.some(i=>getTrack(i.trackId).locked)){notify('Mở khóa track trước khi kéo clip.');return;}
     e.preventDefault();pause();
     const baseline=clone(items),baseTracks=clone(tracks),old=clone(clip),x=e.clientX,y=e.clientY,layerId=uid(),priorRedo=redo.slice(),mode=timelineEditMode,initialScrollLeft=$('#timelineScroll').scrollLeft;
-    let moved=false,lastPlan=null;
+    let moved=false,lastPlan=null,dragFrame=0,pendingMove=null;
     cell.setPointerCapture(e.pointerId);
-    const move=v=>{
+    const paintMove=v=>{
       if(!moved&&Math.abs(v.clientX-x)+Math.abs(v.clientY-y)<3)return;
       if(!moved){remember();moved=true;suppressClick=true;for(const id of ids){const element=$('[data-item="'+id+'"]');if(element)element.style.pointerEvents='none';}}
       const scroll=$('#timelineScroll'),bounds=scroll.getBoundingClientRect();
@@ -1696,12 +1735,20 @@ body.media-collapsed #mediaPanel>.panelHead>div{justify-content:center;width:100
       paintDragPlan(lastPlan,ids,baseline);
     };
     const finish=v=>{
+      if(pendingMove&&v.type!=='pointercancel')paintMove(pendingMove);
+      cancelAnimationFrame(dragFrame);pendingMove=null;
+      window.removeEventListener('keydown',cancelKey,true);window.removeEventListener('blur',cancelDrag);
       cell.removeEventListener('pointermove',move);cell.removeEventListener('pointerup',finish);cell.removeEventListener('pointercancel',finish);hideDropGuide();
       if(!moved)return;
       if(v.type==='pointercancel'||!lastPlan?.valid){items=baseline;tracks=baseTracks;undo.pop();redo=priorRedo;if(lastPlan&&!lastPlan.valid)notify(lastPlan.reason);}
       else{items=lastPlan.items;tracks=lastPlan.tracks;const changed=JSON.stringify(items)!==JSON.stringify(baseline)||JSON.stringify(tracks)!==JSON.stringify(baseTracks);if(!changed){undo.pop();redo=priorRedo;}scheduleDraft();}
       render();setTimeout(()=>suppressClick=false,30);
     };
+    const frame=()=>{dragFrame=0;if(!pendingMove)return;paintMove(pendingMove);const b=$('#timelineScroll').getBoundingClientRect(),v=pendingMove;if(moved&&(v.clientX>b.right-30||v.clientX<b.left+150||v.clientY>b.bottom-20||v.clientY<b.top+20))dragFrame=requestAnimationFrame(frame);};
+    const move=v=>{pendingMove={clientX:v.clientX,clientY:v.clientY};if(!dragFrame)dragFrame=requestAnimationFrame(frame);};
+    const cancelDrag=()=>finish({type:'pointercancel'});
+    const cancelKey=v=>{if(v.key==='Escape'){v.preventDefault();v.stopImmediatePropagation();cancelDrag();}};
+    window.addEventListener('keydown',cancelKey,true);window.addEventListener('blur',cancelDrag);
     cell.addEventListener('pointermove',move);cell.addEventListener('pointerup',finish);cell.addEventListener('pointercancel',finish);
   });
   $("#tracks").onclick = (e) => {
@@ -1985,7 +2032,7 @@ body.media-collapsed #mediaPanel>.panelHead>div{justify-content:center;width:100
         out.scale = clamp(out.scale, 0.1, 4);
         out.transitionDuration = clamp(out.transitionDuration, 0.1, 5);
         out.fit = ["contain", "cover"].includes(out.fit) ? out.fit : "contain";
-        out.transition = ["none", "fade", "slide", "wipe"].includes(out.transition) ? out.transition : "none";
+        out.transition = ["none", "fade", "slide", "wipe", "dissolve"].includes(out.transition) ? out.transition : "none";
         out.align = ["left", "center", "right"].includes(out.align) ? out.align : "center";
         for (const key of ["color", "background"]) if (!/^#[0-9a-f]{6}$/i.test(out[key])) out[key] = d[key];
         sanitizeRestoredExtras(out, i);
@@ -2074,7 +2121,7 @@ const looks = { none: "Gốc", warm: "Ấm", cool: "Lạnh", mono: "Đen trắng
 let booting = true, draftCandidate = null, draftTimer, recording = false, exportCancelled = false, exportAudioContext, exportDestination;
 const audioSources = /* @__PURE__ */ new Map();
 function extraDefaults() {
-  return { subtitle:false,effectTag:"",flipX: false, flipY: false, brightness: 100, contrast: 100, saturation: 100, blur: 0, look: "none", fontFamily: "system-ui", outline: 0, outlineColor: "#000000", letterSpacing: 0, textAnimation: "none", animationDuration: 0.5, keyframes: [] };
+  return { subtitle:false,effectTag:"",linkGroup:"",flipX: false, flipY: false, brightness: 100, contrast: 100, saturation: 100, blur: 0, look: "none", fontFamily: "system-ui", outline: 0, outlineColor: "#000000", letterSpacing: 0, textAnimation: "none", animationDuration: 0.5, keyframes: [] };
 }
 function evaluateProps(i, at = time) {
   const out = Object.fromEntries(transformKeys.map((k) => [k, i[k]]));
@@ -2334,7 +2381,7 @@ function sortedVisuals() {
   return [...items].filter((i) => i.kind !== "audio").sort((a, b) => {
     if (a.kind === "text" && b.kind !== "text") return 1;
     if (b.kind === "text" && a.kind !== "text") return -1;
-    return tracks.findIndex((t) => t.id === b.trackId) - tracks.findIndex((t) => t.id === a.trackId);
+    return tracks.findIndex((t) => t.id === b.trackId) - tracks.findIndex((t) => t.id === a.trackId) || a.start-b.start;
   });
 }
 function textLines(g, text, max) {
@@ -2353,12 +2400,13 @@ function textLines(g, text, max) {
   return out;
 }
 function drawComposition(canvas) {
+  prepareDissolveFrame();
   const g = canvas.getContext("2d"), w = canvas.width, h = canvas.height;
   g.save();
   g.fillStyle = "#090a0c";
   g.fillRect(0, 0, w, h);
   for (const i of sortedVisuals()) {
-    if (!trackVisible(getTrack(i.trackId)) || time < i.start || time >= end(i)) continue;
+    if (!trackVisible(getTrack(i.trackId)) || !clipActive(i)) continue;
     const n = mediaNode(i), v = evaluateProps(i);
     g.save();
     if (i.kind === "text") {
@@ -2470,12 +2518,13 @@ function refreshExportFormats() {
 function routeAudioVolume(i, n, active) {
   const route = audioSources.get(n);
   if (!route) return;
-  const t = getTrack(i.trackId), v = evaluateProps(i), elapsed = time - i.start, remaining = end(i) - time, fade = Math.min(1, i.fadeIn ? elapsed / i.fadeIn : 1, i.fadeOut ? remaining / i.fadeOut : 1);
-  route.gain.gain.value = active && trackVisible(t) && !t.muted ? clamp(v.volume * fade, 0, 1) : 0;
+  const t = getTrack(i.trackId), v = evaluateProps(i), elapsed = Math.max(0,time - i.start), remaining = Math.max(0,end(i) - time), fade = Math.min(1, i.fadeIn ? elapsed / i.fadeIn : 1, i.fadeOut ? remaining / i.fadeOut : 1);
+  route.gain.gain.value = active && trackVisible(t) && !t.muted ? clamp(v.volume * fade * transitionAudioGain(i), 0, 1) : 0;
   n.volume = 1;
   n.muted = false;
 }
 async function prepareExportAudio() {
+  if(!items.some(i=>["video","audio"].includes(i.kind)))return [];
   exportAudioContext = exportAudioContext || new AudioContext();
   await exportAudioContext.resume();
   exportDestination = exportDestination || exportAudioContext.createMediaStreamDestination();
@@ -2779,7 +2828,7 @@ function organizeInspector(){const box=$('#inspector'),item=selected();if(!item)
 function switchInspectorTab(key){if(!$('[data-inspector-tab="'+key+'"]')){notify(key==='audio'?'Chọn một video hoặc mục âm thanh để chỉnh âm lượng.':'Chọn một mục phù hợp trên timeline trước.');return;}const i=selected();if(i)inspectorChoice[i.kind]=key;$$('[data-inspector-pane]').forEach(el=>el.hidden=el.dataset.inspectorPane!==key);$$('[data-inspector-tab]').forEach(b=>{const active=b.dataset.inspectorTab===key;b.classList.toggle('active',active);b.setAttribute('aria-selected',active)});$('#inspector').scrollTop=0;}
 function addVisualPropertyControls(){for(const key of ['scale','opacity','volume','brightness','contrast','saturation','blur','rotation','fontSize','fadeIn','fadeOut']){const input=$('#prop-'+key);if(!input)continue;const limits={scale:[10,400,1],opacity:[0,100,1],volume:[0,100,1],brightness:[0,200,1],contrast:[0,200,1],saturation:[0,300,1],blur:[0,20,.1],rotation:[-180,180,1],fontSize:[12,200,1],fadeIn:[0,selected()?.duration||12,.1],fadeOut:[0,selected()?.duration||12,.1]}[key];const slider=document.createElement('input');slider.type='range';slider.className='propertySlider';slider.min=limits[0];slider.max=limits[1];slider.step=limits[2];slider.value=input.value;slider.setAttribute('aria-label',input.closest('.field').querySelector('label').textContent);slider.oninput=()=>{const i=selected();if(!i||getTrack(i.trackId).locked)return;if(!historyStarted){remember();historyStarted=true}input.value=slider.value;const v=+slider.value/(['scale','opacity','volume'].includes(key)?100:1);i[key]=v;updateKeyframedProp(i,key,v);updateStage(true)};let historyStarted=false;slider.onchange=()=>{historyStarted=false;timeline();scheduleDraft()};input.after(slider)}for(const [value,icon,title]of[['left','alignLeft','Căn trái'],['center','alignCenter','Căn giữa'],['right','alignRight','Căn phải']]){const select=$('#prop-align');if(!select)break;let row=$('#alignButtons');if(!row){row=document.createElement('div');row.id='alignButtons';row.className='segmented';select.after(row);select.classList.add('nativeMirror')}const b=document.createElement('button');b.innerHTML=uiIcon(icon);b.title=title;b.setAttribute('aria-label',title);b.classList.toggle('active',select.value===value);b.onclick=()=>{select.value=value;select.dispatchEvent(new Event('change',{bubbles:true}))};row.append(b)}for(const b of $$('#inspector [data-command]')){const k=b.dataset.command;decorateButton(b,k==='delete'?'trash':k==='split'?'split':'copy',k==='delete'?'Xóa':k==='split'?'Tách clip':'Nhân đôi')}for(const [id,icon,label]of[['copySettings','copy','Sao chép thuộc tính'],['pasteSettings','save','Dán thuộc tính'],['clearKeyframes','trash','Xóa keyframe']])decorateButton(id,icon,label);}
 function libraryVisualCard(type,key,name,visual,description=''){return `<button class="visualCard ${type}" data-palette-${type}="${key}" title="${esc(description||name)}"><div class="cardPreview">${visual}</div><span>${esc(name)}</span><small>${esc(description)}</small></button>`}
-function showLibrary(kind){if(showExtendedLibrary(kind))return;libraryTab=kind;$$('[data-library]').forEach(b=>b.classList.toggle('active',b.dataset.library===kind));const source=['media','audio'].includes(kind);$('#sourceLibrary').hidden=!source;$('#creativeLibrary').hidden=source;$('.assetSearch').hidden=!source;$('.mediaContent').classList.toggle('paletteMode',!source);$('#mediaPanel .panelHead b').textContent={media:'Tư liệu của bạn',audio:'Âm thanh',text:'Văn bản',stickers:'Nhãn dán',transitions:'Chuyển cảnh',filters:'Bộ lọc màu',captions:'Phụ đề'}[kind];if(source){filter=kind==='audio'?'audio':'all';$('#assetSearch').value='';$$('#mediaTabs button').forEach(b=>b.classList.toggle('active',b.dataset.kind===filter));renderAssets();return}const box=$('#creativeLibrary');if(kind==='text'){box.innerHTML='<div class="paletteIntro"><b>Chọn kiểu chữ để bắt đầu</b><p>Bấm mẫu để thêm vào video.</p></div><button class="largeAddText" id="palettePlainText">'+uiIcon('text')+' Thêm văn bản</button><div class="visualCards">'+[['title','Tiêu đề','Aa','Nổi bật'],['subtitle','Phụ đề','Một câu chuyện','Dễ đọc'],['label','Nhãn','NEW STORY','Gọn nhẹ']].map(([k,n,v,d])=>libraryVisualCard('text',k,n,`<span class="textSample ${k}">${v}</span>`,d)).join('')+'</div>'}if(kind==='filters')box.innerHTML='<div class="paletteIntro"><b>Màu sắc cho câu chuyện</b><p>Bấm mẫu để áp dụng cho clip đang chọn.</p></div><div class="visualCards">'+Object.entries(looks).map(([k,n])=>libraryVisualCard('look',k,n,`<img src="${FRAMES[0]}" style="filter:${visualFilter({...defaults('video'),look:k})}" alt="Xem trước ${n}">`)).join('')+'</div>';if(kind==='transitions')box.innerHTML='<div class="paletteIntro"><b>Nối các cảnh liền mạch</b><p>Chọn clip rồi bấm mẫu. Thời lượng chỉnh ở bảng bên phải.</p></div><div class="visualCards">'+[['none','Cắt thẳng'],['fade','Mờ qua đen'],['slide','Trượt ngang'],['wipe','Quét khung']].map(([k,n])=>libraryVisualCard('transition',k,n,`<div class="transitionSample ${k}"><img src="${FRAMES[0]}" alt=""><img src="${FRAMES[1]}" alt=""><span>${uiIcon('transition')}</span></div>`,k==='none'?'Không hiệu ứng':'Rê chuột để xem nhịp')).join('')+'</div>';if(kind==='stickers')box.innerHTML='<div class="paletteIntro"><b>Một chút điểm nhấn</b><p>Nhãn dán dạng ký tự, đổi màu và cỡ tùy ý.</p></div><div class="visualCards stickerCards">'+[['star','★'],['heart','♥'],['spark','✦'],['arrow','➜'],['check','✓'],['flower','✿'],['circle','●'],['diamond','◆']].map(([k,v])=>libraryVisualCard('sticker',k,v,`<span>${v}</span>`)).join('')+'</div>';if(kind==='captions')box.innerHTML='<div class="paletteIntro"><b>Để câu chuyện có lời</b><p>Nhập phụ đề SRT sẵn có hoặc tự thêm từng đoạn.</p></div><button class="captionCard" data-caption-action="import">'+uiIcon('captions')+'<b>Nhập phụ đề SRT</b><small>Tự đặt từng câu vào đúng thời điểm</small></button><button class="captionCard" data-caption-action="text">'+uiIcon('text')+'<b>Thêm phụ đề thủ công</b><small>Chọn mẫu chữ dễ đọc trên video dọc</small></button><button class="captionCard" data-caption-action="export">'+uiIcon('download')+'<b>Tải phụ đề SRT</b><small>Xuất các mục chữ thành tệp phụ đề</small></button><div class="unavailableFeature">'+uiIcon('info')+' Tự nhận dạng giọng nói chưa được tích hợp.</div>';}
+function showLibrary(kind){if(showExtendedLibrary(kind))return;libraryTab=kind;$$('[data-library]').forEach(b=>b.classList.toggle('active',b.dataset.library===kind));const source=['media','audio'].includes(kind);$('#sourceLibrary').hidden=!source;$('#creativeLibrary').hidden=source;$('.assetSearch').hidden=!source;$('.mediaContent').classList.toggle('paletteMode',!source);$('#mediaPanel .panelHead b').textContent={media:'Tư liệu của bạn',audio:'Âm thanh',text:'Văn bản',stickers:'Nhãn dán',transitions:'Chuyển cảnh',filters:'Bộ lọc màu',captions:'Phụ đề'}[kind];if(source){filter=kind==='audio'?'audio':'all';$('#assetSearch').value='';$$('#mediaTabs button').forEach(b=>b.classList.toggle('active',b.dataset.kind===filter));renderAssets();return}const box=$('#creativeLibrary');if(kind==='text'){box.innerHTML='<div class="paletteIntro"><b>Chọn kiểu chữ để bắt đầu</b><p>Bấm mẫu để thêm vào video.</p></div><button class="largeAddText" id="palettePlainText">'+uiIcon('text')+' Thêm văn bản</button><div class="visualCards">'+[['title','Tiêu đề','Aa','Nổi bật'],['subtitle','Phụ đề','Một câu chuyện','Dễ đọc'],['label','Nhãn','NEW STORY','Gọn nhẹ']].map(([k,n,v,d])=>libraryVisualCard('text',k,n,`<span class="textSample ${k}">${v}</span>`,d)).join('')+'</div>'}if(kind==='filters')box.innerHTML='<div class="paletteIntro"><b>Màu sắc cho câu chuyện</b><p>Bấm mẫu để áp dụng cho clip đang chọn.</p></div><div class="visualCards">'+Object.entries(looks).map(([k,n])=>libraryVisualCard('look',k,n,`<img src="${FRAMES[0]}" style="filter:${visualFilter({...defaults('video'),look:k})}" alt="Xem trước ${n}">`)).join('')+'</div>';if(kind==='transitions')box.innerHTML='<div class="paletteIntro"><b>Nối các cảnh liền mạch</b><p>Chọn clip rồi bấm mẫu. Thời lượng chỉnh ở bảng bên phải.</p></div><div class="visualCards">'+[['none','Cắt thẳng'],['dissolve','Hòa hai hình'],['fade','Mờ qua đen'],['slide','Trượt ngang'],['wipe','Quét khung']].map(([k,n])=>libraryVisualCard('transition',k,n,`<div class="transitionSample ${k}"><img src="${FRAMES[0]}" alt=""><img src="${FRAMES[1]}" alt=""><span>${uiIcon('transition')}</span></div>`,k==='none'?'Không hiệu ứng':'Rê chuột để xem nhịp')).join('')+'</div>';if(kind==='stickers')box.innerHTML='<div class="paletteIntro"><b>Một chút điểm nhấn</b><p>Nhãn dán dạng ký tự, đổi màu và cỡ tùy ý.</p></div><div class="visualCards stickerCards">'+[['star','★'],['heart','♥'],['spark','✦'],['arrow','➜'],['check','✓'],['flower','✿'],['circle','●'],['diamond','◆']].map(([k,v])=>libraryVisualCard('sticker',k,v,`<span>${v}</span>`)).join('')+'</div>';if(kind==='captions')box.innerHTML='<div class="paletteIntro"><b>Để câu chuyện có lời</b><p>Nhập phụ đề SRT sẵn có hoặc tự thêm từng đoạn.</p></div><button class="captionCard" data-caption-action="import">'+uiIcon('captions')+'<b>Nhập phụ đề SRT</b><small>Tự đặt từng câu vào đúng thời điểm</small></button><button class="captionCard" data-caption-action="text">'+uiIcon('text')+'<b>Thêm phụ đề thủ công</b><small>Chọn mẫu chữ dễ đọc trên video dọc</small></button><button class="captionCard" data-caption-action="export">'+uiIcon('download')+'<b>Tải phụ đề SRT</b><small>Xuất các mục chữ thành tệp phụ đề</small></button><div class="unavailableFeature">'+uiIcon('info')+' Tự nhận dạng giọng nói chưa được tích hợp.</div>';}
 function ensureVisualSelection(){let i=selected();if(i&&!['video','image'].includes(i.kind)){notify('Chọn một clip video hoặc ảnh trên timeline trước.');return null}if(!i){i=items.find(x=>['video','image'].includes(x.kind));if(i)choose(i.id)}if(!i){notify('Thêm video vào timeline trước.');return null}if(getTrack(i.trackId).locked){notify('Mở khóa track để chỉnh clip.');return null}if(selectedIds.size>1){notify('Chỉ chọn một clip để áp dụng mẫu.');return null}return i}
 function applyTextPreset(preset){addText();const i=selected(),styles={title:{fontSize:96,bold:true,textY:22,textBg:false,color:'#ffffff',outline:2},subtitle:{fontSize:54,bold:true,textY:82,textBg:true,background:'#000000',color:'#ffffff',outline:0},label:{fontSize:48,bold:false,textY:15,textBg:true,background:'#324b53',color:'#8be8d4',outline:0}};Object.assign(i,styles[preset]||{});inspectorChoice.text='basic';render();notify('Đã thêm '+({title:'tiêu đề',subtitle:'phụ đề',label:'nhãn'}[preset]||'văn bản')+'. Sửa nội dung bên phải.');}
 $('#creativeToolbar').addEventListener('click',e=>{const b=e.target.closest('[data-library]');if(b)showLibrary(b.dataset.library)});
@@ -3168,6 +3217,144 @@ function bootSharedEditor(){
  window.SceneForgeEditor.isPlaying=()=>playing;
  window.SceneForgeEditor.getReadiness=()=>({multitrack:true,captionFormats:['srt','vtt','ass'],speechRecognition:false,nativeConcat:false});
 }
+
+// Shared timeline gestures: marquee selection and editable joins.
+let selectedJoin=null;
+function joinAfter(a){return items.find(b=>b.id!==a.id&&b.trackId===a.trackId&&['video','image'].includes(b.kind)&&Math.abs(b.start-end(a))<.001);}
+function joinLimit(a,b){return Math.max(.1,Math.min(5,a.duration,b.duration));}
+function paintJoinBlocks(){
+ if(selectedJoin!==selection||!items.some(i=>i.id===selectedJoin&&joinAfter(i)))selectedJoin=null;
+ $$('.timelineJoin').forEach(n=>n.remove());
+ for(const a of items.filter(i=>['video','image'].includes(i.kind))){
+  const b=joinAfter(a),lane=$('[data-lane="'+a.trackId+'"]');if(!b||!lane)continue;
+  const enabled=a.transition!=='none',duration=Math.min(a.transitionDuration,joinLimit(a,b)),width=enabled?Math.max(36,duration*px):22;
+  const n=document.createElement('button');n.className='timelineJoin'+(enabled?' enabled':'')+(selectedJoin===a.id?' chosen':'');
+  n.dataset.join=a.id;n.style.left=(end(a)*px-width/2)+'px';n.style.width=width+'px';
+  n.title=enabled?'Chuyển cảnh '+duration.toFixed(2)+' giây · kéo mép để chỉnh · Delete để bỏ':'Thêm chuyển cảnh tại điểm nối';
+  n.setAttribute('aria-label',n.title);
+  n.innerHTML=enabled?'<i data-join-edge="left"></i><span>◇ '+duration.toFixed(2)+'s</span><i data-join-edge="right"></i>':'+';
+  lane.append(n);
+ }
+}
+const timelineBeforeJoins=timeline;
+timeline=function(){timelineBeforeJoins();paintJoinBlocks();};
+function selectJoin(id){selectedJoin=id;choose(id);switchInspectorTab('transition');paintJoinBlocks();}
+function applyJoin(id,type){const a=items.find(i=>i.id===id),b=a&&joinAfter(a);if(!a||!b||getTrack(a.trackId).locked){notify('Chọn điểm nối giữa hai clip trên track đã mở khóa.');return false;}
+ transact(()=>{a.transition=type;a.transitionDuration=Math.min(a.transitionDuration,joinLimit(a,b));});selectJoin(id);return true;}
+// Clicking a palette card is validated against a real neighbour, not an orphan effect.
+$('#creativeLibrary').addEventListener('click',e=>{const card=e.target.closest('[data-palette-transition]');if(!card)return;e.preventDefault();e.stopImmediatePropagation();const a=selectedJoin?items.find(i=>i.id===selectedJoin):selected();if(!a||!joinAfter(a)){notify('Chọn clip có cảnh nối phía sau, hoặc kéo mẫu vào dấu + trên timeline.');return;}applyJoin(a.id,card.dataset.paletteTransition);},true);
+const libraryBeforeJoins=showLibrary;
+showLibrary=function(kind){libraryBeforeJoins(kind);if(kind==='transitions'){
+ const intro=$('#creativeLibrary .paletteIntro p');if(intro)intro.textContent='Kéo mẫu vào điểm nối giữa hai clip. Kéo mép khối chuyển cảnh để chỉnh thời lượng.';
+ $$('[data-palette-transition]').forEach(n=>n.draggable=true);
+}};
+$('#creativeLibrary').addEventListener('dragstart',e=>{const card=e.target.closest('[data-palette-transition]');if(card){e.dataTransfer.setData('application/x-sceneforge-transition',card.dataset.paletteTransition);e.dataTransfer.effectAllowed='copy';e.stopPropagation();}});
+function joinAtPointer(e){const block=e.target.closest('[data-join]');if(block)return block.dataset.join;const lane=e.target.closest('[data-lane]');if(!lane)return null;const at=(e.clientX-lane.getBoundingClientRect().left)/px;return items.find(i=>i.trackId===lane.dataset.lane&&joinAfter(i)&&Math.abs(end(i)-at)*px<24)?.id;}
+for(const type of ['dragover','drop'])$('#tracks').addEventListener(type,e=>{if(![...e.dataTransfer.types].includes('application/x-sceneforge-transition'))return;e.preventDefault();e.stopImmediatePropagation();const id=joinAtPointer(e);$$('.timelineJoin').forEach(n=>n.classList.toggle('dropTarget',n.dataset.join===id));if(type==='drop'){if(id)applyJoin(id,e.dataTransfer.getData('application/x-sceneforge-transition'));else notify('Thả mẫu sát điểm nối giữa hai clip liền nhau.');$$('.dropTarget').forEach(n=>n.classList.remove('dropTarget'));}},true);
+let cancelTimelineGesture=null;
+function trackGestureCancel(e){if(!cancelTimelineGesture)return;if(e.type==='blur'||e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();cancelTimelineGesture();}}
+window.addEventListener('keydown',trackGestureCancel,true);window.addEventListener('blur',trackGestureCancel);
+window.addEventListener('keydown',e=>{if(!selectedJoin||!['Delete','Backspace'].includes(e.key)||['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)||$('dialog[open]'))return;e.preventDefault();e.stopImmediatePropagation();applyJoin(selectedJoin,'none');selectedJoin=null;paintJoinBlocks();},true);
+$('#tracks').addEventListener('click',e=>{if(e.target.closest('[data-join]')){e.stopImmediatePropagation();e.preventDefault();}},true);
+$('#tracks').addEventListener('pointerdown',e=>{
+ if(e.button!==0)return;
+ const block=e.target.closest('[data-join]');if(!block){if(e.target.closest('[data-item]'))selectedJoin=null;return;}
+ e.preventDefault();e.stopImmediatePropagation();pause();
+ const a=items.find(i=>i.id===block.dataset.join),b=a&&joinAfter(a);if(!a||!b||getTrack(a.trackId).locked){notify('Mở khóa track để chỉnh chuyển cảnh.');return;}
+ if(a.transition==='none'){applyJoin(a.id,'dissolve');return;}
+ selectJoin(a.id);
+ const edge=e.target.dataset.joinEdge;if(!edge)return;
+ const before=clone(items),priorRedo=redo.slice(),initial=a.transitionDuration,x=e.clientX,scroll=$('#timelineScroll'),initialScroll=scroll.scrollLeft;
+ let changed=false;const captured=e.currentTarget;captured.setPointerCapture(e.pointerId);
+ const move=v=>{const diff=(v.clientX-x+scroll.scrollLeft-initialScroll)/px*(edge==='left'?-2:2),value=Math.round(clamp(initial+diff,.1,joinLimit(a,b))*100)/100;if(value===a.transitionDuration)return;if(!changed){remember();changed=true;}a.transitionDuration=value;paintJoinBlocks();updateStage(true);};
+ const finish=v=>{captured.removeEventListener('pointermove',move);captured.removeEventListener('pointerup',finish);captured.removeEventListener('pointercancel',finish);cancelTimelineGesture=null;if(v.type==='pointercancel'&&changed){items=before;undo.pop();redo=priorRedo;}render();switchInspectorTab('transition');};
+ cancelTimelineGesture=()=>finish({type:'pointercancel'});
+ captured.addEventListener('pointermove',move);captured.addEventListener('pointerup',finish);captured.addEventListener('pointercancel',finish);
+},true);
+// Start selection only from empty lane space; ordinary clip drags retain their tools.
+$('#tracks').addEventListener('pointerdown',e=>{
+ if(e.button!==0||e.target.closest('[data-item],[data-join],button,.trackTitle')||!e.target.closest('[data-lane]'))return;
+ const scroll=$('#timelineScroll'),original=new Set(selectedIds),originalPrimary=selection;
+ const point=v=>{const b=scroll.getBoundingClientRect();return{x:v.clientX-b.left+scroll.scrollLeft,y:v.clientY-b.top+scroll.scrollTop};},start=point(e);
+ let moved=false,frame=0,pointer={clientX:e.clientX,clientY:e.clientY};
+ const rect=document.createElement('div');rect.className='timelineMarquee';document.body.append(rect);
+ const target=e.currentTarget;target.setPointerCapture(e.pointerId);pause();
+ const draw=()=>{frame=0;const bounds=scroll.getBoundingClientRect();if(moved){if(pointer.clientX>bounds.right-24)scroll.scrollLeft+=12;else if(pointer.clientX<bounds.left+140)scroll.scrollLeft-=12;if(pointer.clientY>bounds.bottom-18)scroll.scrollTop+=10;else if(pointer.clientY<bounds.top+18)scroll.scrollTop-=10;}
+  const p=point(pointer),box={left:Math.min(start.x,p.x),right:Math.max(start.x,p.x),top:Math.min(start.y,p.y),bottom:Math.max(start.y,p.y)};
+  if(!moved&&Math.abs(p.x-start.x)+Math.abs(p.y-start.y)<4)return;moved=true;suppressClick=true;
+  Object.assign(rect.style,{display:'block',left:(bounds.left+box.left-scroll.scrollLeft)+'px',top:(bounds.top+box.top-scroll.scrollTop)+'px',width:(box.right-box.left)+'px',height:(box.bottom-box.top)+'px',clipPath:`inset(${Math.max(0,scroll.scrollTop-box.top)}px ${Math.max(0,box.right-scroll.scrollLeft-bounds.width)}px ${Math.max(0,box.bottom-scroll.scrollTop-bounds.height)}px ${Math.max(0,scroll.scrollLeft-box.left)}px)`});
+  const hit=new Set();for(const n of $$('.timelineItem')){const item=items.find(i=>i.id===n.dataset.item);if(!item||getTrack(item.trackId).locked)continue;const r=n.getBoundingClientRect(),left=r.left-bounds.left+scroll.scrollLeft,top=r.top-bounds.top+scroll.scrollTop;if(left<box.right&&left+r.width>box.left&&top<box.bottom&&top+r.height>box.top)hit.add(item.id);}
+  selectedIds=e.shiftKey?new Set([...original].filter(id=>!hit.has(id)).concat([...hit].filter(id=>!original.has(id)))):hit;
+  selection=[...selectedIds][0]||null;$$('.timelineItem').forEach(n=>n.classList.toggle('selected',selectedIds.has(n.dataset.item)));updateSelectionSummary();
+  if(pointer.clientX>bounds.right-24||pointer.clientX<bounds.left+140||pointer.clientY>bounds.bottom-18||pointer.clientY<bounds.top+18)frame=requestAnimationFrame(draw);
+ };
+ const move=v=>{pointer={clientX:v.clientX,clientY:v.clientY};if(!frame)frame=requestAnimationFrame(draw);};
+ const finish=v=>{cancelAnimationFrame(frame);if(v.type!=='pointercancel')draw();cancelAnimationFrame(frame);rect.remove();cancelTimelineGesture=null;target.removeEventListener('pointermove',move);target.removeEventListener('pointerup',finish);target.removeEventListener('pointercancel',finish);if(v.type==='pointercancel'){selectedIds=original;selection=originalPrimary;$$('.timelineItem').forEach(n=>n.classList.toggle('selected',selectedIds.has(n.dataset.item)));}if(moved){selectedJoin=null;inspector();updateSelectionSummary();setTimeout(()=>suppressClick=false,30);}};
+ cancelTimelineGesture=()=>finish({type:'pointercancel'});target.addEventListener('pointermove',move);target.addEventListener('pointerup',finish);target.addEventListener('pointercancel',finish);
+},true);
+// Rolling trim changes the shared cut while keeping the whole sequence length.
+let rollingTrim=false;
+const rollingButton=document.createElement('button');rollingButton.id='rollingTrim';rollingButton.textContent='↔';rollingButton.title='Cắt điểm nối: kéo mép để dài clip trước, ngắn clip sau; giữ tổng thời lượng';rollingButton.setAttribute('aria-label',rollingButton.title);rollingButton.setAttribute('aria-pressed','false');$('#split').after(rollingButton);
+rollingButton.onclick=()=>{rollingTrim=!rollingTrim;rollingButton.setAttribute('aria-pressed',String(rollingTrim));rollingButton.classList.toggle('active',rollingTrim);notify(rollingTrim?'Cắt điểm nối: kéo mép hai clip liền nhau; giữ tổng thời lượng.':'Đã về chế độ cắt mép thông thường.');};
+$('#tracks').addEventListener('pointerdown',e=>{
+ if(!rollingTrim||e.button!==0||!e.target.dataset.edge)return;
+ e.preventDefault();e.stopImmediatePropagation();
+ const item=items.find(i=>i.id===e.target.closest('[data-item]')?.dataset.item);if(!item||!['video','image'].includes(item.kind))return;
+ if(item.linkGroup&&linkedPicking){notify('Tắt cắt điểm nối để cắt đồng bộ hình–tiếng, hoặc bỏ liên kết trước.');return;}
+ const a=e.target.dataset.edge==='right'?item:items.find(i=>i.trackId===item.trackId&&Math.abs(end(i)-item.start)<.001),b=a&&joinAfter(a);
+ if(!a||!b||getTrack(a.trackId).locked){notify('Cần hai clip liền nhau trên track đã mở khóa.');return;}
+ if(linkedPicking&&(a.linkGroup||b.linkGroup)){notify('Bỏ liên kết hình–tiếng trước khi cắt điểm nối, hoặc dùng cắt mép đồng bộ.');return;}
+ pause();choose(item.id);const baseline=clone(items),oldA=clone(a),oldB=clone(b),priorRedo=redo.slice(),x=e.clientX,scroll=$('#timelineScroll'),initialScroll=scroll.scrollLeft;
+ const lower=Math.max(.2-a.duration,b.kind==='image'?-Infinity:-b.mediaIn/b.speed),upper=Math.min(b.duration-.2,a.kind==='image'?Infinity:(getAsset(a.assetId).duration-a.mediaIn)/a.speed-a.duration);
+ let changed=false;const target=e.currentTarget;target.setPointerCapture(e.pointerId);
+ const move=v=>{let delta=(v.clientX-x+scroll.scrollLeft-initialScroll)/px;if(snap)delta=snapped(end(oldA)+delta,a.id)-end(oldA);delta=clamp(delta,lower,upper);if(Math.abs(delta)<.0001&&!changed)return;if(!changed){remember();changed=true;}a.duration=oldA.duration+delta;b.start=oldB.start+delta;b.duration=oldB.duration-delta;if(b.kind!=='image')b.mediaIn=oldB.mediaIn+delta*b.speed;retimeTrimmedKeyframes(a,oldA,0);retimeTrimmedKeyframes(b,oldB,delta);for(const i of [a,b]){i.fadeIn=Math.min(i.fadeIn,i.duration);i.fadeOut=Math.min(i.fadeOut,i.duration);i.transitionDuration=Math.min(i.transitionDuration,i.duration);}for(const i of [a,b]){const n=$('[data-item="'+i.id+'"]');n.style.left=i.start*px+'px';n.style.width=i.duration*px+'px';}paintJoinBlocks();showDropGuide(end(a),'Cắt điểm nối · giữ tổng thời lượng');updateStage(true);};
+ const finish=v=>{target.removeEventListener('pointermove',move);target.removeEventListener('pointerup',finish);target.removeEventListener('pointercancel',finish);cancelTimelineGesture=null;hideDropGuide();if(v.type==='pointercancel'&&changed){items=baseline;undo.pop();redo=priorRedo;}suppressClick=true;render();setTimeout(()=>suppressClick=false,30);};
+ cancelTimelineGesture=()=>finish({type:'pointercancel'});target.addEventListener('pointermove',move);target.addEventListener('pointerup',finish);target.addEventListener('pointercancel',finish);
+},true);
+const shortcut=$('.shortcutHint');if(shortcut)shortcut.textContent='Kéo vùng trống: chọn nhiều · Shift: thêm/bớt · Esc: hủy kéo · +: chuyển cảnh';
+// Linked picture/audio: select, move, trim and split together; explicit unlink.
+let linkedPicking=true;
+const linkedButton=document.createElement('button');linkedButton.id='linkedPicking';linkedButton.textContent='⛓';linkedButton.title='Chọn cùng hình–tiếng đã liên kết (bật/tắt)';linkedButton.setAttribute('aria-label',linkedButton.title);linkedButton.setAttribute('aria-pressed','true');linkedButton.classList.add('active');rollingButton.after(linkedButton);
+const unlinkButton=document.createElement('button');unlinkButton.id='unlinkClips';unlinkButton.textContent='⛓−';unlinkButton.title='Bỏ liên kết hình–tiếng đang chọn';unlinkButton.setAttribute('aria-label',unlinkButton.title);linkedButton.after(unlinkButton);
+linkedButton.onclick=()=>{linkedPicking=!linkedPicking;linkedButton.setAttribute('aria-pressed',String(linkedPicking));linkedButton.classList.toggle('active',linkedPicking);notify(linkedPicking?'Chọn cùng hình–tiếng: bật.':'Có thể chọn và sửa từng phần hình hoặc tiếng riêng.');};
+unlinkButton.onclick=()=>{const groups=new Set(items.filter(i=>selectedIds.has(i.id)&&i.linkGroup).map(i=>i.linkGroup));if(!groups.size){notify('Chọn clip đã liên kết trước.');return;}if(items.some(i=>groups.has(i.linkGroup)&&getTrack(i.trackId).locked)){notify('Mở khóa các track liên kết trước.');return;}transact(()=>{items.filter(i=>groups.has(i.linkGroup)).forEach(i=>i.linkGroup='');});notify('Đã bỏ liên kết; có thể hoàn tác.');};
+const chooseBeforeLinks=choose;
+choose=function(id,seek=false,add=false,preserve=false){chooseBeforeLinks(id,seek,add,preserve);if(!linkedPicking||!id)return;const groups=new Set(items.filter(i=>selectedIds.has(i.id)&&i.linkGroup).map(i=>i.linkGroup));if(!groups.size)return;items.filter(i=>groups.has(i.linkGroup)).forEach(i=>selectedIds.add(i.id));$$('.timelineItem').forEach(n=>n.classList.toggle('selected',selectedIds.has(n.dataset.item)));inspector();updateSelectionSummary();};
+const trimBeforeLinks=planTrim;
+planTrim=function(baseline,baseTracks,id,edge,delta){
+ const source=baseline.find(i=>i.id===id),group=linkedPicking&&source?.linkGroup?baseline.filter(i=>i.linkGroup===source.linkGroup):[];
+ if(group.length<2)return trimBeforeLinks(baseline,baseTracks,id,edge,delta);
+ if(group.some(i=>baseTracks.find(t=>t.id===i.trackId).locked))return{valid:false,reason:'Mở khóa các track hình–tiếng liên kết trước.'};
+ const draft=group.map(i=>trimBeforeLinks(baseline,baseTracks,i.id,edge,delta));if(draft.some(p=>!p.valid))return draft.find(p=>!p.valid);
+ const amounts=draft.map((p,n)=>{const i=p.items.find(i=>i.id===group[n].id);return edge==='left'?i.start-group[n].start:i.duration-group[n].duration;}),shared=delta>=0?Math.min(delta,...amounts):Math.max(delta,...amounts);
+ const plans=group.map(i=>trimBeforeLinks(baseline,baseTracks,i.id,edge,shared));if(plans.some(p=>!p.valid))return plans.find(p=>!p.valid);
+ const result=clone(baseline);for(let n=0;n<group.length;n++)for(const i of plans[n].items.filter(i=>i.trackId===group[n].trackId)){const index=result.findIndex(x=>x.id===i.id);if(index>=0)result[index]=i;}
+ return{valid:true,items:result,tracks:clone(baseTracks),guide:edge==='left'?source.start+shared:end(source)+shared,description:'Cắt hình–tiếng liên kết · giữ đồng bộ'};
+};
+function separateNewLinkGroups(before){const newGroups=new Map();let changed=false;for(const i of items){if(before.has(i.id)||!i.linkGroup)continue;if(!newGroups.has(i.linkGroup))newGroups.set(i.linkGroup,uid());i.linkGroup=newGroups.get(i.linkGroup);changed=true;}if(changed)render();}
+const batchBeforeLinks=batchCommand;
+batchCommand=function(action){const before=new Set(items.map(i=>i.id));batchBeforeLinks(action);if(['split','duplicate'].includes(action))separateNewLinkGroups(before);};
+// Assemble existing clips in a reviewable order, without calling any generation API.
+const assembleButton=document.createElement('button');assembleButton.id='autoAssemble';assembleButton.textContent='▥';assembleButton.title='Xếp clip nối tiếp: chọn thứ tự và chuyển cảnh';assembleButton.setAttribute('aria-label',assembleButton.title);unlinkButton.after(assembleButton);
+const assembleDialog=document.createElement('dialog');assembleDialog.id='assembleDialog';document.body.append(assembleDialog);let assemblyOrder=[];
+function drawAssemblyDialog(){assembleDialog.innerHTML='<h3>Xếp clip thành bản dựng</h3><p>Sắp thứ tự cảnh trước khi ghép. Clip được chuyển vào một track; giữ nguyên chỉnh màu và hiệu ứng.</p><ol class="assemblyList">'+assemblyOrder.map((id,n)=>{const i=items.find(i=>i.id===id);return'<li><b>'+String(n+1).padStart(2,'0')+'</b><span>'+esc(i.name)+'<small>'+i.duration.toFixed(2)+' giây</small></span><button data-assembly-up="'+n+'" '+(!n?'disabled':'')+' aria-label="Đưa cảnh lên">↑</button><button data-assembly-down="'+n+'" '+(n===assemblyOrder.length-1?'disabled':'')+' aria-label="Đưa cảnh xuống">↓</button></li>';}).join('')+'</ol><label>Chuyển cảnh <select id="assemblyTransition"><option value="none">Cắt thẳng</option><option value="dissolve" selected>Hòa hai hình</option><option value="fade">Mờ qua đen</option><option value="slide">Trượt ngang</option><option value="wipe">Quét khung</option></select></label><label>Thời lượng <input id="assemblyDuration" type="number" min="0.1" max="5" step="0.1" value="0.5"> giây</label><p class="hint">Nhạc và phụ đề hiện có giữ nguyên thời gian. Hình–tiếng đã liên kết được di chuyển cùng nhau. Có thể hoàn tác cả lần ghép.</p><div class="assemblyActions"><button data-assembly-cancel>Hủy</button><button data-assembly-apply>Xếp '+assemblyOrder.length+' clip</button></div>';}
+assembleButton.onclick=()=>{let candidates=items.filter(i=>selectedIds.has(i.id)&&['video','image'].includes(i.kind));if(candidates.length<2)candidates=items.filter(i=>['video','image'].includes(i.kind));if(candidates.length<2){notify('Cần ít nhất hai clip video hoặc ảnh trên timeline.');return;}assemblyOrder=candidates.sort((a,b)=>a.start-b.start||tracks.findIndex(t=>t.id===a.trackId)-tracks.findIndex(t=>t.id===b.trackId)).map(i=>i.id);drawAssemblyDialog();assembleDialog.showModal();};
+assembleDialog.onclick=e=>{
+ const up=e.target.closest('[data-assembly-up]'),down=e.target.closest('[data-assembly-down]');if(up||down){const n=Number(up?up.dataset.assemblyUp:down.dataset.assemblyDown),m=n+(up?-1:1),type=$('#assemblyTransition').value,duration=$('#assemblyDuration').value;if(m<0||m>=assemblyOrder.length)return;[assemblyOrder[n],assemblyOrder[m]]=[assemblyOrder[m],assemblyOrder[n]];drawAssemblyDialog();$('#assemblyTransition').value=type;$('#assemblyDuration').value=duration;return;}
+ if(e.target.closest('[data-assembly-cancel]'))assembleDialog.close();
+ if(!e.target.closest('[data-assembly-apply]'))return;
+ const type=$('#assemblyTransition').value,duration=Number($('#assemblyDuration').value),members=assemblyOrder.map(id=>items.find(i=>i.id===id));if(!Number.isFinite(duration)||duration<.1||duration>5){notify('Thời lượng chuyển cảnh từ 0,1 đến 5 giây.');return;}
+ const groups=new Set(members.map(i=>i.linkGroup).filter(Boolean)),linked=items.filter(i=>groups.has(i.linkGroup)&&!members.includes(i));
+ if([...members,...linked].some(i=>getTrack(i.trackId).locked)){notify('Mở khóa các track được ghép trước.');return;}
+ // Reject ambiguous links rather than shifting a companion more than once.
+ if([...groups].some(g=>members.filter(i=>i.linkGroup===g).length>1)){notify('Mỗi nhóm liên kết chỉ nên có một clip hình. Bỏ liên kết để xếp riêng.');return;}
+ pause();transact(()=>{
+  const track=makeMediaTrack('video');track.name='Bản ghép';addTrackInFront(track,tracks);let at=0;
+  // Audio companions each get an independent lane to avoid overwriting unrelated sound.
+  for(let n=0;n<members.length;n++){const i=members[n],offset=at-i.start;i.start=at;i.trackId=track.id;i.transition=n===members.length-1?'none':type;i.transitionDuration=n===members.length-1?duration:Math.min(duration,i.duration,members[n+1].duration);for(const other of linked.filter(x=>x.linkGroup===i.linkGroup)){const t=makeMediaTrack(other.kind);tracks.push(t);other.trackId=t.id;other.start+=offset;}at+=i.duration;}
+  selectedIds=new Set([...members,...linked].map(i=>i.id));selection=members[0].id;
+ });assembleDialog.close();$('#fitTimeline').click();notify('Đã xếp '+members.length+' clip nối tiếp, có thể hoàn tác.');
+};
 
   init();
   booting=false;
