@@ -3489,7 +3489,7 @@ function editorShortcut(e){
  if(mod&&key==='d')action=()=>commands.duplicate();
  if(mod&&key==='a')action=()=>{selectedIds=new Set(items.map(i=>i.id));selection=items[0]?.id||null;timeline();inspector();updateSelectionSummary();};
  if(!mod&&['Delete','Backspace'].includes(e.key))action=()=>{if(selectedJoin){applyJoin(selectedJoin,'none');selectedJoin=null;}else commands.delete();};
- if(!mod&&e.key==='Escape')action=()=>{selectedJoin=null;choose(null);};
+ if(!mod&&e.key==='Escape'){if(document.body.classList.contains('timeline-drag-active'))return false;action=()=>{selectedJoin=null;choose(null);};}
  if(!mod&&['ArrowUp','ArrowDown'].includes(e.key))action=()=>jumpCut(e.key==='ArrowDown'?1:-1);
 
  if(['ArrowLeft','ArrowRight','Home','End'].includes(e.key)&&!mod)action=()=>{pause();time=e.key==='Home'?0:e.key==='End'?total():clamp(time+(e.key==='ArrowLeft'?-1:1)*(e.shiftKey?1:1/24),0,total());updateStage(true);};
