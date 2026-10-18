@@ -93,15 +93,17 @@ async function showScreen(id,writeUrl=true){
  }
 }
 function showMode(next){
- if(!['explore','recording','output'].includes(next)||next===mode)return;
+ if(!['explore','recording','output','subtitles'].includes(next)||next===mode)return;
  mode=next;clearTimeout(idleTimer);pauseVideos();
  tabs.forEach(button=>{button.setAttribute('aria-selected',String(button.dataset.mode===mode));button.tabIndex=button.dataset.mode===mode?0:-1;});
- for(const id of ['explore','recording','output'])document.getElementById(id).hidden=id!==mode;
- if(mode!=='explore'){
-  const video=document.querySelector(mode==='recording'?'#desktopVideo':'#resultVideo');
-  if(!video.getAttribute('src')){video.src=video.dataset.src;video.preload='metadata';video.load();}
+ for(const id of ['explore','recording','output','subtitles'])document.getElementById(id).hidden=id!==mode;
+ if(mode==='subtitles'){
+  document.dispatchEvent(new Event('sceneforge:open-subtitles'));
+ }else if(mode!=='explore'){
+  const video=document.querySelector(mode==='recording'?'#desktopVideo':mode==='subtitles'?'#captionVideo':'#resultVideo');
+  if(!video.getAttribute('src')){video.src=video.dataset.src;video.preload=mode==='subtitles'?'auto':'metadata';video.load();}
  }else warmNext();
- notice.textContent=mode==='explore'?'Khám phá các bảng giao diện':mode==='recording'?'Video thao tác thật':'MP4 mẫu đã xuất';
+ notice.textContent=mode==='explore'?'Khám phá các bảng giao diện':mode==='recording'?'Video thao tác thật':mode==='subtitles'?'Chỉnh phụ đề':'MP4 mẫu đã xuất';
 }
 select.onchange=()=>showScreen(select.value);
 retry.onclick=()=>showScreen(requested);
@@ -117,6 +119,6 @@ window.addEventListener('message',event=>{
 document.addEventListener('visibilitychange',()=>{if(document.hidden){clearTimeout(idleTimer);pauseVideos();}else warmNext();});
 window.addEventListener('pagehide',pauseVideos);
 window.addEventListener('hashchange',()=>showScreen(location.hash.slice(1),false));
-showMode('explore');showScreen(location.hash.slice(1)||'media',false);
+showMode(new URLSearchParams(location.search).get('tool')==='subtitles'?'subtitles':'explore');showScreen(location.hash.slice(1)||'media',false);
 
 })();
