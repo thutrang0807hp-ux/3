@@ -1,1 +1,1 @@
-SceneForge Studio with integrated native Concat UI walkthrough. AI is simulated; native panels are screenshots and videos, not a browser editing engine.
+SceneForge Studio shared web editing preview: one local video, timed subtitle track, SRT/ASS export. Native Concat screenshots are preserved at native/reference.html. No automatic speech recognition or full video-rendering engine in this static demo.

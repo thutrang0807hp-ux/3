@@ -7,14 +7,42 @@ const presets={clean:{size:64,color:'FFFFFF',outline:3,border:1,weight:-1,shadow
 let state={cues:defaults.map(c=>({...c})),preset:'clean',size:64,position:20};
 let undo=[],redo=[],active=-1,frame=null,blobUrl=null,pending=null,persistTimer=null,uploadRevision=0;
 
-let samplePromise=null;
+let samplePromise=null,usingSample=true;
+const compact=matchMedia('(max-width:700px)');
+function setLibrary(open){document.body.classList.toggle('library-collapsed',!open);$('#libraryToggle').setAttribute('aria-expanded',String(open));}
+function setInspector(kind,reveal=true){
+ $('#clipInspector').hidden=kind!=='clip';$('#captionInspector').hidden=kind!=='captions';
+ $('#captionToolsToggle').setAttribute('aria-expanded',String(kind==='captions'&&reveal));
+ document.body.classList.toggle('inspector-open',reveal);
+ $('#captionTimelineVideo').classList.toggle('is-selected',kind==='clip');
+ if(kind==='captions')$('#captionStylePanel').open=true;
+ if(compact.matches&&reveal)setLibrary(false);
+}
+$('#libraryToggle').onclick=()=>setLibrary(document.body.classList.contains('library-collapsed'));
+$('#captionToolsToggle').onclick=()=>setInspector('captions');
+$('#inspectSubtitles').onclick=()=>setInspector('captions');
+$('#closeCaptionInspector').onclick=()=>setInspector('clip',false);
+$('#captionMediaCard').onclick=()=>setInspector('clip');
+compact.addEventListener('change',()=>{setLibrary(!compact.matches);if(compact.matches)document.body.classList.remove('inspector-open');});
+setLibrary(!compact.matches);
+function updateMediaProperties(){
+ const name=$('#captionSource').textContent;
+ $('#workspaceMediaName').textContent=name;$('#clipName').textContent=name;
+ $('#workspaceMediaDuration').textContent=(video.duration||12).toFixed(2)+' giây';$('#clipDuration').textContent=(video.duration||12).toFixed(2)+' giây';
+ $('#clipDimensions').textContent=(video.videoWidth||540)+' × '+(video.videoHeight||960)+' · 9:16';
+ $('#workspaceMediaPoster').hidden=!usingSample;document.querySelector('.media-file-symbol').hidden=usingSample;
+}
+$('#clipVolume').oninput=event=>{video.volume=Number(event.target.value)/100;};
+$('#clipMuted').onchange=event=>{video.muted=event.target.checked;};
+video.addEventListener('volumechange',()=>{$('#clipVolume').value=Math.round(video.volume*100);$('#clipVolumeLabel').value=Math.round(video.volume*100)+'%';$('#clipMuted').checked=video.muted;});
+
 async function openSample(force=false){
  if(video.getAttribute('src')&&!force)return;
  const request=++uploadRevision;feedback('Đang mở video mẫu…');
  try{
   if(!samplePromise)samplePromise=fetch(video.dataset.src).then(response=>{if(!response.ok)throw Error();return response.blob();}).catch(error=>{samplePromise=null;throw error;});
   const blob=await samplePromise;if(request!==uploadRevision)return;
-  video.pause();if(blobUrl)URL.revokeObjectURL(blobUrl);blobUrl=URL.createObjectURL(blob);video.src=blobUrl;video.preload='auto';video.load();$('#captionSource').textContent='Video mẫu · 9:16';feedback('Đã mở video mẫu; bản chữ hiện có được giữ nguyên.');
+  video.pause();if(blobUrl)URL.revokeObjectURL(blobUrl);blobUrl=URL.createObjectURL(blob);video.src=blobUrl;video.preload='auto';video.load();$('#captionSource').textContent='Video mẫu · 9:16';usingSample=true;feedback('Đã mở video mẫu; bản chữ hiện có được giữ nguyên.');
  }catch{if(request===uploadRevision)feedback('Chưa tải được video mẫu. Bấm Video mẫu để thử lại hoặc chọn video trên thiết bị.');}
 }
 document.addEventListener('sceneforge:open-subtitles',()=>openSample());
@@ -62,7 +90,7 @@ function applyStyle(){
 }
 function clock(seconds){const ms=Math.max(0,Math.round(seconds*100));return String(Math.floor(ms/6000)).padStart(2,'0')+':'+String(Math.floor(ms/100)%60).padStart(2,'0')+'.'+String(ms%100).padStart(2,'0');}
 function timelineDuration(){return Number.isFinite(video.duration)&&video.duration>0?video.duration:12;}
-function seekCue(index){const cue=state.cues[index];if(!cue||!Number.isFinite(cue.start))return;video.pause();video.currentTime=cue.start;sync();const row=list.children[index];if(row){list.scrollTop=row.offsetTop-list.firstElementChild.offsetTop;row.querySelector('textarea')?.focus({preventScroll:true});}}
+function seekCue(index){setInspector('captions');const cue=state.cues[index];if(!cue||!Number.isFinite(cue.start))return;video.pause();video.currentTime=cue.start;sync();const row=list.children[index];if(row){list.scrollTop=row.offsetTop-list.firstElementChild.offsetTop;row.querySelector('textarea')?.focus({preventScroll:true});}}
 function renderTimeline(){
  const duration=timelineDuration(),ruler=$('#captionRuler'),track=$('#captionSubtitleTrack');ruler.replaceChildren();track.replaceChildren();
  const step=duration<=20?2:Math.ceil(duration/8);
@@ -73,7 +101,7 @@ function renderTimeline(){
 }
 $('#captionRuler').onclick=event=>{const rect=event.currentTarget.getBoundingClientRect();video.currentTime=Math.max(0,Math.min(timelineDuration(),(event.clientX-rect.left)/rect.width*timelineDuration()));sync();};
 $('#captionRuler').onkeydown=event=>{let time=video.currentTime;if(event.key==='ArrowLeft')time-=.1;else if(event.key==='ArrowRight')time+=.1;else if(event.key==='Home')time=0;else if(event.key==='End')time=timelineDuration();else return;event.preventDefault();video.currentTime=Math.max(0,Math.min(timelineDuration(),time));sync();};
-$('#captionTimelineVideo').onclick=()=>{video.pause();video.currentTime=0;sync();};
+$('#captionTimelineVideo').onclick=()=>setInspector('clip');
 $('#captionTimelineZoom').oninput=event=>{$('#captionTimeline').style.width=Number(event.target.value)*100+'%';};
 function sync(){
  const t=video.currentTime||0;$('#captionPlayhead').style.left=Math.min(100,t/timelineDuration()*100)+'%';$('#captionRuler').setAttribute('aria-valuenow',String(t));$('#captionClock').textContent=clock(t);
@@ -149,7 +177,7 @@ $('#captionImportButton').onclick=()=>$('#captionTextFile').click();
 $('#captionTextFile').onchange=async event=>{
  const file=event.target.files[0];event.target.value='';if(!file)return;
  if(file.size>1024*1024){feedback('Tệp phụ đề tối đa 1 MB.');return;}
- try{const cues=parseSubtitles(await file.text());commit(()=>{state.cues=cues;});feedback('Đã nhập '+cues.length+' câu. Có thể hoàn tác để lấy lại bản trước.');}catch(error){feedback(error.message);}
+ try{const cues=parseSubtitles(await file.text());setInspector('captions');commit(()=>{state.cues=cues;});feedback('Đã nhập '+cues.length+' câu. Có thể hoàn tác để lấy lại bản trước.');}catch(error){feedback(error.message);}
 };
 $('#captionUploadButton').onclick=()=>$('#captionVideoFile').click();
 $('#captionVideoFile').onchange=async event=>{
@@ -162,7 +190,7 @@ $('#captionVideoFile').onchange=async event=>{
   if(request!==uploadRevision){URL.revokeObjectURL(url);return;}
   if(!probe.videoWidth||Math.abs(probe.videoWidth/probe.videoHeight-9/16)>.02)throw Error('Chọn video dọc 9:16 để giữ bố cục phụ đề.');
   if(!Number.isFinite(probe.duration)||probe.duration>600)throw Error('Video phải có thời lượng tối đa 10 phút.');
-  video.pause();if(blobUrl)URL.revokeObjectURL(blobUrl);blobUrl=url;video.src=url;video.load();$('#captionSource').textContent=file.name;
+  video.pause();if(blobUrl)URL.revokeObjectURL(blobUrl);blobUrl=url;video.src=url;video.load();$('#captionSource').textContent=file.name;usingSample=false;
   feedback('Đã mở video trên thiết bị. Bản chữ hiện có vẫn được giữ; nhập SRT/VTT tương ứng hoặc sửa lại từng câu.');
  }catch(error){URL.revokeObjectURL(url);feedback(error.message);}
  finally{clearTimeout(timeout);probe.removeAttribute('src');probe.load();}
@@ -179,9 +207,10 @@ $('#captionExportAss').onclick=()=>{
  download(header+body+'\n','ass');feedback('Đã tải ASS với kiểu chữ. Đây chưa phải MP4 đã gắn phụ đề.');
 };
 video.addEventListener('play',()=>{stopFrames();tick();});video.addEventListener('pause',()=>{stopFrames();sync();});video.addEventListener('ended',stopFrames);
-for(const name of ['timeupdate','seeked','loadedmetadata'])video.addEventListener(name,()=>{sync();if(name==='loadedmetadata'){renderTimeline();active=-1;sync();const error=updateButtons();if(error)feedback(error.message);}});
+for(const name of ['timeupdate','seeked','loadedmetadata'])video.addEventListener(name,()=>{sync();if(name==='loadedmetadata'){updateMediaProperties();renderTimeline();active=-1;sync();const error=updateButtons();if(error)feedback(error.message);}});
 document.addEventListener('visibilitychange',()=>{if(document.hidden)stopFrames();});
 window.addEventListener('pagehide',event=>{stopFrames();clearTimeout(persistTimer);if(!validate())try{localStorage.setItem(storageKey,snapshot());}catch{};if(blobUrl&&!event.persisted)URL.revokeObjectURL(blobUrl);});
 restoreSaved();render();
-if(!$('#subtitles').hidden)openSample();
+setInspector(new URLSearchParams(location.search).get('tool')==='subtitles'?'captions':'clip',new URLSearchParams(location.search).get('tool')==='subtitles');
+openSample();
 })();
