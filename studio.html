@@ -571,14 +571,23 @@ renderAlternate=function(){
  let pane=$('#editorPreviewPane');
  if(!pane){
   pane=document.createElement('section');pane.id='editorPreviewPane';pane.className='alternate-view';
-  pane.innerHTML='<iframe id="standaloneEditorDemo" title="Dựng video · Xem thử Concat gốc" allow="autoplay; fullscreen" src="./native/?embedded=1&amp;v=1a6fa2a90e07"></iframe>';
+  pane.innerHTML='<iframe id="standaloneEditorDemo" title="Dựng video · Xem thử Concat gốc" allow="autoplay; fullscreen" src="./native/?embedded=1&amp;v=53adc7c96071"></iframe>';
   if(new URLSearchParams(location.search).get('tool')==='subtitles'){const frame=pane.querySelector('iframe');const url=new URL(frame.src);url.searchParams.set('tool','subtitles');frame.src=url.href;}
   $('#alternateView').after(pane);
  }
  pane.hidden=false;
  pane.querySelector('iframe')?.contentWindow.postMessage({type:'sceneforge:resume-preview'},location.origin);
- $('#topSubtitle').textContent='Một không gian dựng · Video, chữ & phụ đề · 9:16';
+ $('#topSubtitle').textContent='Một không gian dựng · Video, chữ & phụ đề · Khung ngang / dọc';
 };
+// Keep editing shortcuts available after navigating from the studio sidebar.
+document.addEventListener('keydown',event=>{
+ if(currentView!=='editor'||event.isComposing||event.altKey||event.target.isContentEditable||['INPUT','TEXTAREA','SELECT'].includes(event.target.tagName))return;
+ const mod=event.ctrlKey||event.metaKey,key=event.key.toLowerCase();
+ if((!mod&&[' ','k','arrowleft','arrowright','arrowup','arrowdown','home','end','delete','backspace','escape'].includes(key))||(mod&&['b','s','z','d','a'].includes(key))){
+  const frame=$('#standaloneEditorDemo');if(!frame)return;event.preventDefault();
+  frame.contentWindow.postMessage({type:'sceneforge:editor-shortcut',key:event.key,code:event.code,ctrlKey:event.ctrlKey,metaKey:event.metaKey,shiftKey:event.shiftKey},location.origin);
+ }
+});
 const initialView=location.hash.slice(1);
 if(['overview','library','analysis','queue','settings','editor'].includes(initialView))switchView(initialView);
 window.addEventListener('hashchange',()=>{const v=location.hash.slice(1);if(['overview','library','analysis','queue','settings','editor'].includes(v)&&v!==currentView)switchView(v);});

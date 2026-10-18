@@ -1183,6 +1183,20 @@ body.media-collapsed #mediaPanel>.panelHead>div{justify-content:center;width:100
 /* Leave clip trim handles accessible; only the playhead thumb captures pointers. */
 .timelineJoin{top:-4px;height:18px}
 #playhead{pointer-events:none}#playhead i{pointer-events:auto;cursor:ew-resize}
+/* Readable commands and detailed inspectors stay inside the shared editor. */
+#split{min-width:100px;display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:0 9px!important}
+#play{min-width:105px;width:auto!important;display:inline-flex;align-items:center;justify-content:center;gap:6px}#play .uiIcon,#split .uiIcon{width:16px;height:16px}
+#keyboardHelp{font-size:10px;padding:4px 8px}.previewHead{flex-wrap:wrap;gap:6px}.previewHead #projectAspect{max-width:150px;font-size:11px;padding:4px 6px}
+.advancedInspector h4{font-size:13px;margin:14px 0 10px}.inspectorDescription{font-size:11px;line-height:1.6;color:#a4adbc}.advancedInspector details{margin-top:12px;border-top:1px solid #3b414a;padding-top:10px}.advancedInspector summary{font-size:12px;cursor:pointer;margin-bottom:12px}
+.audioPresetGrid{display:grid;grid-template-columns:1fr 1fr;gap:6px}.audioPresetGrid button{text-align:left;display:grid;gap:5px;padding:9px;background:#292f38;border:1px solid #414955;border-radius:6px}.audioPresetGrid button[aria-pressed=true]{background:#203f50;border-color:#41b8e3}.audioPresetGrid small{font-size:10px;color:#a6b3c5;line-height:1.5}.audioPresetGrid b{font-size:12px}.audioPresetIcon{color:#64c8ef}.audioPresetIcon .uiIcon{width:19px;height:19px}
+#audioEqCurve{width:100%;height:95px;margin-top:12px;background:#181c22;border:1px solid #414955;border-radius:6px}#audioEqCurve line{stroke:#68778a;stroke-dasharray:3 3}#audioEqCurve path{stroke:#62d4f5;stroke-width:2}#audioEqCurve text{font-size:9px;fill:#acb8c8}
+.audioAB,.advancedActions{display:flex;gap:6px;margin:9px 0}.audioAB button,.advancedActions button{flex:1;font-size:11px}.audioAB button[aria-pressed=true]{border-color:#d8be76;color:#eed796}
+.advancedParam{display:grid;grid-template-columns:1fr 65px;gap:7px;margin:11px 0;align-items:center}.advancedParam>span{grid-column:1/-1;font-size:11px;display:flex;justify-content:space-between}.advancedParam small{color:#97a7b9}.advancedParam input[type=range]{width:100%;min-width:0;accent-color:#42bce8}.advancedParam input[type=number]{width:65px;padding:5px;font-size:11px}
+.joinClipPair{display:grid;grid-template-columns:1fr 1fr;gap:8px}.joinClipPair img{width:100%;height:75px;object-fit:cover;border-radius:5px}.joinClipPair small{display:block;font-size:10px;color:#aab6c7;margin:5px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.advancedSelect{display:grid;gap:7px;font-size:11px;margin:14px 0}.advancedSelect select{width:100%;padding:7px}#joinDurationSlider{width:100%;accent-color:#b996e4;margin:5px 0 12px}
+#frameDialog,#keyboardDialog{background:#242930;color:#e4ecf6;border:1px solid #515e70;border-radius:10px;padding:22px;width:min(520px,90vw);max-height:85vh;overflow:auto}#frameDialog::backdrop,#keyboardDialog::backdrop{background:#000a}#frameDialog label{display:flex;align-items:center;justify-content:space-between;margin:15px 0}#frameDialog input{width:130px}#frameError{color:#f4b7a1}#keyboardDialog dl{display:grid;grid-template-columns:1fr 1.4fr;gap:13px 16px;font-size:12px}#keyboardDialog dd{margin:0;color:#b9c5d5}#keyboardDialog kbd{font:11px system-ui;background:#343c48;padding:3px 6px;border-radius:4px}#keyboardDialog p,#frameDialog p{font-size:12px;line-height:1.6;color:#aab8c9}
+@media(max-width:780px){#play{min-width:88px}#keyboardHelp{font-size:9px}#split{min-width:87px}.previewHead #projectAspect{max-width:122px}.audioPresetGrid{grid-template-columns:1fr}}
+.audioPresetGrid{grid-template-columns:repeat(2,minmax(0,1fr))}.audioPresetGrid button{min-width:0;white-space:normal;overflow-wrap:anywhere}.audioPaneModes{display:flex;gap:5px;position:sticky;top:0;background:#202125;z-index:2;padding:7px 0}.audioPaneModes button{flex:1;min-width:0;font-size:11px;padding:8px 5px}.audioPaneModes button[aria-pressed=true]{background:#254758;border-color:#54bce6;color:#c6edfc}.audioAB button,.advancedActions button{white-space:normal;min-width:0;line-height:1.5}
 </style>
 <header><div><strong>Dựng video <span class="projectDot">/</span> Hành trình bình minh</strong><span class="badge">BẢN XEM THỬ · 9:16</span></div><div class="actions"><div class="workspaceViews" role="group" aria-label="Bố cục làm việc"><button data-workspace-view="balanced" class="active" aria-pressed="true">Mặc định</button><button data-workspace-view="preview" aria-pressed="false">Khung xem</button><button data-workspace-view="timeline" aria-pressed="false">Timeline</button></div><button id="featureHelp">Tính năng</button><button id="restoreDraft" hidden>Khôi phục nháp</button><button id="saveProject">Lưu dự án</button><button id="openProject">Mở dự án</button><button id="export" class="primary">Xuất video ↗</button></div></header>
 <main><div id="creativeToolbar"><nav aria-label="Công cụ sáng tạo"><button data-library="media" class="active" aria-label="Tư liệu"><span data-ui-icon="media"></span><small>Tư liệu</small></button><button data-library="audio" aria-label="Âm thanh"><span data-ui-icon="music"></span><small>Âm thanh</small></button><button data-library="text" aria-label="Văn bản"><span data-ui-icon="text"></span><small>Văn bản</small></button><button data-library="stickers" aria-label="Nhãn dán"><span data-ui-icon="star"></span><small>Nhãn dán</small></button><button data-library="transitions" aria-label="Chuyển cảnh"><span data-ui-icon="transition"></span><small>Chuyển cảnh</small></button><button data-library="filters" aria-label="Bộ lọc"><span data-ui-icon="sliders"></span><small>Bộ lọc</small></button><button data-library="captions" aria-label="Phụ đề"><span data-ui-icon="captions"></span><small>Phụ đề</small></button></nav><div class="toolSearchWrap"><span data-ui-icon="search"></span><input id="toolSearch" placeholder="Tìm công cụ…" aria-label="Tìm công cụ" autocomplete="off"><kbd>⌘ K</kbd><div id="toolSearchResults" hidden role="listbox" aria-label="Kết quả tìm công cụ"></div></div></div><div id="workspace"><section id="mediaPanel" class="panel"><div class="panelHead"><b>Kho tư liệu</b><div><button id="mediaMode" title="Đổi lưới / danh sách">☷</button><button id="collapseMedia" title="Thu gọn kho tư liệu">‹</button></div></div><div class="mediaContent"><label class="assetSearch"><span data-ui-icon="search"></span><input id="assetSearch" placeholder="Tìm tư liệu của bạn…" aria-label="Tìm tư liệu"></label><div id="sourceLibrary"><div class="tabs" id="mediaTabs"><button class="active" data-kind="all">Tất cả</button><button data-kind="video">Video</button><button data-kind="audio">Âm thanh</button><button data-kind="image">Ảnh</button></div><label class="placementChoice"><span>Video tải lên</span><select id="importPlacement" aria-label="Vị trí video sau khi tải lên"><option value="layer">Tự tạo lớp riêng</option><option value="append">Nối cuối track</option><option value="library">Chỉ lưu trong kho</option></select></label><button id="upload" class="primary wide">＋ Nhập tư liệu</button><p class="hint">Kéo tư liệu vào track hoặc bấm ＋. Shift + bấm chọn nhiều mục.</p><div id="assets"></div><button id="newText" class="wide">Ｔ Thêm văn bản</button><div class="assetTools"><button id="importSrt">Nhập SRT</button><button id="exportSrt">Xuất SRT</button><button id="addSticker">★ Nhãn dán</button></div><input id="srtFile" type="file" accept=".srt,text/plain" hidden><p class="hint">Tệp từ máy chỉ lưu trong phiên này. Lưu dự án giữ cài đặt; mở lại cần chọn lại tệp.</p></div></div><div id="creativeLibrary" hidden></div><div class="resizePanel" data-resize="media" title="Kéo để đổi độ rộng kho tư liệu"></div></section>
@@ -1196,6 +1210,10 @@ body.media-collapsed #mediaPanel>.panelHead>div{justify-content:center;width:100
   const $ = (s) => document.querySelector(s), $$ = (s) => [...document.querySelectorAll(s)], esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
   let counter = 100;
   const uid = () => String(++counter), clone = (o) => JSON.parse(JSON.stringify(o)), clamp = (n, a, b) => Math.max(a, Math.min(b, n));
+  let projectFrame={width:1080,height:1920};
+  function validFrame(value){return value&&Number.isFinite(value.width)&&Number.isFinite(value.height)&&value.width>=240&&value.height>=240&&value.width<=3840&&value.height<=3840?{width:Math.round(value.width/2)*2,height:Math.round(value.height/2)*2}:{width:1080,height:1920};}
+  function frameDimensions(shortSide=1080){const scale=Math.min(shortSide/Math.min(projectFrame.width,projectFrame.height),3840/Math.max(projectFrame.width,projectFrame.height));return{width:Math.round(projectFrame.width*scale/2)*2,height:Math.round(projectFrame.height*scale/2)*2};}
+  function fitStage(){const s=$('#stageWrap');if(!s)return;const padding=getComputedStyle(s),w=s.clientWidth-parseFloat(padding.paddingLeft)-parseFloat(padding.paddingRight),h=s.clientHeight-parseFloat(padding.paddingTop)-parseFloat(padding.paddingBottom),ratio=projectFrame.width/projectFrame.height;$('#stage').style.width=Math.max(1,Math.min(w,h*ratio))+'px';$('#stage').style.height=Math.max(1,Math.min(h,w/ratio))+'px';}
   function tone() {
     const rate = 16e3, len = rate * 12, b = new ArrayBuffer(44 + len * 2), v = new DataView(b), str = (o, s) => [...s].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
     str(0, "RIFF");
@@ -1233,7 +1251,7 @@ body.media-collapsed #mediaPanel>.panelHead>div{justify-content:center;width:100
     toastTimer = setTimeout(() => $("#toast").style.display = "none", 2900);
   }
   function snapshot() {
-    return clone({ tracks, items, selection, selectedIds:[...selectedIds], markers });
+    return clone({ frame:projectFrame,tracks, items, selection, selectedIds:[...selectedIds], markers });
   }
   function remember() {
     undo.push(snapshot());
@@ -1260,7 +1278,7 @@ body.media-collapsed #mediaPanel>.panelHead>div{justify-content:center;width:100
   }
   function init() {
     pause();
-    selectedIds.clear(); markers=[];
+    selectedIds.clear(); markers=[];projectFrame={width:1080,height:1920};
     tracks = [{ id: "v1", kind: "video", name: "Video 1" }, { id: "t1", kind: "text", name: "V\u0103n b\u1EA3n 1" }, { id: "a1", kind: "audio", name: "\xC2m thanh 1" }];
     items = FRAMES.map((p, i) => ({ ...defaults("video"), id: uid(), kind: "video", assetId: "sample" + i, trackId: "v1", name: assets[i].name, start: i * 4, duration: 4, mediaIn: i * 4 }));
     selection = items[0].id;
@@ -1384,7 +1402,7 @@ body.media-collapsed #mediaPanel>.panelHead>div{justify-content:center;width:100
     for (const [id, n] of nodes) {
       if (!items.some((i) => i.id === id)) {
         if (n.pause) n.pause();
-        n.remove();
+        releaseAudioRoute(n);n.remove();
         nodes.delete(id);
       }
     }
@@ -1399,22 +1417,30 @@ body.media-collapsed #mediaPanel>.panelHead>div{justify-content:center;width:100
     for(const row of lanes.values()){
       row.sort((a,b)=>a.start-b.start);
       for(let n=0;n<row.length-1;n++){
-        const a=row[n],b=row[n+1];if(a.transition!=='dissolve'||Math.abs(b.start-end(a))>=.001)continue;
+        const a=row[n],b=row[n+1];if(!['dissolve','slide','wipe'].includes(a.transition)||Math.abs(b.start-end(a))>=.001)continue;
         const d=Math.min(5,a.transitionDuration,a.duration,b.duration),join=end(a);
-        if(time>=join-d/2&&time<join+d/2){const window={a,b,d,progress:clamp((time-join+d/2)/d,0,1)};dissolveFrame.set(a.id,window);dissolveFrame.set(b.id,window);}
+        if(time>=join-d/2&&time<join+d/2){const window={a,b,d,progress:transitionCurve(clamp((time-join+d/2)/d,0,1),a.transitionEasing)};dissolveFrame.set(a.id,window);dissolveFrame.set(b.id,window);}
       }
     }
   }
   function dissolveWindow(i){return dissolveFrame.get(i.id)||null;}
-  function clipActive(i) {return (time>=i.start&&time<end(i))||!!dissolveWindow(i);}
+  function clipActive(i) {const at=time===total()?Math.max(0,time-.00001):time;return (at>=i.start&&at<end(i))||!!dissolveWindow(i);}
   function sourceTime(i) {const raw=i.mediaIn+(time-i.start)*i.speed,d=getAsset(i.assetId)?.duration||Infinity;return clamp(raw,0,Math.max(0,d-.04));}
   function transitionAudioGain(i) {const w=dissolveWindow(i);return w?(i.id===w.a.id?1-w.progress:w.progress):1;}
+  function transitionCurve(p,curve){return curve==='easeIn'?p*p:curve==='easeOut'?1-(1-p)*(1-p):curve==='easeInOut'?p*p*(3-2*p):p;}
   function transitionState(i) {
     const dissolve=dissolveWindow(i);
-    if(dissolve)return{opacity:i.id===dissolve.b.id?dissolve.progress:1,dx:0,clip:'none'};
+    if(dissolve){
+      const incoming=i.id===dissolve.b.id,p=dissolve.progress,type=dissolve.a.transition,dir=dissolve.a.transitionDirection||'left';
+      const out={opacity:1,dx:0,dy:0,clip:'none'};
+      if(type==='dissolve')out.opacity=incoming?p:1;
+      if(type==='slide'){const amount=incoming?1-p:-p,sign=['left','up'].includes(dir)?1:-1;if(['left','right'].includes(dir))out.dx=amount*100*sign;else out.dy=amount*100*sign;}
+      if(type==='wipe'&&incoming){const hidden=(1-p)*100;out.clip=dir==='left'?`inset(0% 0% 0% ${hidden}%)`:dir==='right'?`inset(0% ${hidden}% 0% 0%)`:dir==='up'?`inset(${hidden}% 0% 0% 0%)`:`inset(0% 0% ${hidden}% 0%)`;}
+      return out;
+    }
     const tr = items.filter((x) => x.trackId === i.trackId && x.id !== i.id && x.kind !== "text" && x.kind !== "audio");
     const next = tr.find((x) => Math.abs(x.start - end(i)) < 0.04), prev = tr.find((x) => Math.abs(end(x) - i.start) < 0.04);
-    let out = { opacity: 1, dx: 0, clip: "none" };
+    let out = { opacity: 1, dx: 0, dy:0, clip: "none" };
     const effect = (type, d, phase) => {
       if (type === "fade") out.opacity *= phase;
       else if (type === "slide") out.dx += (1 - phase) * 100;
@@ -1451,7 +1477,7 @@ body.media-collapsed #mediaPanel>.panelHead>div{justify-content:center;width:100
         n.textContent = animatedText(i);
         n.style.left = values.textX + "%";
         n.style.top = values.textY + "%";
-        n.style.fontSize = i.fontSize / 1080 * 100 + "cqw";
+        n.style.fontSize = i.fontSize / projectFrame.width * 100 + "cqw";
         n.style.color = i.color;
         n.style.background = i.textBg ? i.background : "transparent";
         n.style.padding = i.textBg ? ".4cqw .8cqw" : "0";
@@ -1465,7 +1491,7 @@ body.media-collapsed #mediaPanel>.panelHead>div{justify-content:center;width:100
         n.style.objectFit = i.fit;
         n.style.opacity = values.opacity * effect.opacity;
         n.style.filter = visualFilter(i,$("#stage").clientWidth/1080);
-        n.style.transform = `translate(${values.x + effect.dx}%,${values.y}%) rotate(${values.rotation}deg) scale(${values.scale * (i.flipX ? -1 : 1)},${values.scale * (i.flipY ? -1 : 1)})`;
+        n.style.transform = `translate(${values.x + effect.dx}%,${values.y + effect.dy}%) rotate(${values.rotation}deg) scale(${values.scale * (i.flipX ? -1 : 1)},${values.scale * (i.flipY ? -1 : 1)})`;
         n.style.clipPath = effect.clip;
       }
       if (n.currentTime !== void 0) {
@@ -1492,6 +1518,7 @@ body.media-collapsed #mediaPanel>.panelHead>div{justify-content:center;width:100
     updateClock();
   }
   function render() {
+    fitStage();
     syncSelection();
     renderAssets();
     timeline();
@@ -1522,6 +1549,7 @@ body.media-collapsed #mediaPanel>.panelHead>div{justify-content:center;width:100
       return;
     }
     if (time >= total() - 0.02) time = 0;
+    prepareExportAudio().catch(()=>notify('Không khởi tạo được bộ xử lý âm thanh trên trình duyệt này.'));
     playing = true;
     lastTick = performance.now();
     $("#play").textContent = "\u275A\u275A";
@@ -1558,6 +1586,7 @@ body.media-collapsed #mediaPanel>.panelHead>div{justify-content:center;width:100
     pause();
     redo.push(snapshot());
     const h = undo.pop();
+    projectFrame=validFrame(h.frame);
     tracks = h.tracks;
     items = h.items;
     selection = h.selection;
@@ -1568,6 +1597,7 @@ body.media-collapsed #mediaPanel>.panelHead>div{justify-content:center;width:100
     pause();
     undo.push(snapshot());
     const h = redo.pop();
+    projectFrame=validFrame(h.frame);
     tracks = h.tracks;
     items = h.items;
     selection = h.selection;
@@ -1623,6 +1653,7 @@ body.media-collapsed #mediaPanel>.panelHead>div{justify-content:center;width:100
         siblings.forEach((x) => {
           if (siblings.some((n) => n.id !== x.id && Math.abs(n.start - end(x)) < 0.04)) {
             x.transition = i.transition;
+            x.transitionDirection=i.transitionDirection;x.transitionEasing=i.transitionEasing;
             x.transitionDuration = Math.min(i.transitionDuration, x.duration);
           }
         });
@@ -1672,7 +1703,7 @@ body.media-collapsed #mediaPanel>.panelHead>div{justify-content:center;width:100
     if(key==="duration"&&oldItem.keyframes?.length)retimeTrimmedKeyframes(i,oldItem,0);
     i.fadeIn = Math.min(i.fadeIn, i.duration);
     i.fadeOut = Math.min(i.fadeOut, i.duration);
-    i.transitionDuration = Math.min(i.transitionDuration, i.duration);
+    i.transitionDuration = Math.min(i.transitionDuration, i.duration,items.find(x=>x.id!==i.id&&x.trackId===i.trackId&&Math.abs(x.start-end(i))<.001)?.duration||i.duration);
     if(key==="speed"||key==="mediaIn")repairTimingChange(i,oldItem);
     time = Math.min(time, total());
     timeline();
@@ -1995,7 +2026,7 @@ body.media-collapsed #mediaPanel>.panelHead>div{justify-content:center;width:100
     setTimeout(() => URL.revokeObjectURL(url), 1e3);
   }
   $("#saveProject").onclick = () => {
-    download("sceneforge-project.json", JSON.stringify({ format: "sceneforge-timeline", version: 1, tracks, items, markers, timelineSettings:{mode:timelineEditMode,importPlacement:$("#importPlacement").value}, assets: assets.map(({ url, poster, ...a }) => a) }, null, 2));
+    download("sceneforge-project.json", JSON.stringify({ format: "sceneforge-timeline", version: 1, tracks, items, markers, frame:projectFrame,timelineSettings:{mode:timelineEditMode,importPlacement:$("#importPlacement").value}, assets: assets.map(({ url, poster, ...a }) => a) }, null, 2));
     notify("\u0110\xE3 l\u01B0u d\u1EF1 \xE1n JSON. T\u1EC7p tr\xEAn m\xE1y c\u1EA7n nh\u1EADp l\u1EA1i khi m\u1EDF d\u1EF1 \xE1n.");
   };
   $("#openProject").onclick = () => $("#projectFile").click();
@@ -2040,9 +2071,10 @@ body.media-collapsed #mediaPanel>.panelHead>div{justify-content:center;width:100
       });
       if (new Set(safeItems.map((i) => i.id)).size !== safeItems.length || new Set(safeTracks.map((t) => t.id)).size !== safeTracks.length) throw Error();
       pause();
-      nodes.forEach((n) => n.remove());
+      nodes.forEach((n) => {releaseAudioRoute(n);n.remove();});
       nodes.clear();
       assets = safeAssets;
+      projectFrame=validFrame(p.frame);
       tracks = safeTracks;
       items = safeItems;
       selection = items[0]?.id;
@@ -2104,12 +2136,8 @@ body.media-collapsed #mediaPanel>.panelHead>div{justify-content:center;width:100
       updateStage(true);
     }
   });
-  new ResizeObserver(() => {
-    const s = $("#stageWrap"), w = s.clientWidth - 12, h = s.clientHeight - 12;
-    $("#stage").style.width = Math.max(1, Math.min(w, h * 9 / 16)) + "px";
-    $("#stage").style.height = Math.max(1, Math.min(h, w * 16 / 9)) + "px";
-  }).observe($("#stageWrap"));
-  window.SceneForgeEditor = { getState: () => clone({ items, tracks, time, markers, timelineEditMode, selectedIds:[...selectedIds], assets: assets.map(({ url, ...a }) => a) }), seek: (t) => {
+  new ResizeObserver(fitStage).observe($("#stageWrap"));
+  window.SceneForgeEditor = { getState: () => clone({ frame:projectFrame,items, tracks, time, markers, timelineEditMode, selectedIds:[...selectedIds], assets: assets.map(({ url, ...a }) => a) }), seek: (t) => {
     pause();
     time = clamp(t, 0, total());
     updateStage(true);
@@ -2121,7 +2149,7 @@ const looks = { none: "Gốc", warm: "Ấm", cool: "Lạnh", mono: "Đen trắng
 let booting = true, draftCandidate = null, draftTimer, recording = false, exportCancelled = false, exportAudioContext, exportDestination;
 const audioSources = /* @__PURE__ */ new Map();
 function extraDefaults() {
-  return { subtitle:false,effectTag:"",linkGroup:"",flipX: false, flipY: false, brightness: 100, contrast: 100, saturation: 100, blur: 0, look: "none", fontFamily: "system-ui", outline: 0, outlineColor: "#000000", letterSpacing: 0, textAnimation: "none", animationDuration: 0.5, keyframes: [] };
+  return { subtitle:false,effectTag:"",linkGroup:"",audioBypass:false,audioGainDb:0,audioBass:0,audioMid:0,audioTreble:0,audioHighpass:20,audioLowpass:20000,audioPan:0,audioThreshold:-24,audioRatio:1,audioPreset:"original",audioPreservePitch:true,transitionDirection:"left",transitionEasing:"linear",flipX: false, flipY: false, brightness: 100, contrast: 100, saturation: 100, blur: 0, look: "none", fontFamily: "system-ui", outline: 0, outlineColor: "#000000", letterSpacing: 0, textAnimation: "none", animationDuration: 0.5, keyframes: [] };
 }
 function evaluateProps(i, at = time) {
   const out = Object.fromEntries(transformKeys.map((k) => [k, i[k]]));
@@ -2166,8 +2194,8 @@ function textEffect(i) {
 function styleTextPreview(n, i, v) {
   const f = textEffect(i);
   n.style.fontFamily = i.fontFamily;
-  n.style.letterSpacing = i.letterSpacing / 1080 * 100 + "cqw";
-  n.style.webkitTextStroke = i.outline / 1080 * 100 + "cqw " + i.outlineColor;
+  n.style.letterSpacing = i.letterSpacing / projectFrame.width * 100 + "cqw";
+  n.style.webkitTextStroke = i.outline / projectFrame.width * 100 + "cqw " + i.outlineColor;
   n.style.paintOrder = "stroke fill";
   n.style.opacity = v.opacity * f.opacity;
   n.style.transform = `translate(-50%,-50%) translateY(${f.y}%) rotate(${v.rotation}deg) scale(${v.scale})`;
@@ -2186,6 +2214,9 @@ function sanitizeExtraProp(key, value) {
 }
 function sanitizeRestoredExtras(out, raw) {
   for (const key of ["brightness", "contrast", "saturation", "blur", "outline", "letterSpacing", "animationDuration"]) out[key] = sanitizeExtraProp(key, out[key]);
+  for(const [key,limits]of Object.entries(audioParameterLimits))out[key]=Number.isFinite(out[key])?clamp(out[key],...limits):extraDefaults()[key];
+  out.transitionDirection=['left','right','up','down'].includes(out.transitionDirection)?out.transitionDirection:'left';
+  out.transitionEasing=['linear','easeIn','easeOut','easeInOut'].includes(out.transitionEasing)?out.transitionEasing:'linear';
   out.look = Object.hasOwn(looks, out.look) ? out.look : "none";
   out.fontFamily = fonts.some((f) => f[0] === out.fontFamily) ? out.fontFamily : "system-ui";
   out.textAnimation = ["none", "fade", "rise", "typewriter"].includes(out.textAnimation) ? out.textAnimation : "none";
@@ -2335,7 +2366,7 @@ ${i.text}`).join("\n\n") + "\n"], { type: "application/x-subrip" }));
   notify("Đã xuất tất cả mục chữ thành phụ đề SRT.");
 };
 function projectPayload() {
-  return { format: "sceneforge-timeline", version: 1, tracks, items, markers, timelineSettings:{mode:timelineEditMode,importPlacement:$("#importPlacement").value}, assets: assets.map(({ url, poster, ...a }) => a) };
+  return { format: "sceneforge-timeline", version: 1, tracks, items, markers, frame:projectFrame,timelineSettings:{mode:timelineEditMode,importPlacement:$("#importPlacement").value}, assets: assets.map(({ url, poster, ...a }) => a) };
 }
 function scheduleDraft() {
   if (booting) return;
@@ -2410,9 +2441,9 @@ function drawComposition(canvas) {
     const n = mediaNode(i), v = evaluateProps(i);
     g.save();
     if (i.kind === "text") {
-      const anim = textEffect(i), font = i.fontSize * w / 1080;
+      const anim = textEffect(i), font = i.fontSize * w / projectFrame.width;
       g.font = `${i.bold ? "750" : "400"} ${font}px ${i.fontFamily}`;
-      if ("letterSpacing" in g) g.letterSpacing = i.letterSpacing * w / 1080 + "px";
+      if ("letterSpacing" in g) g.letterSpacing = i.letterSpacing * w / projectFrame.width + "px";
       const lines = textLines(g, animatedText(i), w * 0.95), lineHeight = font * 1.2, width = Math.max(0, ...lines.map((l) => g.measureText(l).width)), height = lines.length * lineHeight;
       g.globalAlpha = v.opacity * anim.opacity;
       g.translate(w * v.textX / 100, h * v.textY / 100 + height * anim.y / 100);
@@ -2427,7 +2458,7 @@ function drawComposition(canvas) {
       g.fillStyle = i.color;
       g.strokeStyle = i.outlineColor;
       g.lineJoin = "round";
-      g.lineWidth = i.outline * w / 1080 * 2;
+      g.lineWidth = i.outline * w / projectFrame.width * 2;
       let x = i.align === "left" ? -width / 2 : i.align === "right" ? width / 2 : 0;
       lines.forEach((line, j) => {
         const y = -height / 2 + lineHeight * (j + 0.5);
@@ -2445,14 +2476,15 @@ function drawComposition(canvas) {
     const effect = transitionState(i);
     g.globalAlpha = v.opacity * effect.opacity;
     if (effect.clip !== "none") {
-      const match = effect.clip.match(/inset\(0 ([\d.]+)%/);
+      const match = effect.clip.match(/inset\(([-\d.]+)%? ([-\d.]+)%? ([-\d.]+)%? ([-\d.]+)%?\)/);
       if (match) {
         g.beginPath();
-        g.rect(0, 0, w * (1 - Number(match[1]) / 100), h);
+        const [top,right,bottom,left]=match.slice(1).map(Number);
+        g.rect(w*left/100,h*top/100,w*(1-left/100-right/100),h*(1-top/100-bottom/100));
         g.clip();
       }
     }
-    g.translate(w / 2 + w * (v.x + effect.dx) / 100, h / 2 + h * v.y / 100);
+    g.translate(w / 2 + w * (v.x + effect.dx) / 100, h / 2 + h * (v.y + effect.dy) / 100);
     g.rotate(v.rotation * Math.PI / 180);
     g.scale(v.scale * (i.flipX ? -1 : 1), v.scale * (i.flipY ? -1 : 1));
     g.filter = visualFilter(i, w / 1080);
@@ -2498,13 +2530,12 @@ $("#captureFrame").onclick = async () => {
     updateStage(true);
     await settleMedia();
     const c = document.createElement("canvas");
-    c.width = 1080;
-    c.height = 1920;
+    c.width=projectFrame.width;c.height=projectFrame.height;
     drawComposition(c);
     const blob = await new Promise((r) => c.toBlob(r, "image/png"));
     if (!blob) throw Error("Không tạo được ảnh");
     downloadBlob("sceneforge-frame-" + time.toFixed(2) + ".png", blob);
-    notify("Đã lưu khung hình 1080 × 1920, gồm chữ và chỉnh màu.");
+    notify(`Đã lưu khung hình ${c.width} × ${c.height}, gồm chữ và chỉnh màu.`);
   } catch (e) {
     notify(e.message);
   }
@@ -2515,32 +2546,32 @@ function refreshExportFormats() {
   $("#realExport").disabled = !options.length;
   $("#codecHint").textContent = options.length ? "Chỉ hiển thị định dạng trình duyệt hỗ trợ. Tối đa 2 phút / lần xuất; 24 fps." : "Trình duyệt này thiếu bộ ghi video. Hãy dùng Chrome/Edge mới hoặc xuất bằng ứng dụng đầy đủ.";
 }
-function routeAudioVolume(i, n, active) {
-  const route = audioSources.get(n);
-  if (!route) return;
-  const t = getTrack(i.trackId), v = evaluateProps(i), elapsed = Math.max(0,time - i.start), remaining = Math.max(0,end(i) - time), fade = Math.min(1, i.fadeIn ? elapsed / i.fadeIn : 1, i.fadeOut ? remaining / i.fadeOut : 1);
-  route.gain.gain.value = active && trackVisible(t) && !t.muted ? clamp(v.volume * fade * transitionAudioGain(i), 0, 1) : 0;
-  n.volume = 1;
-  n.muted = false;
+const audioParameterLimits={audioGainDb:[-24,12],audioBass:[-18,18],audioMid:[-18,18],audioTreble:[-18,18],audioHighpass:[20,1000],audioLowpass:[1000,20000],audioPan:[-100,100],audioThreshold:[-60,0],audioRatio:[1,20]};
+function makeAudioRoute(context,source){
+ const highpass=context.createBiquadFilter(),lowpass=context.createBiquadFilter(),bass=context.createBiquadFilter(),mid=context.createBiquadFilter(),treble=context.createBiquadFilter(),compressor=context.createDynamicsCompressor(),pan=context.createStereoPanner(),gain=context.createGain();
+ highpass.type='highpass';highpass.Q.value=.707;lowpass.type='lowpass';lowpass.Q.value=.707;bass.type='lowshelf';bass.frequency.value=200;mid.type='peaking';mid.frequency.value=1000;mid.Q.value=.8;treble.type='highshelf';treble.frequency.value=4000;compressor.knee.value=20;compressor.attack.value=.003;compressor.release.value=.25;
+ source.connect(highpass);highpass.connect(lowpass);lowpass.connect(bass);bass.connect(mid);mid.connect(treble);treble.connect(compressor);compressor.connect(pan);pan.connect(gain);
+ return{source,highpass,lowpass,bass,mid,treble,compressor,pan,gain};
 }
-async function prepareExportAudio() {
-  if(!items.some(i=>["video","audio"].includes(i.kind)))return [];
-  exportAudioContext = exportAudioContext || new AudioContext();
-  await exportAudioContext.resume();
-  exportDestination = exportDestination || exportAudioContext.createMediaStreamDestination();
-  for (const i of items) {
-    if (!["video", "audio"].includes(i.kind)) continue;
-    const n = mediaNode(i);
-    if (!audioSources.has(n)) {
-      const source = exportAudioContext.createMediaElementSource(n), gain = exportAudioContext.createGain();
-      source.connect(gain);
-      gain.connect(exportAudioContext.destination);
-      gain.connect(exportDestination);
-      audioSources.set(n, { source, gain });
-    }
-    routeAudioVolume(i, n, time >= i.start && time < end(i));
-  }
-  return exportDestination.stream.getAudioTracks();
+function configureAudioRoute(route,i){
+ const number=(key)=>clamp(Number.isFinite(i[key])?i[key]:extraDefaults()[key],...audioParameterLimits[key]);
+ if(i.audioBypass){route.highpass.frequency.value=0;route.lowpass.frequency.value=route.source.context.sampleRate/2;route.bass.gain.value=0;route.mid.gain.value=0;route.treble.gain.value=0;route.pan.pan.value=0;route.compressor.ratio.value=1;return;}
+ route.highpass.frequency.value=number('audioHighpass');route.lowpass.frequency.value=number('audioLowpass');route.bass.gain.value=number('audioBass');route.mid.gain.value=number('audioMid');route.treble.gain.value=number('audioTreble');route.pan.pan.value=number('audioPan')/100;route.compressor.threshold.value=number('audioThreshold');route.compressor.ratio.value=number('audioRatio');
+}
+function releaseAudioRoute(n){const route=audioSources.get(n);if(route){for(const node of Object.values(route))try{node.disconnect();}catch{}audioSources.delete(n);}}
+function routeAudioVolume(i,n,active){
+ if('preservesPitch'in n)n.preservesPitch=i.audioPreservePitch!==false;
+ const route=audioSources.get(n);if(!route)return;configureAudioRoute(route,i);
+ const t=getTrack(i.trackId),v=evaluateProps(i),elapsed=Math.max(0,time-i.start),remaining=Math.max(0,end(i)-time),fade=Math.min(1,i.fadeIn?elapsed/i.fadeIn:1,i.fadeOut?remaining/i.fadeOut:1);
+ route.gain.gain.value=active&&trackVisible(t)&&!t.muted?clamp(v.volume*fade*transitionAudioGain(i),0,1)*Math.pow(10,(i.audioBypass?0:clamp(i.audioGainDb||0,-24,12))/20):0;
+ n.volume=1;n.muted=false;
+}
+async function prepareExportAudio(){
+ if(!items.some(i=>['video','audio'].includes(i.kind)))return [];
+ exportAudioContext=exportAudioContext||new AudioContext();await exportAudioContext.resume();
+ exportDestination=exportDestination||exportAudioContext.createMediaStreamDestination();
+ for(const i of items){if(!['video','audio'].includes(i.kind))continue;const n=mediaNode(i);if(!getAsset(i.assetId)?.url)continue;if(!audioSources.has(n)){const route=makeAudioRoute(exportAudioContext,exportAudioContext.createMediaElementSource(n));route.gain.connect(exportAudioContext.destination);route.gain.connect(exportDestination);audioSources.set(n,route);}routeAudioVolume(i,n,clipActive(i));}
+ return exportDestination.stream.getAudioTracks();
 }
 $("#realExport").onclick = async () => {
   if (recording) return;
@@ -2566,9 +2597,9 @@ $("#realExport").onclick = async () => {
     time = 0;
     updateStage(true);
     await settleMedia();
-    const c = document.createElement("canvas"), width = +$("#exportSize").value;
-    c.width = width;
-    c.height = width * 16 / 9;
+    const c = document.createElement("canvas"), dims=frameDimensions(+$("#exportSize").value),width=dims.width;
+    c.width = dims.width;
+    c.height = dims.height;
     const audioTracks = await prepareExportAudio();
     drawComposition(c);
     stream = c.captureStream(24);
@@ -3139,10 +3170,11 @@ function exportSharedAss(){
  const cues=captionItems();if(!cues.length){notify('Chưa có phụ đề để xuất.');return;}
  const color=value=>'&H00'+value.slice(5,7)+value.slice(3,5)+value.slice(1,3);
  let text='[Script Info]\nScriptType: v4.00+\nPlayResX: 1080\nPlayResY: 1920\nWrapStyle: 0\nScaledBorderAndShadow: yes\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\n';
+ text=text.replace('PlayResX: 1080','PlayResX: '+projectFrame.width).replace('PlayResY: 1920','PlayResY: '+projectFrame.height);
  cues.forEach((cue,index)=>{text+=`Style: Cue${index},Arial,${cue.fontSize},${color(cue.color)},&H00FFFFFF,${color(cue.outlineColor||'#000000')},${color(cue.background||'#101318')},${cue.bold?-1:0},0,0,0,100,100,${cue.letterSpacing||0},0,${cue.textBg?3:1},${cue.textBg?9:cue.outline||0},0,5,0,0,0,1\n`;});
  text+='\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n';
  const stamp=value=>{const cs=Math.round(value*100);return Math.floor(cs/360000)+':'+String(Math.floor(cs/6000)%60).padStart(2,'0')+':'+String(Math.floor(cs/100)%60).padStart(2,'0')+'.'+String(cs%100).padStart(2,'0');};
- cues.forEach((cue,index)=>{text+=`Dialogue: 0,${stamp(cue.start)},${stamp(end(cue))},Cue${index},,0,0,0,,{\\pos(${Math.round(cue.textX*10.8)},${Math.round(cue.textY*19.2)})}`+cue.text.replace(/\\/g,'＼').replace(/{/g,'｛').replace(/}/g,'｝').replace(/\n/g,'\\N')+'\n';});
+ cues.forEach((cue,index)=>{text+=`Dialogue: 0,${stamp(cue.start)},${stamp(end(cue))},Cue${index},,0,0,0,,{\\pos(${Math.round(cue.textX*projectFrame.width/100)},${Math.round(cue.textY*projectFrame.height/100)})}`+cue.text.replace(/\\/g,'＼').replace(/{/g,'｛').replace(/}/g,'｝').replace(/\n/g,'\\N')+'\n';});
  downloadBlob('sceneforge-phu-de.ass',new Blob(['\uFEFF'+text],{type:'text/plain;charset=utf-8'}));notify('ASS giữ thời gian và kiểu chữ cơ bản; keyframe/hiệu ứng cần render trong trình dựng.');
 }
 let migrationAvailable=false;
@@ -3238,7 +3270,7 @@ function paintJoinBlocks(){
 }
 const timelineBeforeJoins=timeline;
 timeline=function(){timelineBeforeJoins();paintJoinBlocks();};
-function selectJoin(id){selectedJoin=id;choose(id);switchInspectorTab('transition');paintJoinBlocks();}
+function selectJoin(id){selectedJoin=id;chooseBeforeLinks(id);switchInspectorTab('transition');paintJoinBlocks();}
 function applyJoin(id,type){const a=items.find(i=>i.id===id),b=a&&joinAfter(a);if(!a||!b||getTrack(a.trackId).locked){notify('Chọn điểm nối giữa hai clip trên track đã mở khóa.');return false;}
  transact(()=>{a.transition=type;a.transitionDuration=Math.min(a.transitionDuration,joinLimit(a,b));});selectJoin(id);return true;}
 // Clicking a palette card is validated against a real neighbour, not an orphan effect.
@@ -3355,6 +3387,118 @@ assembleDialog.onclick=e=>{
   selectedIds=new Set([...members,...linked].map(i=>i.id));selection=members[0].id;
  });assembleDialog.close();$('#fitTimeline').click();notify('Đã xếp '+members.length+' clip nối tiếp, có thể hoàn tác.');
 };
+
+// Visible commands, project geometry, audio DSP and point-of-cut inspector.
+const audioPresets={
+ original:{name:'Gốc',description:'Âm thanh trung tính',patch:{audioGainDb:0,audioBass:0,audioMid:0,audioTreble:0,audioHighpass:20,audioLowpass:20000,audioPan:0,audioThreshold:-24,audioRatio:1}},
+ voice:{name:'Giọng rõ',description:'Giảm tiếng trầm · nhấn giọng',patch:{audioGainDb:0,audioBass:-3,audioMid:3,audioTreble:2,audioHighpass:100,audioLowpass:16000,audioThreshold:-24,audioRatio:3}},
+ warm:{name:'Ấm hơn',description:'Thêm dải trầm · dịu tiếng cao',patch:{audioGainDb:-1,audioBass:5,audioMid:0,audioTreble:-3,audioHighpass:40,audioLowpass:16000,audioThreshold:-24,audioRatio:1}},
+ phone:{name:'Điện thoại',description:'Giới hạn dải 500–3000 Hz',patch:{audioGainDb:0,audioBass:-12,audioMid:3,audioTreble:-12,audioHighpass:500,audioLowpass:3000,audioThreshold:-24,audioRatio:2}},
+ music:{name:'Nhạc nổi',description:'Tăng trầm và cao · nén nhẹ',patch:{audioGainDb:-3,audioBass:4,audioMid:-2,audioTreble:4,audioHighpass:30,audioLowpass:20000,audioThreshold:-18,audioRatio:2}}
+};
+function parameterRow(key,label,min,max,step,value,unit=''){
+ return `<label class="advancedParam"><span>${esc(label)} <small>${unit}</small></span><input type="range" min="${min}" max="${max}" step="${step}" value="${value}" data-audio-param="${key}" aria-label="${esc(label)}"><input type="number" min="${min}" max="${max}" step="${step}" value="${value}" data-audio-param="${key}" aria-label="${esc(label)} · giá trị"></label>`;
+}
+let eqPreviewRoute=null;
+function drawAudioCurve(){
+ const graph=$('#audioEqCurve'),i=selected();if(!graph||!i)return;
+ if(!eqPreviewRoute){const context=new OfflineAudioContext(1,128,48000);eqPreviewRoute=makeAudioRoute(context,context.createBufferSource());}
+ configureAudioRoute(eqPreviewRoute,i);
+ const frequency=Float32Array.from({length:100},(_,n)=>30*Math.pow(20000/30,n/99)),magnitude=new Float32Array(100),phase=new Float32Array(100),sum=new Float32Array(100);
+ for(const filter of [eqPreviewRoute.highpass,eqPreviewRoute.lowpass,eqPreviewRoute.bass,eqPreviewRoute.mid,eqPreviewRoute.treble]){filter.getFrequencyResponse(frequency,magnitude,phase);for(let n=0;n<100;n++)sum[n]+=20*Math.log10(Math.max(.00001,magnitude[n]));}
+ graph.querySelector('path').setAttribute('d',[...sum].map((value,n)=>(n?'L':'M')+(n*2.4).toFixed(1)+','+clamp(42-(value+(i.audioBypass?0:i.audioGainDb))*1.3,3,81).toFixed(1)).join(' '));
+}
+let intervalPreviewToken=0;
+function previewInterval(start,finish){
+ const token=++intervalPreviewToken;effectPreviewToken++;pause();time=clamp(start,0,total());togglePlay();
+ const check=()=>{if(token!==intervalPreviewToken||!playing)return;if(time>=finish){pause();time=Math.min(finish,total());updateStage(true);return;}requestAnimationFrame(check);};requestAnimationFrame(check);
+}
+let audioPaneMode="effects";
+function audioInspectorPanel(){
+ const i=selected(),pane=$('[data-inspector-pane=audio]');if(!i||!pane||selectedIds.size>1||!['video','audio'].includes(i.kind))return;
+ const section=document.createElement('section');section.id='audioEffectsPanel';section.className='advancedInspector';
+ section.innerHTML='<h4>Hiệu ứng âm thanh</h4><p class="inspectorDescription">Áp dụng cho clip đang chọn. Nghe trước và xuất dùng cùng bộ xử lý.</p><div class="audioPresetGrid">'+Object.entries(audioPresets).map(([id,p])=>'<button data-audio-preset="'+id+'" aria-pressed="'+(i.audioPreset===id)+'"><span class="audioPresetIcon">'+uiIcon('music')+'</span><b>'+p.name+'</b><small>'+p.description+'</small></button>').join('')+'</div><svg id="audioEqCurve" viewBox="0 0 240 88" role="img" aria-label="Đường đáp ứng tần số EQ"><line x1="0" y1="42" x2="240" y2="42"/><path fill="none"/><text x="2" y="86">30 Hz</text><text x="100" y="86">1 kHz</text><text x="205" y="86">20 kHz</text></svg><div class="audioAB"><button data-audio-bypass aria-pressed="'+!!i.audioBypass+'">'+(i.audioBypass?'A · Đang nghe gốc':'B · Đang nghe effect')+'</button><button data-audio-preview>▶ Nghe đoạn này</button></div><details open><summary>Mức âm & cân trái–phải</summary>'+parameterRow('audioGainDb','Gain',-24,12,.5,i.audioGainDb,'dB')+parameterRow('audioPan','Cân trái / phải',-100,100,1,i.audioPan,'L ← → R')+'</details><details open><summary>EQ · Cân bằng tần số</summary>'+parameterRow('audioBass','Trầm · 200 Hz',-18,18,.5,i.audioBass,'dB')+parameterRow('audioMid','Trung · 1 kHz',-18,18,.5,i.audioMid,'dB')+parameterRow('audioTreble','Cao · 4 kHz',-18,18,.5,i.audioTreble,'dB')+parameterRow('audioHighpass','Cắt tần số thấp',20,1000,10,i.audioHighpass,'Hz')+parameterRow('audioLowpass','Cắt tần số cao',1000,20000,100,i.audioLowpass,'Hz')+'</details><details><summary>Nén âm lượng · Compressor</summary>'+parameterRow('audioThreshold','Ngưỡng nén',-60,0,1,i.audioThreshold,'dB')+parameterRow('audioRatio','Tỉ lệ nén',1,20,.5,i.audioRatio,':1')+'<p class="inspectorDescription">1:1 tắt nén. Nén giảm chênh lệch giữa đoạn lớn và nhỏ.</p></details><label class="checkLabel"><input type="checkbox" data-audio-pitch '+(i.audioPreservePitch?'checked':'')+'> Giữ cao độ khi đổi tốc độ</label><button class="wide" data-audio-reset>Đặt lại hiệu ứng âm thanh</button><p class="inspectorDescription">Lọc tần số và EQ không phải khử nhiễu AI.</p>';
+ const basic=document.createElement('div');basic.id='audioBasicControls';while(pane.firstChild)basic.append(pane.firstChild);
+ const nav=document.createElement('div');nav.className='audioPaneModes';nav.innerHTML=[['basic','Âm lượng & tốc độ'],['effects','Effect & EQ']].map(([id,label])=>'<button data-audio-view="'+id+'" aria-pressed="'+(audioPaneMode===id)+'">'+label+'</button>').join('');
+ basic.hidden=audioPaneMode!=='basic';section.hidden=audioPaneMode!=='effects';pane.append(nav,basic,section);drawAudioCurve();
+}
+function transitionInspectorPanel(){
+ const i=selected(),pane=$('[data-inspector-pane=transition]');if(!i||!pane||selectedIds.size>1)return;
+ const next=joinAfter(i);if(!next){pane.innerHTML='<div class="contextTip">Chưa có clip liền sau trên cùng track. Đặt hai clip sát nhau để thêm chuyển cảnh.</div>';return;}
+ const names={none:'Cắt thẳng',dissolve:'Hòa hai hình',fade:'Mờ qua đen',slide:'Trượt ngang / dọc',wipe:'Quét khung'},limit=joinLimit(i,next),duration=Math.min(i.transitionDuration,limit);
+ pane.innerHTML='<section id="transitionDetails" class="advancedInspector"><h4>Chuyển cảnh tại điểm nối</h4><div class="joinClipPair">'+[i,next].map((clip,n)=>'<div><img src="'+esc(getAsset(clip.assetId)?.poster||FRAMES[n])+'" alt=""><small>'+(n?'Vào':'Ra')+' · '+esc(clip.name)+'</small></div>').join('')+'</div><p class="inspectorDescription">'+fmt(end(i))+' · '+esc(i.name)+' → '+esc(next.name)+'</p>'+selectField('Kiểu chuyển cảnh','transition',i.transition,Object.entries(names))+field('Thời lượng (giây)','transitionDuration',duration,'number',`min="0.1" max="${limit}" step="0.05"`)+`<input id="joinDurationSlider" type="range" min="0.1" max="${limit}" step="0.05" value="${duration}" aria-label="Độ dài chuyển cảnh trên điểm nối">`+'<label class="advancedSelect">Hướng chuyển<select data-transition-option="transitionDirection" '+(!['slide','wipe'].includes(i.transition)?'disabled':'')+'>'+[['left','← Sang trái'],['right','→ Sang phải'],['up','↑ Lên trên'],['down','↓ Xuống dưới']].map(([id,label])=>'<option value="'+id+'" '+(i.transitionDirection===id?'selected':'')+'>'+label+'</option>').join('')+'</select></label><label class="advancedSelect">Nhịp chuyển<select data-transition-option="transitionEasing" '+(!['dissolve','slide','wipe'].includes(i.transition)?'disabled':'')+'>'+[['linear','Đều'],['easeInOut','Mượt đầu & cuối'],['easeIn','Chậm → nhanh'],['easeOut','Nhanh → chậm']].map(([id,label])=>'<option value="'+id+'" '+(i.transitionEasing===id?'selected':'')+'>'+label+'</option>').join('')+'</select></label><p class="inspectorDescription">Tối đa '+limit.toFixed(2)+' giây theo độ dài hai clip. Có thể kéo hai mép khối chuyển cảnh trên timeline.</p><div class="advancedActions"><button data-transition-preview>▶ Xem điểm nối</button><button data-transition-remove>Bỏ chuyển cảnh</button></div><button id="applyTransitions" class="wide">Áp dụng kiểu & thời lượng cho các điểm nối cùng track</button></section>';
+}
+const inspectorBeforeAdvanced=inspector;
+inspector=function(){inspectorBeforeAdvanced();audioInspectorPanel();transitionInspectorPanel();};
+$('#inspector').addEventListener('input',e=>{
+ const input=e.target,key=input.dataset.audioParam,i=selected();if(key&&i&&input.type==='range'&&!getTrack(i.trackId).locked){if(!input.dataset.history){remember();input.dataset.history='1';}i[key]=clamp(Number(input.value),...audioParameterLimits[key]);i.audioPreset='custom';input.closest('.advancedParam').querySelector('input[type=number]').value=input.value;updateStage();drawAudioCurve();}
+ if(input.id==='joinDurationSlider'&&i&&!getTrack(i.trackId).locked){if(!input.dataset.history){remember();input.dataset.history='1';}const next=joinAfter(i);if(!next)return;i.transitionDuration=clamp(Number(input.value),.1,joinLimit(i,next));$('#prop-transitionDuration').value=i.transitionDuration;paintJoinBlocks();updateStage(true);}
+});
+$('#inspector').addEventListener('change',e=>{
+ const input=e.target,key=input.dataset.audioParam,i=selected();if(!i||getTrack(i.trackId).locked)return;
+ if(key){const value=Number(input.value);if(!Number.isFinite(value))return;if(input.type==='number')transact(()=>{i[key]=clamp(value,...audioParameterLimits[key]);i.audioPreset='custom';});else{delete input.dataset.history;timeline();inspector();scheduleDraft();}drawAudioCurve();}
+ if(input.dataset.audioPitch!==undefined)transact(()=>i.audioPreservePitch=input.checked);
+ if(input.id==='joinDurationSlider'){delete input.dataset.history;timeline();inspector();scheduleDraft();}
+ if(input.dataset.transitionOption){const key=input.dataset.transitionOption,allowed=key==='transitionDirection'?['left','right','up','down']:['linear','easeIn','easeOut','easeInOut'];if(allowed.includes(input.value))transact(()=>i[key]=input.value);}
+});
+$('#inspector').addEventListener('click',e=>{
+ const view=e.target.closest('[data-audio-view]');if(view){audioPaneMode=view.dataset.audioView;$('#audioBasicControls').hidden=audioPaneMode!=='basic';$('#audioEffectsPanel').hidden=audioPaneMode!=='effects';$$('[data-audio-view]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.audioView===audioPaneMode)));return;}
+ const i=selected();if(!i||getTrack(i.trackId).locked)return;
+ const preset=e.target.closest('[data-audio-preset]');if(preset){transact(()=>Object.assign(i,audioPresets[preset.dataset.audioPreset].patch,{audioPreset:preset.dataset.audioPreset,audioBypass:false}));prepareExportAudio().catch(()=>{});}
+ if(e.target.closest('[data-audio-reset]'))transact(()=>Object.assign(i,audioPresets.original.patch,{audioPreset:'original',audioBypass:false}));
+ if(e.target.closest('[data-audio-bypass]'))transact(()=>i.audioBypass=!i.audioBypass);
+ if(e.target.closest('[data-audio-preview]'))previewInterval(i.start,end(i));
+ if(e.target.closest('[data-transition-preview]')){const next=joinAfter(i);if(next){const d=Math.min(i.transitionDuration,joinLimit(i,next));previewInterval(Math.max(i.start,end(i)-d/2-.3),Math.min(end(next),end(i)+d/2+.3));}}
+ if(e.target.closest('[data-transition-remove]'))applyJoin(i.id,'none');
+},false);
+// Preserve visible labels each time the original chrome redecorates icons.
+const timelineControlsBeforeAdvanced=decorateTimelineControls;
+decorateTimelineControls=function(){timelineControlsBeforeAdvanced();decorateButton('split','split','Cắt · Ctrl+B',true);};
+decorateTransport=function(){decorateButton('play',playing?'pause':'play',playing?'Dừng · Space':'Phát · Space',true);};
+const framePresets={'9:16':{width:1080,height:1920},'16:9':{width:1920,height:1080},'1:1':{width:1080,height:1080},'4:5':{width:1080,height:1350}};
+const frameSelect=document.createElement('select');frameSelect.id='projectAspect';frameSelect.setAttribute('aria-label','Tỉ lệ khung hình dự án');frameSelect.innerHTML='<option value="9:16">9:16 · Dọc</option><option value="16:9">16:9 · Ngang</option><option value="1:1">1:1 · Vuông</option><option value="4:5">4:5 · Dọc</option><option value="custom">Tùy chỉnh…</option>';$('.previewHead').append(frameSelect);
+const frameDialog=document.createElement('dialog');frameDialog.id='frameDialog';frameDialog.innerHTML='<h3>Khung hình tùy chỉnh</h3><p>Đổi tỉ lệ toàn bộ bản dựng. Clip giữ cách lấp khung đang chọn.</p><label>Chiều rộng <input id="frameWidth" type="number" min="240" max="3840" step="2"></label><label>Chiều cao <input id="frameHeight" type="number" min="240" max="3840" step="2"></label><p id="frameError" role="status"></p><button id="cancelFrame">Hủy</button><button id="applyFrame">Áp dụng</button>';document.body.append(frameDialog);
+function frameName(){return Object.entries(framePresets).find(([,value])=>value.width===projectFrame.width&&value.height===projectFrame.height)?.[0]||'custom';}
+function updateFrameChrome(){
+ const name=frameName();frameSelect.value=name;const label=projectFrame.width+' × '+projectFrame.height+' · '+(name==='custom'?'Tùy chỉnh':name);
+ $('.previewHead>span:nth-child(2)').textContent=label;const title=$('header strong');title.textContent='SceneForge · Dựng video '+(name==='custom'?'Tùy chỉnh':name);
+ $('#stage').style.aspectRatio=projectFrame.width+' / '+projectFrame.height;
+ $('#exportDialog h2').textContent='Xuất video · '+label;
+ for(const option of $$('#exportSize option')){const d=frameDimensions(Number(option.value));option.textContent=d.width+' × '+d.height;}
+ $('#summary').textContent=$('#summary').textContent.replace(/9:16$/,name==='custom'?projectFrame.width+':'+projectFrame.height:name);
+ const fitLabel=$('label[for=prop-fit]');if(fitLabel)fitLabel.textContent='Cách lấp khung '+(name==='custom'?'tùy chỉnh':name);
+ const sequence=$('.sequenceHead>span small');if(sequence)sequence.textContent=name==='custom'?projectFrame.width+':'+projectFrame.height:name;
+ $('#safe').title='Vùng an toàn · '+label;
+}
+frameSelect.onchange=()=>{if(recording){updateFrameChrome();return;}if(frameSelect.value==='custom'){$('#frameWidth').value=projectFrame.width;$('#frameHeight').value=projectFrame.height;$('#frameError').textContent='';frameDialog.showModal();return;}pause();transact(()=>projectFrame={...framePresets[frameSelect.value]});};
+$('#cancelFrame').onclick=()=>{frameDialog.close();updateFrameChrome();};frameDialog.addEventListener('cancel',()=>queueMicrotask(updateFrameChrome));
+$('#applyFrame').onclick=()=>{const width=Number($('#frameWidth').value),height=Number($('#frameHeight').value);if(!Number.isFinite(width)||!Number.isFinite(height)||width<240||height<240||width>3840||height>3840){$('#frameError').textContent='Mỗi chiều cần từ 240 đến 3840 px.';return;}pause();transact(()=>projectFrame=validFrame({width,height}));frameDialog.close();};
+const decorateBeforeAdvanced=decorateEditorControls;
+decorateEditorControls=function(){decorateBeforeAdvanced();updateFrameChrome();};
+const shortcutsButton=document.createElement('button');shortcutsButton.id='keyboardHelp';shortcutsButton.textContent='⌨ Phím tắt';shortcutsButton.title='Các phím dựng video';$('.transport').append(shortcutsButton);
+const shortcutsDialog=document.createElement('dialog');shortcutsDialog.id='keyboardDialog';shortcutsDialog.innerHTML='<h3>Phím tắt dựng video</h3><dl>'+[['Space / K','Phát hoặc tạm dừng'],['Ctrl / Cmd + B','Cắt các clip đang chọn tại vạch phát'],['← / →','Tua từng khung hình (24 fps)'],['Shift + ← / →','Tua 1 giây'],['Home / End','Về đầu / cuối bản dựng'],['Ctrl / Cmd + Z','Hoàn tác'],['Ctrl / Cmd + Shift + Z','Làm lại'],['Ctrl / Cmd + D','Nhân đôi'],['Delete','Xóa clip hoặc chuyển cảnh đang chọn'],['Ctrl / Cmd + S','Lưu dự án'],['Esc','Hủy kéo / bỏ chọn']].map(([key,label])=>'<dt><kbd>'+key+'</kbd></dt><dd>'+label+'</dd>').join('')+'</dl><p>Phím dựng tạm ngưng khi đang nhập chữ, chỉnh ô số hoặc mở hộp thoại.</p><button id="closeKeyboard">Đóng</button>';document.body.append(shortcutsDialog);
+shortcutsButton.onclick=()=>shortcutsDialog.showModal();$('#closeKeyboard').onclick=()=>shortcutsDialog.close();
+function editorShortcut(e){
+ if(e.defaultPrevented||e.isComposing||e.altKey||['INPUT','TEXTAREA','SELECT'].includes(e.target?.tagName)||e.target?.isContentEditable||$('dialog[open]'))return false;
+ const mod=e.ctrlKey||e.metaKey,key=e.key.toLowerCase();let action;
+ if(recording)return false;
+ if((e.code==='Space'||key===' '||key==='k')&&!mod)action=togglePlay;
+ if(mod&&key==='b')action=()=>commands.split();
+ if(mod&&key==='s')action=()=>$('#saveProject').click();
+ if(mod&&key==='z')action=()=>commands[e.shiftKey?'redo':'undo']();
+ if(mod&&key==='d')action=()=>commands.duplicate();
+ if(mod&&key==='a')action=()=>{selectedIds=new Set(items.map(i=>i.id));selection=items[0]?.id||null;timeline();inspector();updateSelectionSummary();};
+ if(!mod&&['Delete','Backspace'].includes(e.key))action=()=>{if(selectedJoin){applyJoin(selectedJoin,'none');selectedJoin=null;}else commands.delete();};
+ if(!mod&&e.key==='Escape')action=()=>{selectedJoin=null;choose(null);};
+ if(!mod&&['ArrowUp','ArrowDown'].includes(e.key))action=()=>jumpCut(e.key==='ArrowDown'?1:-1);
+
+ if(['ArrowLeft','ArrowRight','Home','End'].includes(e.key)&&!mod)action=()=>{pause();time=e.key==='Home'?0:e.key==='End'?total():clamp(time+(e.key==='ArrowLeft'?-1:1)*(e.shiftKey?1:1/24),0,total());updateStage(true);};
+ if(!action)return false;e.preventDefault();e.stopImmediatePropagation();action();return true;
+}
+window.addEventListener('keydown',editorShortcut,true);
+// Only the same-origin studio may forward keys while its editor tab is visible.
+window.addEventListener('message',e=>{if(e.source!==parent||e.origin!==location.origin||e.data?.type!=='sceneforge:editor-shortcut')return;const k=e.data;editorShortcut({key:String(k.key||''),code:String(k.code||''),ctrlKey:!!k.ctrlKey,metaKey:!!k.metaKey,shiftKey:!!k.shiftKey,target:document.activeElement,preventDefault(){},stopImmediatePropagation(){}});});
+window.SceneForgeEditor.getAudioStatus=()=>({state:exportAudioContext?.state||'idle',routes:audioSources.size});
 
   init();
   booting=false;
