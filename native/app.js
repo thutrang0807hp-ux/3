@@ -25,7 +25,7 @@ const cache=new Map();
 const cacheLimit=matchMedia('(max-width:600px)').matches?2:4;
 const connection=navigator.connection;
 let current=null,requested='media',mode=null,revision=0,idleTimer,loadingTimer,active=true;
-for(const [id,label] of screens){const option=document.createElement('option');option.value=id;option.textContent=label;select.append(option);}
+for(const [id,label] of [...screens,['subtitles','Chữ & phụ đề']]){const option=document.createElement('option');option.value=id;option.textContent=label;select.append(option);}
 const common=[['media',18,42,45,48],['text',65,42,35,48],['stickers',104,42,50,48],['transitions',156,42,69,48],['effects',228,42,49,48],['filters',280,42,42,48],['templates',327,42,65,48],['export',1217,3,78,27],['video-inspector',198,923,79,72],['text-inspector',198,879,79,40],['audio-inspector',198,799,239,72]];
 function pauseVideos(){videos.forEach(video=>video.pause());}
 function pruneCache(){
@@ -51,7 +51,7 @@ function loadScreen(id){
 }
 function warmNext(){
  clearTimeout(idleTimer);
- if(!active||document.hidden||mode!=='explore'||connection?.saveData||/2g/.test(connection?.effectiveType||''))return;
+ if(!active||document.hidden||current==='subtitles'||mode!=='explore'||connection?.saveData||/2g/.test(connection?.effectiveType||''))return;
  idleTimer=setTimeout(()=>{
   if(!active||document.hidden||mode!=='explore')return;
   const next=screens[(screens.findIndex(s=>s[0]===current)+1)%screens.length][0];
@@ -64,9 +64,26 @@ function hotspot(id,left,top,width,height,fn){
  button.setAttribute('aria-label',id==='export'&&current==='export'?'Xem MP4 mẫu đã xuất':'Xem '+label);
  button.dataset.label=label;
  button.style.cssText=`left:${left/14.4}%;top:${top/10}%;width:${width/14.4}%;height:${height/10}%`;
- button.onclick=fn||(()=>showScreen(id));return button;
+ button.onclick=fn||(()=>showScreen(id==='text'?'subtitles':id));return button;
+}
+function captionWorkspace(open){
+ const section=document.querySelector('#subtitles');section.hidden=!open;
+ viewer.classList.toggle('subtitles-open',open);img.hidden=open;spots.hidden=open;
+ document.querySelector('.hint').textContent=open?'Bấm phụ đề trên timeline để sửa hoặc tua':'Bấm các tab hoặc clip được đánh dấu trong hình';
+ document.querySelector('#captionToolButton').setAttribute('aria-pressed',String(open));
+ if(!open)document.querySelector('#captionVideo').pause();
 }
 async function showScreen(id,writeUrl=true){
+ if(id==='subtitles'){
+  ++revision;clearTimeout(idleTimer);clearTimeout(loadingTimer);loading.hidden=true;status.hidden=true;
+  viewer.setAttribute('aria-busy','false');current=requested='subtitles';select.value='subtitles';
+  showMode('explore');captionWorkspace(true);
+  title.textContent='Chữ & phụ đề';description.textContent='Mẫu chữ bên trái · xem trước ở giữa · sửa câu bên phải · phụ đề trên timeline phía dưới.';
+  notice.textContent='Chỉnh phụ đề ngay trong khung dựng';
+  if(writeUrl)history.replaceState(null,'','#subtitles');
+  document.dispatchEvent(new Event('sceneforge:open-subtitles'));return;
+ }
+
  const item=screens.find(s=>s[0]===id)||screens[0];requested=item[0];select.value=requested;
  if(current===requested){++revision;clearTimeout(loadingTimer);viewer.setAttribute('aria-busy','false');loading.hidden=true;status.hidden=true;if(writeUrl&&location.hash!=='#'+current)history.replaceState(null,'','#'+current);return;}
  const ticket=++revision;
@@ -76,7 +93,7 @@ async function showScreen(id,writeUrl=true){
  try{
   const picture=await loadScreen(requested);
   if(ticket!==revision)return;
-  current=item[0];picture.alt='Cửa sổ Concat gốc — '+item[1];
+  current=item[0];captionWorkspace(false);picture.hidden=false;picture.alt='Cửa sổ Concat gốc — '+item[1];
   if(img!==picture){img.replaceWith(picture);picture.id='screenImage';img.removeAttribute('id');img=picture;}
   title.textContent=item[1];description.textContent=item[2];notice.textContent='Đang xem '+item[1];
   const buttons=current==='export'?[hotspot('media',1397,8,35,35),hotspot('export',989,949,324,38,()=>showMode('output'))]:common.map(s=>hotspot(...s));
@@ -93,19 +110,19 @@ async function showScreen(id,writeUrl=true){
  }
 }
 function showMode(next){
- if(!['explore','recording','output','subtitles'].includes(next)||next===mode)return;
+ if(!['explore','recording','output'].includes(next)||next===mode)return;
  mode=next;clearTimeout(idleTimer);pauseVideos();
  tabs.forEach(button=>{button.setAttribute('aria-selected',String(button.dataset.mode===mode));button.tabIndex=button.dataset.mode===mode?0:-1;});
- for(const id of ['explore','recording','output','subtitles'])document.getElementById(id).hidden=id!==mode;
- if(mode==='subtitles'){
-  document.dispatchEvent(new Event('sceneforge:open-subtitles'));
- }else if(mode!=='explore'){
-  const video=document.querySelector(mode==='recording'?'#desktopVideo':mode==='subtitles'?'#captionVideo':'#resultVideo');
-  if(!video.getAttribute('src')){video.src=video.dataset.src;video.preload=mode==='subtitles'?'auto':'metadata';video.load();}
+ for(const id of ['explore','recording','output'])document.getElementById(id).hidden=id!==mode;
+ if(mode!=='explore'){
+  const video=document.querySelector(mode==='recording'?'#desktopVideo':'#resultVideo');
+  if(!video.getAttribute('src')){video.src=video.dataset.src;video.preload='metadata';video.load();}
  }else warmNext();
  notice.textContent=mode==='explore'?'Khám phá các bảng giao diện':mode==='recording'?'Video thao tác thật':mode==='subtitles'?'Chỉnh phụ đề':'MP4 mẫu đã xuất';
 }
 select.onchange=()=>showScreen(select.value);
+document.querySelector('#captionToolButton').onclick=()=>showScreen('subtitles');
+for(const button of document.querySelectorAll('[data-native-panel]'))button.onclick=()=>showScreen(button.dataset.nativePanel);
 retry.onclick=()=>showScreen(requested);
 document.querySelector('#nextScreen').onclick=()=>{const index=screens.findIndex(s=>s[0]===requested);showScreen(screens[(index+1)%screens.length][0]);};
 document.querySelector('#guides').onchange=e=>viewer.classList.toggle('guided',e.target.checked);
@@ -119,6 +136,6 @@ window.addEventListener('message',event=>{
 document.addEventListener('visibilitychange',()=>{if(document.hidden){clearTimeout(idleTimer);pauseVideos();}else warmNext();});
 window.addEventListener('pagehide',pauseVideos);
 window.addEventListener('hashchange',()=>showScreen(location.hash.slice(1),false));
-showMode(new URLSearchParams(location.search).get('tool')==='subtitles'?'subtitles':'explore');showScreen(location.hash.slice(1)||'media',false);
+showMode('explore');showScreen(new URLSearchParams(location.search).get('tool')==='subtitles'?'subtitles':location.hash.slice(1)||'media',false);
 
 })();

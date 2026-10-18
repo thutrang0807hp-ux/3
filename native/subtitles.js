@@ -61,10 +61,24 @@ function applyStyle(){
  $('#captionSize').value=state.size;$('#captionSizeLabel').value=state.size;$('#captionPosition').value=String(state.position);
 }
 function clock(seconds){const ms=Math.max(0,Math.round(seconds*100));return String(Math.floor(ms/6000)).padStart(2,'0')+':'+String(Math.floor(ms/100)%60).padStart(2,'0')+'.'+String(ms%100).padStart(2,'0');}
+function timelineDuration(){return Number.isFinite(video.duration)&&video.duration>0?video.duration:12;}
+function seekCue(index){const cue=state.cues[index];if(!cue||!Number.isFinite(cue.start))return;video.pause();video.currentTime=cue.start;sync();const row=list.children[index];if(row){list.scrollTop=row.offsetTop-list.firstElementChild.offsetTop;row.querySelector('textarea')?.focus({preventScroll:true});}}
+function renderTimeline(){
+ const duration=timelineDuration(),ruler=$('#captionRuler'),track=$('#captionSubtitleTrack');ruler.replaceChildren();track.replaceChildren();
+ const step=duration<=20?2:Math.ceil(duration/8);
+ for(let t=0;t<duration;t+=step){const label=document.createElement('span');label.style.left=t/duration*100+'%';label.textContent=clock(t);ruler.append(label);}
+ state.cues.forEach((cue,index)=>{if(!Number.isFinite(cue.start)||!Number.isFinite(cue.end)||cue.end<=cue.start)return;const button=document.createElement('button');button.textContent=cue.text;button.dataset.cue=index;button.setAttribute('aria-label','Phụ đề câu '+(index+1)+': '+cue.text);button.style.left=Math.max(0,Math.min(100,cue.start/duration*100))+'%';button.style.width=Math.max(0,Math.min(duration,cue.end)-Math.max(0,cue.start))/duration*100+'%';button.onclick=()=>seekCue(index);track.append(button);});
+ $('#captionTimelineVideo').textContent=$('#captionSource').textContent;
+ ruler.setAttribute('role','slider');ruler.tabIndex=0;ruler.setAttribute('aria-valuemin','0');ruler.setAttribute('aria-valuemax',String(duration));
+}
+$('#captionRuler').onclick=event=>{const rect=event.currentTarget.getBoundingClientRect();video.currentTime=Math.max(0,Math.min(timelineDuration(),(event.clientX-rect.left)/rect.width*timelineDuration()));sync();};
+$('#captionRuler').onkeydown=event=>{let time=video.currentTime;if(event.key==='ArrowLeft')time-=.1;else if(event.key==='ArrowRight')time+=.1;else if(event.key==='Home')time=0;else if(event.key==='End')time=timelineDuration();else return;event.preventDefault();video.currentTime=Math.max(0,Math.min(timelineDuration(),time));sync();};
+$('#captionTimelineVideo').onclick=()=>{video.pause();video.currentTime=0;sync();};
+$('#captionTimelineZoom').oninput=event=>{$('#captionTimeline').style.width=Number(event.target.value)*100+'%';};
 function sync(){
- const t=video.currentTime||0;$('#captionClock').textContent=clock(t);
+ const t=video.currentTime||0;$('#captionPlayhead').style.left=Math.min(100,t/timelineDuration()*100)+'%';$('#captionRuler').setAttribute('aria-valuenow',String(t));$('#captionClock').textContent=clock(t);
  const index=state.cues.findIndex(c=>Number.isFinite(c.start)&&t>=c.start&&t<c.end);
- if(index!==active){if(active>=0)list.children[active]?.classList.remove('is-current');if(index>=0)list.children[index]?.classList.add('is-current');active=index;}
+ if(index!==active){if(active>=0)list.children[active]?.classList.remove('is-current');if(index>=0)list.children[index]?.classList.add('is-current');active=index;$('#captionSubtitleTrack').querySelectorAll('[data-cue]').forEach(button=>button.classList.toggle('is-current',Number(button.dataset.cue)===index));}
  const text=index>=0?state.cues[index].text:'';
  if(live.textContent!==text)live.textContent=text;
  overlay.hidden=!text;
@@ -75,7 +89,7 @@ function render(){
  applyStyle();list.replaceChildren();active=-1;
  state.cues.forEach((cue,index)=>{
   const row=document.createElement('div');row.className='sub-cue';row.dataset.index=index;
-  const seek=document.createElement('button');seek.className='cue-seek';seek.textContent=String(index+1).padStart(2,'0');seek.setAttribute('aria-label','Xem câu '+(index+1));seek.onclick=()=>{video.pause();video.currentTime=cue.start;sync();};
+  const seek=document.createElement('button');seek.className='cue-seek';seek.textContent=String(index+1).padStart(2,'0');seek.setAttribute('aria-label','Xem câu '+(index+1));seek.onclick=()=>seekCue(index);
   const body=document.createElement('div');body.className='cue-body';
   const text=document.createElement('textarea');text.value=cue.text;text.maxLength=1000;text.dataset.field='text';text.setAttribute('aria-label','Nội dung câu '+(index+1));
   const times=document.createElement('div');times.className='cue-times';
@@ -87,14 +101,14 @@ function render(){
   const remove=document.createElement('button');remove.className='cue-delete';remove.textContent='×';remove.setAttribute('aria-label','Xóa câu '+(index+1));remove.onclick=()=>commit(()=>state.cues.splice(index,1));
   row.append(seek,body,remove);list.append(row);
  });
- $('#captionCount').textContent=state.cues.length;updateButtons();sync();
+ $('#captionCount').textContent=state.cues.length;renderTimeline();updateButtons();sync();
 }
 list.addEventListener('focusin',event=>{if(event.target.dataset.field)pending=snapshot();});
 list.addEventListener('input',event=>{
  const field=event.target.dataset.field;if(!field)return;
  const cue=state.cues[Number(event.target.closest('[data-index]').dataset.index)];
  cue[field]=field==='text'?event.target.value:(event.target.value===''?null:Number(event.target.value));
- sync();const error=updateButtons();feedback(error?.message||'');
+ renderTimeline();active=-1;sync();const error=updateButtons();feedback(error?.message||'');
 });
 list.addEventListener('change',event=>{if(!event.target.dataset.field)return;if(pending)remember(pending);pending=snapshot();});
 $('#captionUndo').onclick=()=>{if(!undo.length)return;redo.push(snapshot());state=JSON.parse(undo.pop());render();save();feedback('Đã hoàn tác.');};
@@ -165,7 +179,7 @@ $('#captionExportAss').onclick=()=>{
  download(header+body+'\n','ass');feedback('Đã tải ASS với kiểu chữ. Đây chưa phải MP4 đã gắn phụ đề.');
 };
 video.addEventListener('play',()=>{stopFrames();tick();});video.addEventListener('pause',()=>{stopFrames();sync();});video.addEventListener('ended',stopFrames);
-for(const name of ['timeupdate','seeked','loadedmetadata'])video.addEventListener(name,()=>{sync();if(name==='loadedmetadata'){const error=updateButtons();if(error)feedback(error.message);}});
+for(const name of ['timeupdate','seeked','loadedmetadata'])video.addEventListener(name,()=>{sync();if(name==='loadedmetadata'){renderTimeline();active=-1;sync();const error=updateButtons();if(error)feedback(error.message);}});
 document.addEventListener('visibilitychange',()=>{if(document.hidden)stopFrames();});
 window.addEventListener('pagehide',event=>{stopFrames();clearTimeout(persistTimer);if(!validate())try{localStorage.setItem(storageKey,snapshot());}catch{};if(blobUrl&&!event.persisted)URL.revokeObjectURL(blobUrl);});
 restoreSaved();render();
