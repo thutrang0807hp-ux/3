@@ -571,7 +571,7 @@ renderAlternate=function(){
  let pane=$('#editorPreviewPane');
  if(!pane){
   pane=document.createElement('section');pane.id='editorPreviewPane';pane.className='alternate-view';
-  pane.innerHTML='<iframe id="standaloneEditorDemo" title="Dựng video · Xem thử Concat gốc" allow="autoplay; fullscreen" src="./native/?embedded=1&amp;v=928c52c3473a"></iframe>';
+  pane.innerHTML='<iframe id="standaloneEditorDemo" title="Dựng video · Xem thử Concat gốc" allow="autoplay; fullscreen" src="./native/?embedded=1&amp;v=15e557c65d12"></iframe>';
   if(new URLSearchParams(location.search).get('tool')==='subtitles'){const frame=pane.querySelector('iframe');const url=new URL(frame.src);url.searchParams.set('tool','subtitles');frame.src=url.href;}
   $('#alternateView').after(pane);
  }
@@ -591,4 +591,18 @@ document.addEventListener('keydown',event=>{
 const initialView=location.hash.slice(1);
 if(['overview','library','analysis','queue','settings','editor'].includes(initialView))switchView(initialView);
 window.addEventListener('hashchange',()=>{const v=location.hash.slice(1);if(['overview','library','analysis','queue','settings','editor'].includes(v)&&v!==currentView)switchView(v);});
+</script><script>// The analysis tab owns one persistent workflow, like the existing editor tab.
+const workflowStyle=document.createElement('style');workflowStyle.textContent='body.workflow-open .app-rail,body.workflow-open #analysisWorkspace,body.workflow-open .studio-footer,body.workflow-open .studio-topbar{display:none!important}#workflowPane{position:fixed;left:0;right:0;top:0;bottom:0;z-index:4;background:#101113}#workflowFrame{border:0;width:100%;height:100%;display:block}@media(max-width:550px){#workflowPane{left:0;z-index:6}}';document.head.append(workflowStyle);
+const workflowPreviousSwitch=switchView;
+switchView=function(view){workflowPreviousSwitch(view);document.body.classList.toggle('workflow-open',view==='analysis');let pane=$('#workflowPane');if(view==='analysis'){if(!pane){pane=document.createElement('section');pane.id='workflowPane';pane.innerHTML='<iframe id="workflowFrame" title="Tạo video · sơ đồ phân tích và duyệt cảnh" allow="autoplay" src="./workflow.html?v=2ee71d44d96b"></iframe>';document.body.append(pane);}pane.hidden=false;$('#analysisWorkspace').hidden=true;$('#alternateView').hidden=true;}else if(pane){pane.hidden=true;pane.querySelector('iframe').contentWindow.postMessage({type:'sceneforge:workflow-pause'},location.origin);}};
+for(const button of document.querySelectorAll('[data-nav=analysis]')){const label=button.querySelector('span');if(label)label.textContent='Tạo video';}
+let workflowTransferBusy=false;
+window.addEventListener('message',async e=>{
+ const frame=$('#workflowFrame');if(e.origin!==location.origin||e.source!==frame?.contentWindow)return;
+ if(e.data?.type==='sceneforge:workflow-navigate'&&['editor','overview'].includes(e.data.view)){switchView(e.data.view);return;}
+ if(e.data?.type!=='sceneforge:workflow-open-editor'||workflowTransferBusy)return;workflowTransferBusy=true;
+ try{const payload=e.data.payload;if(!Array.isArray(payload?.clips)||!payload.clips.length||payload.clips.length>300)throw Error('Dữ liệu clip không hợp lệ.');switchView('editor');const editor=$('#standaloneEditorDemo');await new Promise((resolve,reject)=>{const started=Date.now(),check=()=>{try{if(editor.contentWindow?.SceneForgeEditor?.getReadiness()?.workflowImport){resolve();return;}}catch{}if(Date.now()-started>25000){reject(Error('Trình dựng chưa sẵn sàng. Hãy thử lại.'));return;}setTimeout(check,100);};check();});const id=crypto.randomUUID();await new Promise((resolve,reject)=>{const timer=setTimeout(()=>{window.removeEventListener('message',ack);reject(Error('Chưa nhận được kết quả nhập clip. Kiểm tra tab Dựng trước khi thử lại.'));},60000);function ack(event){if(event.source!==editor.contentWindow||event.origin!==location.origin||event.data?.type!=='sceneforge:workflow-import-ack'||event.data.id!==id)return;clearTimeout(timer);window.removeEventListener('message',ack);event.data.error?reject(Error(event.data.error)):resolve();}window.addEventListener('message',ack);editor.contentWindow.postMessage({type:'sceneforge:workflow-import',id,payload},location.origin);});frame.contentWindow.postMessage({type:'sceneforge:workflow-import-result'},location.origin);
+ }catch(err){frame.contentWindow.postMessage({type:'sceneforge:workflow-import-result',error:err.message},location.origin);toast(err.message);}finally{workflowTransferBusy=false;}
+});
+if(currentView==='analysis')switchView('analysis');
 </script></body></html>
