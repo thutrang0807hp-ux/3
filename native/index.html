@@ -3645,21 +3645,20 @@ window.addEventListener('message',async event=>{
  importingWorkflow=true;const addedUrls=[];
  try{
   if(!Array.isArray(payload?.clips)||!payload.clips.length||payload.clips.length>300)throw Error('Danh sách clip không hợp lệ.');
-  const newAssets=[],newItems=[],videoTrack={id:uid(),kind:'video',name:'Video từ Tạo video'},voiceTrack={id:uid(),kind:'audio',name:'Giọng đọc chung'},captionTrack={id:uid(),kind:'text',name:'Phụ đề từ kịch bản'};
+  const newAssets=[],newItems=[],videoTrack={id:uid(),kind:'video',name:'Video từ Tạo video'},captionTrack={id:uid(),kind:'text',name:'Phụ đề từ kịch bản'};
   const newTracks=[videoTrack];let at=0;
   for(const [index,c]of payload.clips.entries()){
    if(!(c.file instanceof Blob)||!Number.isFinite(c.duration)||c.duration<.2||c.duration>600||!Number.isFinite(c.sourceDuration)||c.sourceDuration<.2||Math.abs(c.start-at)>.05)throw Error('Thời lượng/mốc clip không hợp lệ.');
    if(at+c.duration>3600)throw Error('Bản dựng tối đa 60 phút.');
    const url=URL.createObjectURL(c.file);addedUrls.push(url);
    const asset={id:uid(),kind:'video',name:String(c.name||'Cảnh '+(index+1)).slice(0,250),duration:c.sourceDuration,url,poster:c.poster||FRAMES[0]};newAssets.push(asset);
-   const videoDuration=Math.min(c.duration,c.sourceDuration),item={...defaults('video'),id:uid(),assetId:asset.id,trackId:videoTrack.id,kind:'video',name:asset.name,start:at,duration:videoDuration,volume:payload.voice?0:1};newItems.push(item);
+   const videoDuration=Math.min(c.duration,c.sourceDuration),item={...defaults('video'),id:uid(),assetId:asset.id,trackId:videoTrack.id,kind:'video',name:asset.name,start:at,duration:videoDuration,volume:1};newItems.push(item);
    const gap=c.duration-videoDuration;if(gap>.0001){
     if(typeof c.tail!=='string'||!/^data:image\/(jpeg|png|webp);base64,/.test(c.tail))throw Error('Thiếu ảnh cuối để giữ khung cho clip ngắn.');
     const still={id:uid(),kind:'image',name:asset.name+' · giữ khung cuối',duration:gap,url:c.tail,poster:c.tail};newAssets.push(still);newItems.push({...defaults('image'),id:uid(),kind:'image',assetId:still.id,trackId:videoTrack.id,name:still.name,start:at+videoDuration,duration:gap});
    }
    at+=c.duration;
   }
-  if(payload.voice){const v=payload.voice;if(!(v.file instanceof Blob)||!Number.isFinite(v.duration)||v.duration<.2)throw Error('Tệp giọng đọc không hợp lệ.');const url=URL.createObjectURL(v.file);addedUrls.push(url);const a={id:uid(),kind:'audio',name:String(v.name||'Giọng đọc'),duration:v.duration,url};newAssets.push(a);newTracks.push(voiceTrack);newItems.push({...defaults('audio'),id:uid(),kind:'audio',assetId:a.id,trackId:voiceTrack.id,name:a.name,start:0,duration:Math.min(at,v.duration)});}
   if(Array.isArray(payload.captions)&&payload.captions.length){if(payload.captions.length>1000)throw Error('Quá nhiều câu phụ đề.');newTracks.push(captionTrack);for(const c of payload.captions){if(!Number.isFinite(c.start)||!Number.isFinite(c.end)||c.start<0||c.end<=c.start||c.end>at+.05)throw Error('Mốc phụ đề vượt bản dựng.');newItems.push({...defaults('text'),subtitle:true,id:uid(),kind:'text',assetId:null,trackId:captionTrack.id,name:String(c.text).slice(0,50),text:String(c.text).slice(0,500),start:c.start,duration:c.end-c.start,fontSize:52,textY:82,textBg:true,outline:1});}}
   pause();transact(()=>{assets.push(...newAssets);tracks=newTracks;items=newItems;projectFrame={width:1080,height:1920};markers=[];selection=newItems[0]?.id||null;selectedIds=new Set(selection?[selection]:[]);time=0;});
   if($('#fitTimeline'))$('#fitTimeline').click();notify('Đã đưa '+payload.clips.length+' clip vào timeline. Giữ đúng mốc cảnh; một lần hoàn tác để về bản dựng trước.');ack(null);
