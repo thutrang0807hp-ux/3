@@ -1,0 +1,4 @@
+Gemini watermark processing: GargantuaX/gemini-watermark-remover, commit dcf688f34f4d05cc1c33236d104b4624314748ed (MIT).
+MP4/WebCodecs: mediabunny 1.46.0 (MPL-2.0).
+Exact vendored sources: gwr-source.zip and mediabunny-1.46.0-source.zip (alongside this notice). No modifications to vendored code.
+Upstream source: https://github.com/GargantuaX/gemini-watermark-remover and https://github.com/Vanilagy/mediabunny/tree/v1.46.0
