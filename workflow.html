@@ -20,6 +20,8 @@
 
 #minimap i.minimapSelected{background:var(--lime);border-color:#f0ff98;box-shadow:0 0 0 1px #d4f53c80;z-index:2}
 #usageStrip{height:36px;display:flex;align-items:center;gap:18px;padding:0 20px;border-bottom:1px solid #31372c;background:#191e18;white-space:nowrap;overflow-x:auto;font-size:10px}#usageStrip>button{font-size:10px;padding:3px 7px;flex-shrink:0}#usageStrip span{color:#a4ada0}#usageStrip b{color:#dde6d2;font-weight:500}#usageStrip small{color:#8d9787;margin-left:auto;font-size:9px}#viewport,#details{top:190px}.renderErrorBox{margin-top:10px;padding:9px 10px;border:1px solid #a84f49;border-radius:7px;background:#382221;color:#ffd3cd;display:grid;gap:5px;font-size:10px;overflow-wrap:anywhere}.renderErrorBox strong{font-size:10px}.renderErrorBox span{white-space:pre-wrap}.node>.renderErrorBox{margin:0 10px 10px}@media(max-width:760px){#viewport,#details{top:226px}#usageStrip{gap:12px;padding:0 10px}#usageStrip small{display:none}}
+
+.errorPreview small{color:#e0a39a;font-size:9px}.errorPreview button{justify-self:start;font-size:9px;background:transparent;border-color:#a84f49;color:#ffd3cd}
 </style></head><body>
 <header class="topbar"><a class="brand" href="#" data-action="fit">✳ <b>SceneForge</b></a><nav><button data-action="projects">Dự án</button><button class="active">Tạo video</button><button data-action="editor">Dựng ↗</button></nav><div class="topright"><span class="connection"><i></i> Flow · chưa kết nối</span><button data-action="export">↓ Lưu dự án</button><button data-action="cancel">Dừng</button><button data-action="new">＋ Bản mới</button></div></header>
 <section class="branchbar"><button data-branch="reference">▸ Từ video mẫu</button><button data-branch="photos">▧ Từ ảnh & ý tưởng</button><span id="branchExplanation"></span><button data-action="choose-workflow">Đổi không gian</button></section><section id="workflowChooser" hidden></section>
@@ -279,14 +281,20 @@ document.addEventListener('change',e=>{const key=e.target.dataset.vo,allowed={mo
 const wiresWithoutVoiceOver=drawWires;
 drawWires=function(){wiresWithoutVoiceOver();const a=$('#node-voice-over'),b=$('#node-merge');if(!a||!b)return;const x=a.offsetLeft+a.offsetWidth/2,y=a.offsetTop,xx=b.offsetLeft+b.offsetWidth/2,yy=b.offsetTop+b.offsetHeight;$('#wires').insertAdjacentHTML('beforeend','<path class="wire voice" data-from="node-voice-over" data-to="node-merge" d="M '+x+' '+y+' C '+(x+70)+' '+(y-30)+', '+(xx+70)+' '+(yy+30)+', '+xx+' '+yy+'"/>');};
 
+// A visual-only error preview; never persisted as a real project error.
+let errorPreview=new URLSearchParams(location.search).get('demoError')==='1';
+function errorPreviewBox(){return '<div class="renderErrorBox errorPreview" role="status"><strong>⚠ Không tạo được video</strong><span>Kết nối bị gián đoạn. Vui lòng thử lại.</span><small>Lỗi minh họa · không gửi render</small><button class="plain" data-action="error-preview">Tắt minh họa</button></div>';}
+function focusErrorPreview(){requestAnimationFrame(()=>requestAnimationFrame(()=>{const n=$('.errorPreview')?.closest('.node');if(!n)return;selectCanvasNode(n.id);view.z=Math.min(1,($('#viewport').clientWidth-44)/n.offsetWidth);view.x=($('#viewport').clientWidth-n.offsetWidth*view.z)/2-n.offsetLeft*view.z;view.y=34-n.offsetTop*view.z;applyView();}));}
+actions['error-preview']=()=>{errorPreview=!errorPreview;render();if(errorPreview)focusErrorPreview();};
 // Keep errors inline; old task records remain stored but have no management UI.
 const renderErrorNames={network:'Lỗi kết nối',session:'Hết phiên đăng nhập',quota:'Hết hạn mức',rejected:'Yêu cầu bị từ chối',other:'Tạo clip bị lỗi'};
 function renderStatus(s){const errors=[];
  if(s.renderError){const error=s.renderError;errors.push(typeof error==='string'?error:String(error.message||'Không tạo được clip.'));}
  for(const p of clipParts(s)){const t=s.renderTasks?.[p.id]?.at(-1);if(t?.status!=='error'||(s.clearedRenderErrors?.[p.id]??-1)>=(t.updatedAt||t.createdAt||0))continue;const label=clipParts(s).length>1?'Clip '+(s.index+1)+p.id+': ':'';errors.push(label+(t.message||renderErrorNames[t.errorCode]||'Không tạo được clip.'));}
  if(s.importError)errors.push('Không nhập được clip: '+s.importError.message);
- if(!errors.length)return '';
- return '<div class="renderErrorBox" role="alert"><strong>⚠ Video bị lỗi</strong>'+[...new Set(errors)].map(message=>'<span>'+esc(message)+'</span>').join('')+'</div>';
+ const preview=errorPreview&&s===project.scenes[0]?errorPreviewBox():'';
+ if(!errors.length)return preview;
+ return '<div class="renderErrorBox" role="alert"><strong>⚠ Video bị lỗi</strong>'+[...new Set(errors)].map(message=>'<span>'+esc(message)+'</span>').join('')+'</div>'+preview;
 }
 const clipWithoutStatus=clipNode;
 clipNode=function(s,i,y){return clipWithoutStatus(s,i,y).replace('<div class="clipVersion">',renderStatus(s)+'<div class="clipVersion">');};
@@ -298,11 +306,16 @@ addClip=async function(file,target){const projectId=project.id,s=project.scenes.
 const usageKey='sceneforge-manual-usage-v1';let usageRecord={flow:null,ai:null,aiUnit:'lượt',updatedAt:null};
 try{const r=JSON.parse(localStorage.getItem(usageKey)||'null');if(r&&typeof r==='object')for(const k of ['flow','ai','updatedAt'])if(r[k]===null||typeof r[k]==='number'&&Number.isFinite(r[k])&&r[k]>=0)usageRecord[k]=r[k];}catch{}
 function estimatedCredits(){let value=0,missing=false;for(const s of project.scenes){const count=clipParts(s).filter(p=>!chosenClip(s,p.id)).length;if(!count)continue;const cost=project.settings?.costs?.[s.model];if(typeof cost!=='number'||!Number.isFinite(cost)||cost<0)missing=true;else value+=cost*count;}return{value,missing};}
-function updateUsage(){const e=estimatedCredits();$('#usageStrip').innerHTML='<button data-action="usage">Hạn mức ⌄</button><span>Flow: <b>'+ (usageRecord.flow===null?'chưa biết':esc(usageRecord.flow)+' credit · tự nhập')+'</b></span><span>AI phân tích: <b>'+(usageRecord.ai===null?'chưa biết':esc(usageRecord.ai)+' lượt · tự nhập')+'</b></span><small>'+ (usageRecord.updatedAt?'Tự cập nhật '+new Date(usageRecord.updatedAt).toLocaleString('vi-VN'):'Chưa kết nối · chưa xác minh')+'</small><button class="plain" data-action="costs">Dự kiến: '+(e.missing?'chưa đủ giá':e.value+' credit')+' ⓘ</button>';}
+function updateUsage(){const e=estimatedCredits();$('#usageStrip').innerHTML='<button data-action="usage">Hạn mức ⌄</button><button class="plain" data-action="error-preview">'+(errorPreview?'Tắt lỗi mẫu':'Xem lỗi mẫu')+'</button><span>Flow: <b>'+ (usageRecord.flow===null?'chưa biết':esc(usageRecord.flow)+' credit · tự nhập')+'</b></span><span>AI phân tích: <b>'+(usageRecord.ai===null?'chưa biết':esc(usageRecord.ai)+' lượt · tự nhập')+'</b></span><small>'+ (usageRecord.updatedAt?'Tự cập nhật '+new Date(usageRecord.updatedAt).toLocaleString('vi-VN'):'Chưa kết nối · chưa xác minh')+'</small><button class="plain" data-action="costs">Dự kiến: '+(e.missing?'chưa đủ giá':e.value+' credit')+' ⓘ</button>';}
 actions.usage=()=>{const e=estimatedCredits();modal('Hạn mức & credit','<div class="detailNotice">Flow và AI chưa kết nối. Chưa đọc được số dư, hạn mức thật, thời điểm reset hay phí của lần lỗi. Số bên dưới do bạn tự nhập, không được tự trừ khi chuẩn bị/thử lại.</div><label class="compactField">Flow · số credit còn lại tự kiểm tra<input id="usageFlow" type="number" min="0" step="any" placeholder="Chưa biết" value="'+(usageRecord.flow??'')+'"></label><label class="compactField">AI phân tích · số lượt còn lại tự kiểm tra<input id="usageAI" type="number" min="0" step="1" placeholder="Chưa biết" value="'+(usageRecord.ai??'')+'"></label><p>Chỉ nhập số lượt nếu nhà cung cấp có hiển thị. Hạn mức token/RPM/chi phí không tự quy đổi thành lượt.</p><p>Credit dự kiến cho các phần chưa có clip: <b>'+(e.missing?'Chưa đủ đơn giá':e.value+' credit')+'</b>. Dùng mức bạn nhập trong “Credit tham khảo”; không phải báo giá đã xác minh, không bao gồm lần thử lại hoặc tạo thêm phiên bản.</p><p>Ghi nhận gần nhất: '+(usageRecord.updatedAt?new Date(usageRecord.updatedAt).toLocaleString('vi-VN')+' · tự nhập':'chưa có')+'. Dữ liệu lưu cục bộ trên trình duyệt, dùng chung giữa các dự án.</p>','<button data-action="usage-clear">Xóa số tự nhập</button><button class="primary" data-action="usage-save">Lưu số tự nhập</button>');};
 actions['usage-save']=()=>{const next={};for(const[key,id]of [['flow','usageFlow'],['ai','usageAI']]){const raw=$('#'+id).value.trim(),n=raw===''?null:Number(raw);if(n!==null&&(!Number.isFinite(n)||n<0||key==='ai'&&!Number.isInteger(n))){toast('Nhập số không âm; lượt AI phải là số nguyên, hoặc để trống.');return;}next[key]=n;}next.updatedAt=Date.now();try{localStorage.setItem(usageKey,JSON.stringify(next));}catch{toast('Trình duyệt không lưu được hạn mức; chưa áp dụng.');return;}usageRecord=next;closeModal();updateUsage();};
 actions['usage-clear']=()=>{try{localStorage.removeItem(usageKey);}catch{toast('Không xóa được dữ liệu lưu.');return;}usageRecord={flow:null,ai:null,updatedAt:null};closeModal();updateUsage();};
 const chromeWithoutUsage=updateChrome;updateChrome=function(){chromeWithoutUsage();updateUsage();};
+
+const renderWithoutErrorPreview=render;
+render=function(){renderWithoutErrorPreview();if(errorPreview&&!project.scenes.length)$('#empty-clips .nodeBody')?.insertAdjacentHTML('beforeend',errorPreviewBox());};
+const initWithoutErrorPreview=init;
+init=async function(){await initWithoutErrorPreview();if(errorPreview){$('#workflowChooser').hidden=true;document.body.classList.remove('choosing-workflow');render();focusErrorPreview();}};
 
 // Route speech along the nearest clear horizontal corridor, never the canvas bottom.
 function voiceWireRoute(a,b){
