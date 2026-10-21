@@ -21,7 +21,7 @@ Nguồn yêu cầu: bản đầu `design/package-4-spec/DAC_TA_GOI_4.md`, sau đ
 - Ghép cục bộ theo nhãn, cắt clip theo giây, không dùng cùng một clip hai lần liền nhau; nhịp dài nối nhiều clip. Thiếu thì hiện đỏ và hai đường: tạo bổ sung có xác nhận xếp hàng hoặc dùng tạm kiểu khác. Không tự tạo phần thiếu. Ghép kiểu khác đổi thứ tự chọn khi Bộ cảnh có đủ lựa chọn.
 - Ghép cục bộ **không giả là Đạo diễn AI**. Gemini chỉ có trong bản cục bộ khi đã lưu key; nút AI bị khóa khi chưa có kết nối/SDK phù hợp.
 - Sang Dựng chuyển clip và giọng thật; tiếng gốc Muse tắt, giọng riêng giữ. Giữ luật hỏi trước khi thay bản dựng; nhập bản mới vào Kho không tự thay timeline. Video mẫu vẫn giữ tiếng Flow hiện có, chưa đổi toàn bộ pipeline video mẫu sang giọng đọc chung/lipsync mới của gói 4.
-- Dùng lại video từ ảnh tạo phòng mới từ lời/công thức với bộ ảnh mới, kế hoạch ghép được bỏ. Các phòng ảnh cũ được giữ lời và mốc khi chuyển sang khung mới; vẫn giữ workflow cũ trong DB. Clip trong workflow cũ chưa tự phân loại thành tám kiểu vì không có dữ kiện xác nhận loại cảnh.
+- Dùng lại video từ ảnh tạo phòng mới từ lời/công thức với bộ ảnh mới, kế hoạch ghép được bỏ. Phòng ảnh cũ có storyboard/khung/clip được mở lại theo giao diện cũ; nút chuyển workspace giữ đồng thời cả bản cũ và bản Bộ cảnh. Không chỉ chuyển lời/mốc rồi che phần khung và clip. Clip cũ chưa tự phân loại thành tám kiểu vì không có dữ kiện xác nhận loại cảnh.
 
 ## Dọn dữ liệu
 
@@ -71,3 +71,7 @@ Không sử dụng AGPL/FlowKit hay captcha thuê. Còn cần tài khoản do ng
 - Các bài node canvas và timeline magnetic reorder tiếp tục kiểm tra thao tác cũ. Các bài gói 3 còn đòi sáu cột/luồng ảnh cũ không phải hợp đồng giao diện mới.
 
 Pages và localhost là hai origin khác nhau: dữ liệu trình duyệt không tự chuyển qua lại. Không hứa ZIP tự mang dự án hiện có sang bản cục bộ; JSON riêng không chứa hết media. Xuất vẫn MediaRecorder, chưa có FFmpeg chạy nền.
+
+## Đợt rà soát bảo toàn thiết kế
+
+Xem `design-preservation-audit.md` và `design-archive-integrity.json`: 41 file từ 5 ZIP nguyên vẹn. Khôi phục chuyển 2 hướng ở đầu canvas, giữ phòng riêng, nhận diện lại dự án ảnh theo cảnh cũ; bỏ màn chào che canvas; đo header theo kích thước thực. Luồng ảnh xếp lại theo ảnh 06, có Xếp như mẫu/hoàn tác và không đè node. Các thiếu sót engine/FFmpeg vẫn được ghi rõ, không coi giao diện là nghiệm thu dịch vụ.
