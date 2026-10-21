@@ -59,3 +59,7 @@ Có thêm CPU trong node Phân tích, 25 phép thử và ảnh Cài đặt thứ
 ## Local AI / rà clip sau Veo
 
 Bổ sung hướng lia/zoom vào prompt, bảng lấy mẫu clip và duyệt theo phiên bản; adapter Ollama local mô tả/đối chiếu với xem trước/khôi phục. Xem [phạm vi và kiểm chứng](local-ai-implementation.md). Chưa chạy model vision hoặc kiểm lỗi danh tính/logo trên clip Veo thật.
+
+## Tài khoản · thiết kế theo ảnh tham chiếu mới
+
+Sơ đồ và nhật ký hai cột, bảng đầy đủ ưu tiên/trạng thái/credit/tùy chọn, biểu đồ chi phí 7/30 ngày; dữ liệu minh họa chỉ trong demo. [Chi tiết giao diện và thao tác](accounts-dashboard-implementation.md). Không giả đã kết nối provider hoặc cập nhật engine.
