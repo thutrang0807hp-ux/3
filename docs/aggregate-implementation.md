@@ -47,3 +47,7 @@
 - `python scripts/app-shell/check_aggregate.py`: trình duyệt thật → companion → Gemini giả lập → xem lại sau reload/áp dụng/khôi phục → nhập clip → FFmpeg thật → MP4 + SRT; cả hai lưu đúng phòng. Không gửi lặp để mở lại kết quả hoặc tự rút công thức.
 - `python scripts/native-preview/measure_timeline.py`: đo thao tác kéo và kiểm tra font, xuất JSON số liệu.
 - Hồi quy: node/setting/thông báo Gói 5, Kho kịch bản, dọn dữ liệu, điều hướng hai workflow, trang chủ theo ảnh, chèn từ tính/chuyển cảnh, gain âm thanh xuất thật. Những kiểm tra cần provider thật không thay bằng số ví dụ.
+
+## Bổ sung bảng thử thật
+
+Thêm Cài đặt → Động cơ/Thông báo → Kiểm tra theo bảng thử: 22 tiêu chí gốc, kết quả tự ghi nhận riêng với số đo MP4/font/thông báo. Xem [chi tiết và giới hạn](testing-implementation.md). Gemini được xếp tuần tự trên toàn bộ công cụ. Không chứng nhận các mục dịch vụ/Windows chưa chạy thật.
