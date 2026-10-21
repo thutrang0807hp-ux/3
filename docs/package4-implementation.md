@@ -1,6 +1,12 @@
 # SceneForge · Gói 4 · Phạm vi triển khai (21/10/2026)
 
-Nguồn yêu cầu: `design/package-4-spec/DAC_TA_GOI_4.md` và bảy ảnh đi kèm. Gói này thay giao diện sáu cột của gói 3; dữ liệu sản phẩm, room ID, nguồn video, bộ ảnh và bản dựng cũ không bị đặt lại.
+Nguồn yêu cầu: bản đầu `design/package-4-spec/DAC_TA_GOI_4.md`, sau đó `design/package-4-received/SceneForge_Goi4/DAC_TA_GOI_4.md` và tám ảnh đi kèm. Đã đối chiếu diff: thay đổi đặc tả là mục 7 Kho kịch bản đã chốt và ảnh 08; không tạo lại các chức năng trùng. Gói này thay giao diện sáu cột của gói 3; dữ liệu sản phẩm, room ID, nguồn video, bộ ảnh và bản dựng cũ không bị đặt lại.
+
+## Bản cập nhật bố cục và xem thử
+
+- Bỏ chiều rộng cứng/sáu cột CSS cũ khỏi bố cục cuối; desktop bốn cột chia đều, từng cột cuộn riêng. Tiêu đề, tìm kiếm, menu Video mới, tabs/bộ lọc được bố trí theo ảnh 01. Thẻ gộp thông tin trên ảnh bìa; việc duyệt khung ưu tiên lên đầu. Màn hình nhỏ cuộn ngang riêng bảng, không kéo tràn cả trang.
+- `?demo=1`: năm sản phẩm, bảy phòng và Bộ cảnh minh họa; hai timeline mẫu có media phát thật. Có banner ghi rõ trạng thái minh họa. Không gọi API/tài khoản. Dùng database shell riêng `sceneforge-app-showcase` và mã phòng `showcase-*`; không nhập các phòng này vào database làm việc khi quay lại bản thường. Các ví dụ ở cột Đã xuất chưa phải tệp xuất thật; có thể mở timeline rồi tự xuất thử.
+- Đây là mã ứng dụng có thao tác, không dùng ảnh chụp giao diện thay cho nút. Ví dụ sản phẩm/bìa/trạng thái không đại diện cho kết quả dịch vụ thật.
 
 ## Dùng ngay trên bản web
 
@@ -10,7 +16,7 @@ Nguồn yêu cầu: `design/package-4-spec/DAC_TA_GOI_4.md` và bảy ảnh đi 
 - Không gian Từ ảnh có bảy node: ảnh đầu vào, Bộ cảnh, công thức, kịch bản, giọng, đạo diễn và Sang Dựng. Kéo node theo đúng mức zoom, phóng/thu/kéo nền, lưu vị trí. Dây cập nhật theo node, không chạy hiệu ứng tiến độ giả.
 - Bộ cảnh tám kiểu: prompt quay/ánh sáng/chuyển động, 9:16, no talking/mouth closed/no text. Nhập clip thật, kiểm tra khung/thời lượng, giữ các bản. Clip dùng chung theo sản phẩm, còn lời/giọng/kế hoạch ghép riêng từng phòng. Có tùy chọn khung trước, sửa yêu cầu, tạo hai bản. Lỗi nhập tệp thật có khung đỏ và giữ các bản cũ.
 - Ảnh đầu vào chép từ sản phẩm, thêm/bỏ ảnh riêng trong phòng không sửa bộ gốc.
-- Ba công thức chỉ có nhịp/loại cảnh/thời lượng, không bịa lời hay công dụng sản phẩm. Viết/dán lời, sửa tên/nhãn/giây từng nhịp. Kho kịch bản đầy đủ chưa chốt nên không thêm trang kho giả.
+- Kho kịch bản chung cho mọi sản phẩm, mở bảng nổi hai phần từ node Công thức trong luồng ảnh. Tìm/lọc ngành/nguồn; dải màu nhịp theo thời gian; nguồn/mục đích/kiểu cảnh/ví dụ viết lại/mẹo; tự gõ nhịp, đổi tên, xóa, áp công thức và dropdown đổi ngay tại Kịch bản. Ba khung ban đầu không có lời quảng cáo bịa. Lựa chọn công thức lưu snapshot riêng; xóa công thức không xóa lời hoặc timeline đã dùng. 👍/👎 trên video ảnh đã xuất là đánh giá tùy chọn, bấm lại bỏ chọn, không cộng trùng; lịch sử dùng/đánh giá lưu độc lập để dọn/xóa phòng không xóa kho.
 - Nhập WAV/MP3/M4A, sóng lấy từ âm thanh giải mã thật, phát nghe. Canh nhịp bằng khoảng lặng; nếu thiếu khoảng lặng thì chia ước lượng theo độ dài lời và ghi rõ. Không gọi đây là nhận dạng lời hoặc căn từng từ chính xác. Có Không lời.
 - Ghép cục bộ theo nhãn, cắt clip theo giây, không dùng cùng một clip hai lần liền nhau; nhịp dài nối nhiều clip. Thiếu thì hiện đỏ và hai đường: tạo bổ sung có xác nhận xếp hàng hoặc dùng tạm kiểu khác. Không tự tạo phần thiếu. Ghép kiểu khác đổi thứ tự chọn khi Bộ cảnh có đủ lựa chọn.
 - Ghép cục bộ **không giả là Đạo diễn AI**. Gemini chỉ có trong bản cục bộ khi đã lưu key; nút AI bị khóa khi chưa có kết nối/SDK phù hợp.
@@ -35,6 +41,14 @@ Tệp `downloads/SceneForge-Goi4-Local.zip` chứa giao diện build, `local_eng
 
 **Flow/Muse tự động vẫn chưa kết nối.** Tài khoản, số dư/quota, gia hạn, đổi ưu tiên tài khoản, cooldown và chạy hai engine thật chưa được kiểm chứng đầu-cuối. Các hàm policy có bài kiểm tra: 401 cần đăng nhập, 403/429/lỗi mạng giữ số cũ, xác minh dừng xoay, ba lỗi nghỉ, việc không rõ kết quả không gửi lại; đó chưa phải một worker dịch vụ hoàn chỉnh. Nút xoay/kiểm tra bị khóa khi chưa có adapter. Chưa có biểu đồ credit thực khi không có log xác minh.
 
+## Kho kịch bản · Gemini trong bản cục bộ
+
+- `/ai/recipe` rút công thức từ lời có mốc giây đã phân tích/nhập. Sau khi lưu phân tích tham khảo có lời, tự gọi một lần khi có key cục bộ. Nếu chỉ mới dò điểm cắt chưa có lời/nội dung thì ghi cần nội dung; không bịa phân tích lời. Trạng thái gửi được lưu trước khi gọi; mất kết nối/lỗi không tự gửi lại, xóa công thức không tự sinh lại.
+- `/ai/recipe-video`: video MP4/WebM dọc, tối đa 18 MB inline. Người dùng chọn file trong kho, xác nhận gửi phân tích; Gemini đọc video để trả công thức mới. File lớn hơn cần nén/cắt; chưa có pipeline tải file lớn lên Gemini File API.
+- `/ai/recommend-recipes`: chọn tối đa ba ID có thật theo ngành/ý chính/đánh giá. Mở kho có nút AI gợi ý. Khi bấm AI viết lần đầu mà chưa tự chọn công thức và chưa có lời, tự chọn công thức AI xếp đầu; không thay lời đang sửa.
+- `/ai/script` nhận cấu trúc/mục đích, viết lời mới theo thông tin sản phẩm. Không sao lời ví dụ làm lời đọc. Chưa có key thì chỉ áp khung nhịp, cho tự viết và báo rõ; không giả đã viết AI.
+- Kiểm tra JSON, nhãn, số nhịp/mốc thời gian và ID đề xuất. Từ chối câu ví dụ dài sao nguyên văn nguồn đã cung cấp. Không tự gọi lại để “sửa” kết quả lỗi. Chưa kiểm chứng bằng key thật; kiểm thử API bằng phản hồi mô phỏng cục bộ. Nhật ký lưu usage thật khi có gọi, phí tiền để chưa xác minh, không dùng con số ví dụ trong tài liệu.
+
 ## Những điều phát hiện khi đọc repo
 
 Đã lấy đúng repo gốc bằng git, đọc README, LICENSE, cấu hình, store/auth/keepalive và API; không chạy mã ba repo trong đợt này. Revision cố định ở `docs/engine-audit/upstream-revisions.json`.
@@ -47,6 +61,9 @@ Không sử dụng AGPL/FlowKit hay captcha thuê. Còn cần tài khoản do ng
 
 ## Kiểm tra
 
+- `scripts/app-shell/check_recipes.py`: CRUD/lọc/áp/reload công thức, snapshot sau xóa, đánh giá không trùng, rút công thức một lần, bố cục 1920/1440/1280/1024/768/390 không đè/tràn. Gemini mô phỏng tại ranh giới truyền tải.
+- `scripts/app-shell/check_showcase.py`: dữ liệu mẫu tách biệt, timeline phát thật/tắt tiếng, mở node/kho và reload; quay về bản làm việc giữ nguyên dữ liệu; không gọi API.
+- `local_engine/check_recipes.py`: hợp đồng ba API mới, chặn đầu vào/mốc giây/nhãn/ID và sao nguyên lời, một lần gửi, không đưa video vào text/log. Không gọi Gemini thật.
 - `scripts/app-shell/check_package4.py`: trình duyệt thật, MP4/ảnh/WAV thật; bốn cột/tab/lọc/list; hai làn và hai bản có phụ thuộc; ảnh phòng độc lập; Bộ cảnh chung; thiếu loại cảnh không tự tạo; canh khoảng lặng, nhịp dài/no-repeat/đổi phương án; kéo node lưu; Sang Dựng tắt tiếng Muse, giọng thật; cleanup cơ bản; reload cả bytes/timeline; account offline không bịa dữ liệu.
 - `scripts/app-shell/check_cleanup.py`: ba phiên bản clip; v1 bị cắt trên timeline + v3 đang chọn sống, v2 và nguồn bị dọn; tệp xuất thật còn, bản dựng mở lại và dùng lại mẫu sau dọn được.
 - `local_engine/check_local.py`: AES-GCM, mở lại vault, quyền khóa, không trả secret, policy, chặn Origin/Host/header, không kích hoạt account chưa kiểm chứng, vận chuyển WAV thật. Không gọi dịch vụ.
