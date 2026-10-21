@@ -1,5 +1,5 @@
 {
-  "checked_files": 41,
+  "checked_files": 44,
   "files": [
     {
       "archive": "SceneForge_KhungSuonApp.zip",
@@ -246,6 +246,24 @@
       "path": "design/workflow-spec/handoff/anh-thiet-ke/01-tab-tao-video-toan-canh.png",
       "bytes": 932741,
       "sha256": "22512ddc919ac0ff08a4aadc5c3d68bf55aa6ffc64778d5f753ee3b597ee2d12"
+    },
+    {
+      "archive": "SceneForge_Goi5 (1).zip",
+      "path": "design/package-5-spec/SceneForge_Goi5/anh-thiet-ke/02-tab-tao-video-ban-gop.png",
+      "bytes": 642153,
+      "sha256": "cc9a25d698733d873b750bb3074cd63e205c9613957d72a1f079d7552b18944b"
+    },
+    {
+      "archive": "SceneForge_Goi5 (1).zip",
+      "path": "design/package-5-spec/SceneForge_Goi5/anh-thiet-ke/01-cai-dat-thong-bao-man-chao.png",
+      "bytes": 533147,
+      "sha256": "142a1f009e4d577d6fc898cc44f8ec6f6cdd14729ae87afa25803e49b60f6a09"
+    },
+    {
+      "archive": "SceneForge_Goi5 (1).zip",
+      "path": "design/package-5-spec/SceneForge_Goi5/DAC_TA_GOI_5.md",
+      "bytes": 13155,
+      "sha256": "0d9e6db408910221e52a9e42e68cddbea393d0601f309038b8cb19f165d6aeb5"
     }
   ]
 }
