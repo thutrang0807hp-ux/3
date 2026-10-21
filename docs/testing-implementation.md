@@ -1,6 +1,6 @@
 # Bảng thử thật → công cụ kiểm tra trong app
 
-Nguồn: SceneForge_BangThuThat.xlsx (22 mục A1–D4), giữ nguyên workbook gốc. File nhận lại trùng byte với workbook của gói tổng hợp, không triển khai trùng.
+Nguồn: SceneForge_BangThuThat.xlsx (25 mục A1–D7 (bản nhận lại; giữ kết quả 22 mục cũ)), giữ nguyên workbook gốc. File nhận lại trùng byte với workbook của gói tổng hợp, không triển khai trùng.
 
 Mở **Cài đặt → Động cơ hoặc Thông báo → Kiểm tra theo bảng thử**. Bảng cho xem cách thử, tiêu chí đạt và phương án dự phòng của từng mục. Chỉ ghi Đạt/Không đạt sau khi nhập bằng chứng; kết quả này luôn mang nhãn **bạn tự ghi nhận**, không phải app chứng nhận.
 

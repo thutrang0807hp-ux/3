@@ -1,0 +1,22 @@
+{
+  "source_sha256": "40e5b4d911b3d2d3c2ece1ad020955aec75575469529e4116569309918eb41b5",
+  "new_or_changed": [
+    {
+      "archive": "Goi5_CaiDat_ThongBao_ManChao_TaoVideoBanGop.zip",
+      "path": "SceneForge_Goi5/anh-thiet-ke/03-cai-dat-giong-thu-muc-xuat.png",
+      "sha256": "d9ba62fd5b425008c9b4162491ab0242f686c0612523629da8ef6137645dfc79"
+    },
+    {
+      "archive": "Goi5_CaiDat_ThongBao_ManChao_TaoVideoBanGop.zip",
+      "path": "SceneForge_Goi5/DAC_TA_GOI_5.md",
+      "sha256": "7b6edb94ac2d6218ca95b2f59296c3aa94178c701dad1e85db9b4cf7a9f581c4"
+    },
+    {
+      "archive": "Goi5_CaiDat_ThongBao_ManChao_TaoVideoBanGop.zip",
+      "path": "SceneForge_Goi5/SceneForge_BangThuThat.xlsx",
+      "sha256": "1fe36051e3938f06f78d579aa008de4b880b338008433c0ea1c116d84f8bd2cb"
+    }
+  ],
+  "top_files_preserved": 7,
+  "nested_files_preserved": 39
+}

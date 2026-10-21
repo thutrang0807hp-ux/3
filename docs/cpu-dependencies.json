@@ -1,0 +1,38 @@
+[
+  {
+    "package": "scenedetect",
+    "version": "0.7.2",
+    "license": "BSD-3-Clause",
+    "source": "PyPI distribution metadata; no dependency binaries/models included in SceneForge ZIP."
+  },
+  {
+    "package": "opencv-python",
+    "version": "4.14.0.94",
+    "license": "Apache 2.0",
+    "source": "PyPI distribution metadata; no dependency binaries/models included in SceneForge ZIP."
+  },
+  {
+    "package": "rapidocr-onnxruntime",
+    "version": "1.4.4",
+    "license": "Apache-2.0",
+    "source": "PyPI distribution metadata; no dependency binaries/models included in SceneForge ZIP."
+  },
+  {
+    "package": "faster-whisper",
+    "version": "1.2.1",
+    "license": "MIT",
+    "source": "PyPI distribution metadata; no dependency binaries/models included in SceneForge ZIP."
+  },
+  {
+    "package": "onnxruntime",
+    "version": "1.31.0",
+    "license": "MIT License",
+    "source": "PyPI distribution metadata; no dependency binaries/models included in SceneForge ZIP."
+  },
+  {
+    "package": "ctranslate2",
+    "version": "4.8.3",
+    "license": "MIT",
+    "source": "PyPI distribution metadata; no dependency binaries/models included in SceneForge ZIP."
+  }
+]

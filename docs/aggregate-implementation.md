@@ -51,3 +51,7 @@
 ## Bổ sung bảng thử thật
 
 Thêm Cài đặt → Động cơ/Thông báo → Kiểm tra theo bảng thử: 22 tiêu chí gốc, kết quả tự ghi nhận riêng với số đo MP4/font/thông báo. Xem [chi tiết và giới hạn](testing-implementation.md). Gemini được xếp tuần tự trên toàn bộ công cụ. Không chứng nhận các mục dịch vụ/Windows chưa chạy thật.
+
+## Gói tổng hợp nhận lại
+
+Có thêm CPU trong node Phân tích, 25 phép thử và ảnh Cài đặt thứ ba. Xem [phần đã nối / chưa thử](aggregate-2-implementation.md). Bản gốc của cả hai gói vẫn giữ riêng; không xóa các engine/luồng hoặc thay thiết kế trang chủ.
