@@ -55,3 +55,7 @@ Thêm Cài đặt → Động cơ/Thông báo → Kiểm tra theo bảng thử: 
 ## Gói tổng hợp nhận lại
 
 Có thêm CPU trong node Phân tích, 25 phép thử và ảnh Cài đặt thứ ba. Xem [phần đã nối / chưa thử](aggregate-2-implementation.md). Bản gốc của cả hai gói vẫn giữ riêng; không xóa các engine/luồng hoặc thay thiết kế trang chủ.
+
+## Local AI / rà clip sau Veo
+
+Bổ sung hướng lia/zoom vào prompt, bảng lấy mẫu clip và duyệt theo phiên bản; adapter Ollama local mô tả/đối chiếu với xem trước/khôi phục. Xem [phạm vi và kiểm chứng](local-ai-implementation.md). Chưa chạy model vision hoặc kiểm lỗi danh tính/logo trên clip Veo thật.
