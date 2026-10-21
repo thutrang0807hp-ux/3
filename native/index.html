@@ -2151,7 +2151,7 @@ body.timeline-drag-active #tracks .timelineJoin{visibility:hidden}
       const built = builtins();
       const safeAssets = p.assets.map((a) => {
         if (!["video", "audio", "image"].includes(a.kind) || typeof a.id !== "string" || !/^[\w-]+$/.test(a.id) || !Number.isFinite(a.duration) || a.duration < 0.2) throw Error();
-        return built.find((b) => b.id === a.id) || { id: a.id, kind: a.kind, name: String(a.name).slice(0, 150), duration: a.duration, url: null, missing: true };
+        return built.find((b) => b.id === a.id) || { id: a.id, kind: a.kind, name: String(a.name).slice(0, 150), duration: a.duration, url: null, missing: true, workflowKey:typeof a.workflowKey==="string"?a.workflowKey.slice(0,150):null,workflowScene:typeof a.workflowScene==="string"?a.workflowScene.slice(0,150):null,workflowPart:typeof a.workflowPart==="string"?a.workflowPart.slice(0,20):null,workflowSceneIndex:Number.isFinite(a.workflowSceneIndex)?a.workflowSceneIndex:null,workflowVersion:Number.isFinite(a.workflowVersion)?a.workflowVersion:null,newVersion:!!a.newVersion };
       });
       const safeItems = p.items.map((i) => {
         if (!["video", "image", "audio", "text"].includes(i.kind) || typeof i.id !== "string" || !/^[\w-]+$/.test(i.id) || !safeTracks.some((t) => t.id === i.trackId && compatible(i.kind, t)) || !Number.isFinite(i.start) || i.start < 0 || i.start > 3600 || !Number.isFinite(i.duration) || i.duration < 0.2 || i.duration > 3600) throw Error();
@@ -2484,21 +2484,21 @@ function scheduleDraft() {
   clearTimeout(draftTimer);
   draftTimer = setTimeout(() => {
     try {
-      localStorage.setItem("sceneforge-editor-draft-v2", JSON.stringify(projectPayload()));
+      localStorage.setItem(editorDraftMetaKey(), JSON.stringify(projectPayload()));
     } catch {
     }
   }, 700);
 }
 function detectDraft() {
   try {
-    draftCandidate = localStorage.getItem("sceneforge-editor-draft-v2");
+    draftCandidate = localStorage.getItem(editorDraftMetaKey());
     if (draftCandidate) $("#restoreDraft").hidden = false;
   } catch {
   }
 }
 $("#restoreDraft").onclick = () => {
   try {
-    const s = draftCandidate || localStorage.getItem("sceneforge-editor-draft-v2");
+    const s = draftCandidate || localStorage.getItem(editorDraftMetaKey());
     if (!s) return;
     const f = new File([s], "draft.json", { type: "application/json" });
     $("#projectFile").onchange({ target: { files: [f], value: "" } });
@@ -3806,43 +3806,43 @@ function closeMiniOptions(){miniAudioOptions.hidden=true;$('#miniAudioMore').set
 function handleMiniEscape(){if(miniVolumeSession){finishMiniVolume(true);return true;}if(!miniAudioOptions.hidden){closeMiniOptions();return true;}return false;}
 document.addEventListener('pointerdown',e=>{if(!miniAudioOptions.hidden&&!e.target.closest('#miniAudioOptions,#miniAudioControls'))closeMiniOptions();},true);
 
-// Receive local user-selected clips from the original SceneForge node workflow.
-// Original integration: no Concat/OpenMontage/FlowKit source is used here.
+// User-owned media arrives from the local workflow; importing never calls Flow.
 let importingWorkflow=false;
 window.addEventListener('message',async event=>{
  if(event.origin!==location.origin||event.source!==parent||event.data?.type!=='sceneforge:workflow-import')return;
- const {id,payload}=event.data;
- const ack=error=>parent.postMessage({type:'sceneforge:workflow-import-ack',id,error},location.origin);
- if(importingWorkflow||recording){ack('Đang xuất/nhập bản dựng khác. Đợi thao tác đó hoàn tất.');return;}
- importingWorkflow=true;const addedUrls=[];
+ const{id,payload}=event.data,ack=error=>parent.postMessage({type:'sceneforge:workflow-import-ack',id,error},location.origin);
+ if(importingWorkflow||recording){ack('Đang xuất/nhập bản dựng khác.');return;}importingWorkflow=true;const addedUrls=[];
  try{
-  if(!Array.isArray(payload?.clips)||!payload.clips.length||payload.clips.length>300)throw Error('Danh sách clip không hợp lệ.');
-  const newAssets=[],newItems=[],videoTrack={id:uid(),kind:'video',name:'Video từ Tạo video'},captionTrack={id:uid(),kind:'text',name:'Phụ đề từ kịch bản'};
-  const newTracks=[videoTrack];let at=0;
-  for(const [index,c]of payload.clips.entries()){
-   if(!(c.file instanceof Blob)||!Number.isFinite(c.duration)||c.duration<.2||c.duration>600||!Number.isFinite(c.sourceDuration)||c.sourceDuration<.2||Math.abs(c.start-at)>.05)throw Error('Thời lượng/mốc clip không hợp lệ.');
-   if(at+c.duration>3600)throw Error('Bản dựng tối đa 60 phút.');
-   const url=URL.createObjectURL(c.file);addedUrls.push(url);
-   const asset={id:uid(),kind:'video',name:String(c.name||'Cảnh '+(index+1)).slice(0,250),duration:c.sourceDuration,url,poster:c.poster||FRAMES[0]};newAssets.push(asset);
-   const videoDuration=Math.min(c.duration,c.sourceDuration),item={...defaults('video'),id:uid(),assetId:asset.id,trackId:videoTrack.id,kind:'video',name:asset.name,start:at,duration:videoDuration,volume:1};newItems.push(item);
-   const gap=c.duration-videoDuration;if(gap>.0001){
-    if(typeof c.tail!=='string'||!/^data:image\/(jpeg|png|webp);base64,/.test(c.tail))throw Error('Thiếu ảnh cuối để giữ khung cho clip ngắn.');
-    const still={id:uid(),kind:'image',name:asset.name+' · giữ khung cuối',duration:gap,url:c.tail,poster:c.tail};newAssets.push(still);newItems.push({...defaults('image'),id:uid(),kind:'image',assetId:still.id,trackId:videoTrack.id,name:still.name,start:at+videoDuration,duration:gap});
-   }
-   at+=c.duration;
+  if(editorRoomId&&payload.roomId!==editorRoomId)throw Error('Clip không thuộc phòng đang mở.');
+  await window.SceneForgeEditor.roomReady;
+  const library=payload.placement==='library',append=!!payload.appendOnly;
+  if(!Array.isArray(payload?.clips)||payload.clips.length>300||(!library&&!payload.clips.length))throw Error('Danh sách clip không hợp lệ.');
+  const newAssets=[],newItems=[],videoTrack={id:uid(),kind:'video',name:'Video từ Tạo video'},newTracks=[videoTrack];let at=0;
+  const known=new Set(assets.map(a=>a.workflowKey).filter(Boolean));
+  function assetFor(c,kind='video'){
+   if(!(c.file instanceof Blob)||c.file.size===0)throw Error('Thiếu tệp clip.');
+   if(append&&c.key&&known.has(c.key))return null;
+   const url=URL.createObjectURL(c.file);addedUrls.push(url);const asset={id:uid(),kind,name:String(c.name||'Tư liệu').slice(0,250),duration:c.sourceDuration,url,poster:c.poster||FRAMES[0],workflowKey:c.key||null,workflowScene:c.sceneId||null,workflowPart:c.part||null,workflowSceneIndex:c.sceneIndex,workflowVersion:c.version,newVersion:append};if(append)asset.name+=' · bản mới';newAssets.push(asset);return asset;
   }
-  if(Array.isArray(payload.captions)&&payload.captions.length){if(payload.captions.length>1000)throw Error('Quá nhiều câu phụ đề.');newTracks.push(captionTrack);for(const c of payload.captions){if(!Number.isFinite(c.start)||!Number.isFinite(c.end)||c.start<0||c.end<=c.start||c.end>at+.05)throw Error('Mốc phụ đề vượt bản dựng.');newItems.push({...defaults('text'),subtitle:true,id:uid(),kind:'text',assetId:null,trackId:captionTrack.id,name:String(c.text).slice(0,50),text:String(c.text).slice(0,500),start:c.start,duration:c.end-c.start,fontSize:52,textY:82,textBg:true,outline:1});}}
-  activeClipDrag?.cancel?.();pause();transact(()=>{assets.push(...newAssets);tracks=newTracks;items=newItems;projectFrame={width:1080,height:1920};markers=[];selection=newItems[0]?.id||null;selectedIds=new Set(selection?[selection]:[]);time=0;});
-  if($('#fitTimeline'))$('#fitTimeline').click();notify('Đã đưa '+payload.clips.length+' clip vào timeline. Giữ đúng mốc cảnh; một lần hoàn tác để về bản dựng trước.');ack(null);
- }catch(error){for(const url of addedUrls)URL.revokeObjectURL(url);ack(error.message);}
- finally{importingWorkflow=false;}
+  for(const[index,c]of payload.clips.entries()){
+   if(!Number.isFinite(c.duration)||c.duration<.2||c.duration>600||!Number.isFinite(c.sourceDuration)||c.sourceDuration<.2||!Number.isFinite(c.start)||c.start<0||(!library&&Math.abs(c.start-at)>.05))throw Error('Thời lượng/mốc clip không hợp lệ.');
+   if(c.start+c.duration>3600)throw Error('Bản dựng tối đa 60 phút.');const asset=assetFor(c);if(!asset)continue;if(!library){const duration=Math.min(c.duration,c.sourceDuration);newItems.push({...defaults('video'),id:uid(),assetId:asset.id,trackId:videoTrack.id,kind:'video',name:asset.name,start:at,duration,volume:1});const gap=c.duration-duration;if(gap>.0001){if(typeof c.tail!=='string'||!/^data:image\/(jpeg|png|webp);base64,/.test(c.tail))throw Error('Thiếu ảnh cuối cho clip ngắn.');const still={id:uid(),kind:'image',name:asset.name+' · giữ khung cuối',duration:gap,url:c.tail,poster:c.tail};newAssets.push(still);newItems.push({...defaults('image'),id:uid(),kind:'image',assetId:still.id,trackId:videoTrack.id,name:still.name,start:at+duration,duration:gap});}}at=Math.max(at,c.start+c.duration);
+  }
+  for(const c of payload.alternatives||[]){if(!Number.isFinite(c.sourceDuration)||c.sourceDuration<.2)throw Error('Bản phụ không có thời lượng hợp lệ.');assetFor(c);}
+  for(const a of payload.audio||[]){if(!(a.file instanceof Blob))throw Error('Thiếu tệp âm thanh.');const asset=assetFor({...a,key:a.key||'audio:'+a.role,sourceDuration:1},'audio');if(!asset)continue;const audio=document.createElement('audio');try{await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error('Không đọc được âm thanh.')),15000);audio.onloadedmetadata=()=>{clearTimeout(timer);resolve();};audio.onerror=()=>{clearTimeout(timer);reject(Error('Không giải mã được âm thanh.'));};audio.src=asset.url;});asset.duration=audio.duration;if(!Number.isFinite(asset.duration)||asset.duration<=0)throw Error('Thời lượng âm thanh không hợp lệ.');}finally{audio.removeAttribute('src');audio.load();}if(a.place&&!append){const track={id:uid(),kind:'audio',name:a.role==='voice'?'Giọng đọc':'Nhạc nền'};newTracks.push(track);newItems.push({...defaults('audio'),id:uid(),assetId:asset.id,trackId:track.id,kind:'audio',name:asset.name,start:a.start||0,duration:asset.duration,volume:a.role==='music'?.15:1});}}
+  if(Array.isArray(payload.captions)&&payload.captions.length&&!library){const track={id:uid(),kind:'text',name:'Phụ đề từ kịch bản'};newTracks.push(track);if(payload.captions.length>1000)throw Error('Quá nhiều câu phụ đề.');for(const c of payload.captions){if(!Number.isFinite(c.start)||!Number.isFinite(c.end)||c.start<0||c.end<=c.start||c.end>at+.05)throw Error('Mốc phụ đề vượt bản dựng.');newItems.push({...defaults('text'),subtitle:true,id:uid(),kind:'text',assetId:null,trackId:track.id,name:String(c.text).slice(0,50),text:String(c.text).slice(0,500),start:c.start,duration:c.end-c.start,fontSize:52,textY:82,textBg:true,outline:1});}}
+  activeClipDrag?.cancel?.();pause();transact(()=>{assets.push(...newAssets);if(!append){tracks=newTracks;items=newItems;projectFrame={width:1080,height:1920};markers=[];selection=newItems[0]?.id||null;selectedIds=new Set(selection?[selection]:[]);time=0;}});
+  if(!library)$('#fitTimeline')?.click();notify(append?'Đã thêm bản mới vào Kho. Timeline được giữ nguyên.':library?'Đã đưa clip vào Kho để tự ghép.':'Đã ghép clip đúng thứ tự; giữ tiếng Flow.');ack(null);
+ }catch(error){for(const url of addedUrls)URL.revokeObjectURL(url);ack(error.message);}finally{importingWorkflow=false;}
 });
 
 // Atomic local drafts include media bytes, not expiring blob URLs.
 let editorDBPromise,editorSaveVersion=0,editorSavedVersion=0,editorSaveBusy=false,editorSaveTimer=0,editorRestoring=false;
 const editorBlobCache=new Map();
+const editorRoomId=new URLSearchParams(location.search).get('room');
+function editorDraftMetaKey(){return 'sceneforge-editor-draft-v2'+(editorRoomId?':'+editorRoomId:'');}
 function editorDB(){return editorDBPromise??=new Promise((resolve,reject)=>{const r=indexedDB.open('sceneforge-editor-local',1);r.onupgradeneeded=()=>r.result.createObjectStore('drafts');r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});}
-async function editorDraftIO(mode,value){const db=await editorDB();return new Promise((resolve,reject)=>{const tx=db.transaction('drafts',mode),store=tx.objectStore('drafts'),r=mode==='readonly'?store.get('current'):store.put(value,'current');tx.oncomplete=()=>resolve(r.result);tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);});}
+async function editorDraftIO(mode,value){const db=await editorDB();return new Promise((resolve,reject)=>{const tx=db.transaction('drafts',mode),store=tx.objectStore('drafts'),r=mode==='readonly'?store.get(editorRoomId||'current'):store.put(value,editorRoomId||'current');tx.oncomplete=()=>resolve(r.result);tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);});}
 function setEditorSaveStatus(label,state){const n=$('#editorSaveStatus');if(n){n.textContent=label;n.dataset.state=state;}}
 async function flushEditorDraft(){
  if(editorSaveBusy||editorRestoring||editorSavedVersion===editorSaveVersion)return;
@@ -3854,7 +3854,8 @@ async function flushEditorDraft(){
    media.push({id:a.id,file,poster:a.poster||null});
   }
   await editorDraftIO('readwrite',{payload,media,savedAt:Date.now()});editorSavedVersion=version;
-  localStorage.setItem('sceneforge-editor-draft-v2',JSON.stringify(payload));draftCandidate=JSON.stringify(payload);
+  if(editorRoomId)parent.postMessage({type:'sceneforge:room-editor-saved',roomId:editorRoomId,itemCount:items.length,assetCount:assets.length},location.origin);
+  localStorage.setItem(editorDraftMetaKey(),JSON.stringify(payload));draftCandidate=JSON.stringify(payload);
   const missing=source.filter(a=>a.missing||!a.url).length;setEditorSaveStatus(missing?'Đã lưu · thiếu '+missing+' tệp':'✓ Đã lưu trên máy',missing?'error':'saved');
   const used=new Set(source.map(a=>a.url));for(const key of editorBlobCache.keys())if(!used.has(key))editorBlobCache.delete(key);
  }catch(error){setEditorSaveStatus('Chưa lưu được','error');const n=$('#editorSaveStatus');if(n)n.title=error?.name==='QuotaExceededError'?'Bộ nhớ trình duyệt đầy. Hãy giải phóng dung lượng.':String(error.message||error);}
@@ -4126,6 +4127,22 @@ timeline=function(){timelineCardsBeforePoster();for(const el of $$('.timelineIte
 // Hidden drop-mode controls never silently restore a destructive overwrite mode.
 const bootBeforeAutomaticRows=bootSharedEditor;bootSharedEditor=function(){bootBeforeAutomaticRows();timelineEditMode='insert';$('#timelineEditMode').value='insert';};
 const loadBeforeAutomaticRows=$('#projectFile').onchange;$('#projectFile').onchange=async function(event){await loadBeforeAutomaticRows(event);timelineEditMode='insert';$('#timelineEditMode').value='insert';};
+
+// Room-scoped persistence wraps the existing editor; standalone editor remains usable.
+let editorRoomReadyResolve,editorRoomReadyReject;
+const bootBeforeRoomShell=bootSharedEditor;bootSharedEditor=function(){bootBeforeRoomShell();if(!editorRoomId)return;
+ window.SceneForgeEditor.roomReady=new Promise((resolve,reject)=>{editorRoomReadyResolve=resolve;editorRoomReadyReject=reject;});
+ window.SceneForgeEditor.isExporting=()=>recording;
+ window.SceneForgeEditor.flushRoom=async()=>{await window.SceneForgeEditor.roomReady;if(recording)throw Error('Đợi xuất video xong trước khi đổi phòng.');clearTimeout(editorSaveTimer);while(editorSaveBusy)await new Promise(r=>setTimeout(r,40));await flushEditorDraft();while(editorSaveBusy)await new Promise(r=>setTimeout(r,40));if(editorSavedVersion!==editorSaveVersion)throw Error('Chưa lưu được bản dựng. Không đổi phòng để tránh mất dữ liệu.');};
+ (async()=>{editorRestoring=true;clearTimeout(editorSaveTimer);try{let saved=await editorDraftIO('readonly');if(!saved&&new URLSearchParams(location.search).get('legacy')==='1'){const d=await editorDB();saved=await new Promise((resolve,reject)=>{const r=d.transaction('drafts').objectStore('drafts').get('current');r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});if(saved)await editorDraftIO('readwrite',saved);}
+ if(saved?.payload){editorRestoring=false;await $('#restoreDraft').onclick();if($('#editorSaveStatus').dataset.state==='error')throw Error('Không khôi phục được phòng.');}else{activeClipDrag?.cancel?.();pause();items=[];assets=[];tracks=[makeMediaTrack('video',[])];selection=null;selectedIds=new Set();markers=[];time=0;undo=[];redo=[];nodes.forEach(n=>{releaseAudioRoute(n);n.remove();});nodes.clear();render();editorSavedVersion=editorSaveVersion;setEditorSaveStatus('Phòng mới · chưa có clip','saved');}
+ workbenchPrefs.name=new URLSearchParams(location.search).get('roomName')||'Bản dựng';$('#editorProjectName').value=workbenchPrefs.name;$('#restoreDraft').hidden=true;undo=[];redo=[];editorRestoring=false;editorRoomReadyResolve();
+ }catch(e){editorRestoring=false;setEditorSaveStatus('Không mở được phòng','error');editorRoomReadyReject(e);}})();
+};
+const downloadBeforeRoomShell=downloadBlob;downloadBlob=function(name,file){downloadBeforeRoomShell(name,file);if(editorRoomId&&recording&&file.type.startsWith('video/'))parent.postMessage({type:'sceneforge:room-exported',roomId:editorRoomId,name,file},location.origin);};
+const assetsBeforeRoomShell=renderAssets;renderAssets=function(){assetsBeforeRoomShell();if(!editorRoomId)return;for(const asset of assets.filter(a=>a.newVersion&&a.workflowScene)){const card=$('[data-asset="'+asset.id+'"]');if(!card)continue;const existing=items.find(i=>{const old=getAsset(i.assetId);return old?.workflowScene===asset.workflowScene&&old?.workflowPart===asset.workflowPart&&old.id!==asset.id;});if(!existing)continue;const button=document.createElement('button');button.textContent='Thay vào timeline';button.dataset.replaceWorkflow=asset.id;button.title='Chỉ thay cảnh này khi bạn bấm; giữ các chỉnh sửa khác';card.append(button);}};
+document.addEventListener('click',e=>{const button=e.target.closest('[data-replace-workflow]');if(!button)return;e.stopImmediatePropagation();const asset=getAsset(button.dataset.replaceWorkflow),target=items.find(i=>{const old=getAsset(i.assetId);return old?.workflowScene===asset.workflowScene&&old?.workflowPart===asset.workflowPart&&old.id!==asset.id;});if(!target)return;if(getTrack(target.trackId)?.locked){notify('Mở khóa hàng trước khi thay clip.');return;}if(!confirm('Thay cảnh này bằng '+asset.name+'? Giữ vị trí và hiệu ứng; nếu clip mới ngắn hơn thì rút ngắn cảnh. Có thể hoàn tác.'))return;activeClipDrag?.cancel?.();pause();transact(()=>{target.assetId=asset.id;target.name=asset.name;target.mediaIn=0;target.duration=Math.min(target.duration,asset.duration/target.speed);target.fadeIn=Math.min(target.fadeIn,target.duration);target.fadeOut=Math.min(target.fadeOut,target.duration);target.transitionDuration=Math.min(target.transitionDuration,target.duration);});},true);
+if(editorRoomId){const style=document.createElement('style');style.textContent='#editorBrand nav{display:none}';document.head.append(style);}
 
   init();
   booting=false;
