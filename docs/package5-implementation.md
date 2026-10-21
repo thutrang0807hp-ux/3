@@ -1,3 +1,5 @@
+> Đây là bản đối chiếu ở lần triển khai Gói 5. Các bổ sung Gemini/MP4/cân âm/timeline sau đó nằm trong `aggregate-implementation.md`.
+
 # Gói 5 — triển khai và đối chiếu
 
 Đặc tả gốc: `design/package-5-spec/SceneForge_Goi5/DAC_TA_GOI_5.md`, hai ảnh trong cùng thư mục. Không thay ảnh gốc hay xóa các gói 1–4. Tổng 44 tệp thiết kế/đặc tả đã đối chiếu SHA-256 với ZIP được nhận.

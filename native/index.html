@@ -1284,7 +1284,8 @@ body[data-editor-layout=tall] main{gap:0;grid-template-rows:minmax(230px,1fr) 6p
 body.timeline-drag-active{user-select:none;cursor:grabbing}
 body.timeline-drag-active #tracks .timelineJoin{visibility:hidden}
 #dropGuide{left:0;will-change:transform}
-</style>
+
+@font-face{font-family:SceneForgeSans;src:url(../fonts/SceneForgeSans.ttf) format("truetype");font-display:swap}</style>
 <header><div><strong>Dựng video <span class="projectDot">/</span> Hành trình bình minh</strong><span class="badge">BẢN XEM THỬ · 9:16</span></div><div class="actions"><div class="workspaceViews" role="group" aria-label="Bố cục làm việc"><button data-workspace-view="balanced" class="active" aria-pressed="true">Mặc định</button><button data-workspace-view="preview" aria-pressed="false">Khung xem</button><button data-workspace-view="timeline" aria-pressed="false">Timeline</button></div><button id="featureHelp">Tính năng</button><button id="restoreDraft" hidden>Khôi phục nháp</button><button id="saveProject">Lưu dự án</button><button id="openProject">Mở dự án</button><button id="export" class="primary">Xuất video ↗</button></div></header>
 <main><div id="creativeToolbar"><nav aria-label="Công cụ sáng tạo"><button data-library="media" class="active" aria-label="Tư liệu"><span data-ui-icon="media"></span><small>Tư liệu</small></button><button data-library="audio" aria-label="Âm thanh"><span data-ui-icon="music"></span><small>Âm thanh</small></button><button data-library="text" aria-label="Văn bản"><span data-ui-icon="text"></span><small>Văn bản</small></button><button data-library="stickers" aria-label="Nhãn dán"><span data-ui-icon="star"></span><small>Nhãn dán</small></button><button data-library="transitions" aria-label="Chuyển cảnh"><span data-ui-icon="transition"></span><small>Chuyển cảnh</small></button><button data-library="filters" aria-label="Bộ lọc"><span data-ui-icon="sliders"></span><small>Bộ lọc</small></button><button data-library="captions" aria-label="Phụ đề"><span data-ui-icon="captions"></span><small>Phụ đề</small></button></nav><div class="toolSearchWrap"><span data-ui-icon="search"></span><input id="toolSearch" placeholder="Tìm công cụ…" aria-label="Tìm công cụ" autocomplete="off"><kbd>⌘ K</kbd><div id="toolSearchResults" hidden role="listbox" aria-label="Kết quả tìm công cụ"></div></div></div><div id="workspace"><section id="mediaPanel" class="panel"><div class="panelHead"><b>Kho tư liệu</b><div><button id="mediaMode" title="Đổi lưới / danh sách">☷</button><button id="collapseMedia" title="Thu gọn kho tư liệu">‹</button></div></div><div class="mediaContent"><label class="assetSearch"><span data-ui-icon="search"></span><input id="assetSearch" placeholder="Tìm tư liệu của bạn…" aria-label="Tìm tư liệu"></label><div id="sourceLibrary"><div class="tabs" id="mediaTabs"><button class="active" data-kind="all">Tất cả</button><button data-kind="video">Video</button><button data-kind="audio">Âm thanh</button><button data-kind="image">Ảnh</button></div><label class="placementChoice"><span>Video tải lên</span><select id="importPlacement" aria-label="Vị trí video sau khi tải lên"><option value="layer">Tự tạo lớp riêng</option><option value="append">Nối cuối track</option><option value="library">Chỉ lưu trong kho</option></select></label><button id="upload" class="primary wide">＋ Nhập tư liệu</button><p class="hint">Kéo tư liệu vào track hoặc bấm ＋. Shift + bấm chọn nhiều mục.</p><div id="assets"></div><button id="newText" class="wide">Ｔ Thêm văn bản</button><div class="assetTools"><button id="importSrt">Nhập SRT</button><button id="exportSrt">Xuất SRT</button><button id="addSticker">★ Nhãn dán</button></div><input id="srtFile" type="file" accept=".srt,text/plain" hidden><p class="hint">Tệp từ máy chỉ lưu trong phiên này. Lưu dự án giữ cài đặt; mở lại cần chọn lại tệp.</p></div></div><div id="creativeLibrary" hidden></div><div class="resizePanel" data-resize="media" title="Kéo để đổi độ rộng kho tư liệu"></div></section>
 <section class="preview"><div class="previewHead"><span>Xem trước</span><span>1080 × 1920 · 9:16</span></div><div id="stageWrap"><div id="stage" aria-label="Khung hình xem trước"><div id="stageLayers"></div><div id="safeGuide" hidden></div></div></div><div class="transport"><button id="jumpStart" title="Về đầu">|◀</button><button id="play" aria-label="Phát video">▶</button><span id="clock">00:00.0 / 00:12.0</span><button id="captureFrame" title="Lưu khung hình PNG">📷</button><button id="fullscreen" title="Toàn màn hình">⛶</button><button id="safe" title="Hiện vùng an toàn">▣</button></div><input id="seek" type="range" min="0" max="12" step="0.01" value="0" aria-label="Tua video"></section>
@@ -1500,7 +1501,7 @@ body.timeline-drag-active #tracks .timelineJoin{visibility:hidden}
         nodes.delete(id);
       }
     }
-    items.forEach(mediaNode);
+    // Preview decodes active/nearby media only; export preflight still resolves every source.
     updateStage(true);
   }
   // A dissolve has two simultaneously visible sources around the cut.
@@ -1558,11 +1559,18 @@ body.timeline-drag-active #tracks .timelineJoin{visibility:hidden}
       return tracks.findIndex((t) => t.id === b.trackId) - tracks.findIndex((t) => t.id === a.trackId) || a.start-b.start;
     });
     ordered.forEach((i, z) => {
-      const n = mediaNode(i), t = getTrack(i.trackId), values = evaluateProps(i), active = trackVisible(t) && clipActive(i);
+      const t=getTrack(i.trackId),active=trackVisible(t)&&clipActive(i);
+      let n=nodes.get(i.id);
+      // Creating hundreds of hidden video decoders blocked clip selection/drag.
+      if(!n&&!active&&!(['video','audio'].includes(i.kind)&&i.start>time&&i.start-time<=3))return;
+      n=n||mediaNode(i);const values=evaluateProps(i);
       if (i.kind !== "audio") n.style.display = active ? "block" : "none";
       if (!active) {
         if (n.pause) routeAudioVolume(i,n,false);
         if (n.pause && !n.paused) n.pause();
+        if(!recording&&n.pause&&(end(i)<time-2||i.start>time+4)){
+          releaseAudioRoute(n);n.removeAttribute('src');n.load();n.remove();nodes.delete(i.id);return;
+        }
         // Keep future sources at their trimmed entry frame before a cut arrives.
         if (n.currentTime!==undefined&&time<i.start&&n.readyState>=1&&!n.seeking&&Math.abs(n.currentTime-i.mediaIn)>.04) {
           try{n.currentTime=Math.min(i.mediaIn,Math.max(0,(getAsset(i.assetId)?.duration||0)-.04));}catch{}
@@ -2640,6 +2648,7 @@ $("#captureFrame").onclick = async () => {
     if (time >= total()) time = Math.max(0, total() - 0.05);
     updateStage(true);
     await settleMedia();
+    await document.fonts.ready;
     const c = document.createElement("canvas");
     c.width=projectFrame.width;c.height=projectFrame.height;
     drawComposition(c);
@@ -2708,6 +2717,7 @@ $("#realExport").onclick = async () => {
     time = 0;
     updateStage(true);
     await settleMedia();
+    await document.fonts.ready;
     const c = document.createElement("canvas"), dims=frameDimensions(+$("#exportSize").value),width=dims.width;
     c.width = dims.width;
     c.height = dims.height;
@@ -2752,7 +2762,7 @@ $("#realExport").onclick = async () => {
     let blob = new Blob(chunks, { type: mime.split(";")[0] });
     if (mime.startsWith("video/webm")) blob = await finalizeWebm(blob, total());
     if (blob.size < 1e3) throw Error("Bộ ghi không tạo được video");
-    downloadBlob((($("#editorExportName")?.value||"sceneforge-"+Date.now()).replace(/[\\/:*?"<>|\x00-\x1f]/g,"-").replace(/\.(mp4|webm)$/i,"").trim()||"sceneforge") + (mime.startsWith("video/mp4") ? ".mp4" : ".webm"), blob);
+    const finished=await completeExportFile((($("#editorExportName")?.value||"sceneforge-"+Date.now()).replace(/[\\/:*?"<>|\x00-\x1f]/g,"-").replace(/\.(mp4|webm)$/i,"").trim()||"sceneforge") + (mime.startsWith("video/mp4") ? ".mp4" : ".webm"),blob);blob=finished.blob;downloadBlob(finished.name,blob);
     $("#exportProgress").value = 100;
     $("#exportStatus").textContent = "Đã tải video thật (" + (blob.size / 1024 / 1024).toFixed(2) + " MB). Không gửi dữ liệu lên máy chủ.";
   } catch (e) {
@@ -3002,7 +3012,7 @@ function paintDragPlan(plan,selected,baseline){
  const byId=plan.valid?new Map(plan.items.map(i=>[i.id,i])):ctx.source;
  for(const {el,original,opacity}of ctx.nodes.values()){
   if(selected.has(original.id))continue;const item=byId.get(original.id);
-  const transform=item?'translate3d('+((item.start-original.start)*px)+'px,0,0) scaleX('+(item.duration/original.duration)+')':'';
+  const changed=item&&(item.start!==original.start||item.duration!==original.duration);const transform=changed?'translate3d('+((item.start-original.start)*px)+'px,0,0) scaleX('+(item.duration/original.duration)+')':'';
   if(el.style.transform!==transform){el.style.transformOrigin='left center';el.style.transform=transform;}
   const nextOpacity=item?opacity:'.12';if(el.style.opacity!==nextOpacity)el.style.opacity=nextOpacity;
  }
@@ -4153,6 +4163,28 @@ window.addEventListener('message',e=>{if(e.origin!==location.origin||e.source!==
 if(parent!==window)parent.postMessage({type:'sceneforge:preferences-request'},location.origin);
 const package5DownloadBefore=downloadBlob;downloadBlob=function(name,file){package5DownloadBefore(name,file);if(recording&&file.type.startsWith('video/')&&package5ExportPreferences.sidecarSrt&&captionItems().length){const cues=captionItems(),srt='\uFEFF'+cues.map((cue,index)=>`${index+1}\n${toSrtTime(cue.start)} --> ${toSrtTime(end(cue))}\n${cue.text.trim().replace(/\n\s*\n/g,'\n')}\n`).join('\n');const srtName=name.replace(/\.[^.]+$/,'.srt'),srtFile=new Blob([srt],{type:'application/x-subrip;charset=utf-8'});package5DownloadBefore(srtName,srtFile);if(editorRoomId)parent.postMessage({type:'sceneforge:export-sidecar',roomId:editorRoomId,name:srtName,file:srtFile},location.origin);}};
 const package5ExportObserver=new MutationObserver(()=>{if($('#exportDialog').open)$('#codecHint').textContent='Ghi theo thời gian thực · '+$('#exportFrameRate').value+' fps yêu cầu, số khung thực phụ thuộc máy và tư liệu. Giữ cửa sổ ở phía trước.';});package5ExportObserver.observe($('#exportDialog'),{attributes:true,attributeFilter:['open']});
+
+// Bundled DejaVu Sans has Vietnamese coverage; retain old project font choices.
+fonts.unshift(['SceneForgeSans','Tiếng Việt']);for(const preset of Object.values(sharedCaptionStyles))preset.fontFamily='SceneForgeSans';
+// Optional local finishing stage. Browser composition remains unchanged and available.
+let finishingCapability=false,finishingJob=null,finishingFallback=null,finishingNormalizationDirty=false;
+const localFinishingAllowed=()=>['localhost','127.0.0.1'].includes(location.hostname)&&!editorRoomId?.startsWith('showcase-')&&new URLSearchParams(location.search).get('demo')!=='1';
+async function finishingRequest(path,options={}){const r=await fetch('/local-api/export/'+path,options);if(!r.ok){let message;try{message=(await r.json()).detail;}catch{}throw Error(message||'FFmpeg chưa trả kết quả.');}return r;}
+const finishingControls=document.createElement('section');finishingControls.id='localFinishingControls';finishingControls.hidden=true;finishingControls.innerHTML='<label style="display:flex;gap:8px;align-items:center"><input id="useLocalMp4" type="checkbox" checked> MP4 bằng FFmpeg · trên máy</label><label style="display:flex;gap:8px;align-items:center;margin-top:8px"><input id="normalizeLocalMp4" type="checkbox" checked> Cân âm lượng khi tạo MP4</label><p class="hint">Trình duyệt dựng hình/hiệu ứng trước, FFmpeg mã hóa MP4 H.264/AAC sau. Vẫn cần giữ tab ở phía trước trong lúc ghi, tối đa 2 phút / 100 MB.</p><button id="downloadUnfinishedExport" hidden>Tải bản ghi dự phòng</button>';
+$('#exportProgress').before(finishingControls);
+if(localFinishingAllowed())fetch('/local-api/export/capabilities').then(r=>r.ok?r.json():null).then(d=>{finishingCapability=!!d?.available;finishingControls.hidden=!finishingCapability;}).catch(()=>{});
+$('#normalizeLocalMp4').onchange=()=>finishingNormalizationDirty=true;
+window.addEventListener('message',e=>{if(!finishingNormalizationDirty&&e.origin===location.origin&&e.source===parent&&e.data?.type==='sceneforge:preferences'&&typeof e.data.settings?.normalizeAudio==='boolean')$('#normalizeLocalMp4').checked=e.data.settings.normalizeAudio;});
+$('#downloadUnfinishedExport').onclick=()=>{if(!finishingFallback)return;downloadBlob(finishingFallback.name,finishingFallback.blob);};
+const finishingCancelBefore=$('#cancelExport').onclick;$('#cancelExport').onclick=async e=>{finishingCancelBefore?.(e);if(finishingJob){try{await finishingRequest('jobs/'+finishingJob+'/cancel',{method:'POST',headers:{'X-SceneForge-Local':'1'}});}catch{}}};
+async function completeExportFile(name,blob){
+ if(!finishingCapability||!$('#useLocalMp4').checked)return{name,blob};if(blob.size>100*1024*1024)throw Error('Bản ghi vượt 100 MB; tắt MP4 cục bộ để tải định dạng trình duyệt.');
+ finishingFallback={name,blob};$('#downloadUnfinishedExport').hidden=true;
+ try{const fps=Number($('#exportFrameRate').value)||30,normalize=$('#normalizeLocalMp4').checked;$('#exportStatus').textContent='FFmpeg · đang chuyển bản ghi vào động cơ cục bộ…';const r=await finishingRequest('mp4?fps='+fps+'&normalize='+normalize+'&duration='+total(),{method:'POST',headers:{'X-SceneForge-Local':'1','Content-Type':'application/octet-stream'},body:blob});const job=await r.json();finishingJob=job.id;let result=job;
+  while(!['done','error','cancelled'].includes(result.state)){if(exportCancelled){await finishingRequest('jobs/'+job.id+'/cancel',{method:'POST',headers:{'X-SceneForge-Local':'1'}});throw Error('Đã hủy FFmpeg.');}await new Promise(r=>setTimeout(r,400));result=await(await finishingRequest('jobs/'+job.id)).json();$('#exportProgress').value=Math.min(99,result.progress||0);$('#exportStatus').textContent='FFmpeg · '+(result.state==='queued'?'đợi lượt':(result.progress||0)+'% · mã hóa MP4'+(normalize?' và cân âm lượng':''));}
+  if(result.state!=='done')throw Error(result.error||'Đã hủy FFmpeg.');const mp4=await(await finishingRequest('jobs/'+job.id+'/file')).blob();if(exportCancelled)throw Error('Đã hủy xuất.');if(mp4.type!=='video/mp4'||mp4.size<500)throw Error('Kết quả không phải MP4 hợp lệ.');finishingFallback=null;return{name:name.replace(/\.(webm|mp4)$/i,'.mp4'),blob:mp4};
+ }catch(e){$('#downloadUnfinishedExport').hidden=!finishingFallback;throw e;}finally{finishingJob=null;}
+}
 
   init();
   booting=false;

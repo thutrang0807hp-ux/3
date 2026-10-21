@@ -1,0 +1,36 @@
+{
+  "environment": "Linux Chromium headless; synthetic pointer drag across two tracks; same sample assets. Not a Windows or heavy-source-video benchmark.",
+  "font": "Bundled DejaVu Sans: actual font loaded in browser; cmap covers Ữ ặ ỡ ợ ẫ. Other OS fallback fonts not certified.",
+  "measurements": [
+    {
+      "samples": 76,
+      "median_ms": 16.699999999999932,
+      "p95_ms": 16.700000000000045,
+      "max_ms": 16.799999999999955,
+      "longtasks": 0,
+      "max_longtask_ms": 0,
+      "clips": 3,
+      "gesture_seconds": 1.16
+    },
+    {
+      "samples": 76,
+      "median_ms": 16.699999999999818,
+      "p95_ms": 16.799999999999727,
+      "max_ms": 50,
+      "longtasks": 0,
+      "max_longtask_ms": 0,
+      "clips": 30,
+      "gesture_seconds": 1.195
+    },
+    {
+      "samples": 113,
+      "median_ms": 16.699999999999818,
+      "p95_ms": 16.800000000000182,
+      "max_ms": 150,
+      "longtasks": 2,
+      "max_longtask_ms": 144,
+      "clips": 100,
+      "gesture_seconds": 2.011
+    }
+  ]
+}

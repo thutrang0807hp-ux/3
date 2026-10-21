@@ -1,0 +1,355 @@
+{
+  "top_files_preserved": 7,
+  "checked_nested_files": 38,
+  "identical_previous": 35,
+  "new_or_changed": [
+    "design/all-spec-received/SceneForge_TatCa/extracted/Goi1_TabTaoVideo/handoff/DAC_TA_TAB_TAO_VIDEO.md",
+    "design/all-spec-received/SceneForge_TatCa/extracted/Goi1_TabTaoVideo/handoff/TOM_TAT_CHO_CLAUDE_MOI.md",
+    "design/all-spec-received/SceneForge_TatCa/extracted/Goi5_CaiDat_ThongBao_ManChao_TaoVideoBanGop/SceneForge_Goi5/SceneForge_BangThuThat.xlsx"
+  ],
+  "files": [
+    {
+      "archive": "Goi1_TabTaoVideo.zip",
+      "path": "design/all-spec-received/SceneForge_TatCa/extracted/Goi1_TabTaoVideo/handoff/DAC_TA_TAB_TAO_VIDEO.md",
+      "bytes": 24298,
+      "sha256": "f5aadcdf2ed47288e9a72418c3aa939dc3192d61e40d9a61e49f473c52b31d42",
+      "identical_previous": []
+    },
+    {
+      "archive": "Goi1_TabTaoVideo.zip",
+      "path": "design/all-spec-received/SceneForge_TatCa/extracted/Goi1_TabTaoVideo/handoff/anh-thiet-ke/02-o-kich-ban-giong-doc.png",
+      "bytes": 299142,
+      "sha256": "4ce6c609baee99de1d22fb8012969f53f6db3d844847ec8566e21acc54c61e7e",
+      "identical_previous": [
+        "design/workflow-spec/handoff/anh-thiet-ke/02-o-kich-ban-giong-doc.png"
+      ]
+    },
+    {
+      "archive": "Goi1_TabTaoVideo.zip",
+      "path": "design/all-spec-received/SceneForge_TatCa/extracted/Goi1_TabTaoVideo/handoff/anh-thiet-ke/03-cach-thay-nguoi-1-canh.png",
+      "bytes": 224900,
+      "sha256": "71fe36c2cf00d20c1fb61f32c9d572454fa5d0f3beaa4a65d226d700406d0051",
+      "identical_previous": [
+        "design/workflow-spec/handoff/anh-thiet-ke/03-cach-thay-nguoi-1-canh.png"
+      ]
+    },
+    {
+      "archive": "Goi1_TabTaoVideo.zip",
+      "path": "design/all-spec-received/SceneForge_TatCa/extracted/Goi1_TabTaoVideo/handoff/anh-thiet-ke/04-quy-trinh-va-chi-phi.png",
+      "bytes": 254040,
+      "sha256": "1ac4b8b8c631844e7732fff4502c025785362efa6c23ac7d61593fc8623ec62a",
+      "identical_previous": [
+        "design/workflow-spec/handoff/anh-thiet-ke/04-quy-trinh-va-chi-phi.png"
+      ]
+    },
+    {
+      "archive": "Goi1_TabTaoVideo.zip",
+      "path": "design/all-spec-received/SceneForge_TatCa/extracted/Goi1_TabTaoVideo/handoff/anh-thiet-ke/01-tab-tao-video-toan-canh.png",
+      "bytes": 932741,
+      "sha256": "22512ddc919ac0ff08a4aadc5c3d68bf55aa6ffc64778d5f753ee3b597ee2d12",
+      "identical_previous": [
+        "design/workflow-spec/handoff/anh-thiet-ke/01-tab-tao-video-toan-canh.png"
+      ]
+    },
+    {
+      "archive": "Goi1_TabTaoVideo.zip",
+      "path": "design/all-spec-received/SceneForge_TatCa/extracted/Goi1_TabTaoVideo/handoff/TOM_TAT_CHO_CLAUDE_MOI.md",
+      "bytes": 10771,
+      "sha256": "69005e5fd09ba8e85f1e3f74d759ce01a991df565bf281c6fd952c436ecc8cb2",
+      "identical_previous": []
+    },
+    {
+      "archive": "Goi2_TabDung.zip",
+      "path": "design/all-spec-received/SceneForge_TatCa/extracted/Goi2_TabDung/SceneForge_DacTa_TabDung/tham-khao/DUNG_VIDEO_THONG_NHAT.md",
+      "bytes": 11292,
+      "sha256": "79131e9e07b5f194d6e51988e9fa53b23c92d1ee37c9b58a8e234ce899645c0d",
+      "identical_previous": [
+        "design/editor-spec/tham-khao/DUNG_VIDEO_THONG_NHAT.md"
+      ]
+    },
+    {
+      "archive": "Goi2_TabDung.zip",
+      "path": "design/all-spec-received/SceneForge_TatCa/extracted/Goi2_TabDung/SceneForge_DacTa_TabDung/anh-thiet-ke/tab-dung-am-thanh.png",
+      "bytes": 138028,
+      "sha256": "63df8cda7ed2346d21e34a82c21c1018a1efc650c7fa9f46e5667c44f1c97b89",
+      "identical_previous": [
+        "design/editor-spec/anh-thiet-ke/tab-dung-am-thanh.png"
+      ]
+    },
+    {
+      "archive": "Goi2_TabDung.zip",
+      "path": "design/all-spec-received/SceneForge_TatCa/extracted/Goi2_TabDung/SceneForge_DacTa_TabDung/anh-thiet-ke/kho-tu-lieu.png",
+      "bytes": 344446,
+      "sha256": "6240f93a6532e5a08d0795e932a30d3bc93cfa29338e94d60b0d9ef26550df4c",
+      "identical_previous": [
+        "design/editor-spec/anh-thiet-ke/kho-tu-lieu.png"
+      ]
+    },
+    {
+      "archive": "Goi2_TabDung.zip",
+      "path": "design/all-spec-received/SceneForge_TatCa/extracted/Goi2_TabDung/SceneForge_DacTa_TabDung/anh-thiet-ke/thanh-cong-cu-timeline-v2.png",
+      "bytes": 103143,
+      "sha256": "2720ec4bf99a0eb8d007dfacb1467b3b199f579e12191dfa698f3f2720eff995",
+      "identical_previous": [
+        "design/editor-spec/anh-thiet-ke/thanh-cong-cu-timeline-v2.png"
+      ]
+    },
+    {
+      "archive": "Goi2_TabDung.zip",
+      "path": "design/all-spec-received/SceneForge_TatCa/extracted/Goi2_TabDung/SceneForge_DacTa_TabDung/anh-thiet-ke/chu-va-phu-de.png",
+      "bytes": 238555,
+      "sha256": "f64d822e98da5f9762d17ed4e1b5146d541a299dbc97a2093dfc6ac3a3de3702",
+      "identical_previous": [
+        "design/editor-spec/anh-thiet-ke/chu-va-phu-de.png"
+      ]
+    },
+    {
+      "archive": "Goi2_TabDung.zip",
+      "path": "design/all-spec-received/SceneForge_TatCa/extracted/Goi2_TabDung/SceneForge_DacTa_TabDung/anh-thiet-ke/tuy-chinh-bo-cuc.png",
+      "bytes": 228341,
+      "sha256": "eabb5cc936dd2fb336e505fd129de4572e9d0f5652d38d80145d7f6373537b56",
+      "identical_previous": [
+        "design/editor-spec/anh-thiet-ke/tuy-chinh-bo-cuc.png"
+      ]
+    },
+    {
+      "archive": "Goi2_TabDung.zip",
+      "path": "design/all-spec-received/SceneForge_TatCa/extracted/Goi2_TabDung/SceneForge_DacTa_TabDung/anh-thiet-ke/bang-chinh-hinh.png",
+      "bytes": 192444,
+      "sha256": "4079fb48fdab3f4ae8dbb5c3125985e2f10b3caa80686c064d5bea55f3a3993b",
+      "identical_previous": [
+        "design/editor-spec/anh-thiet-ke/bang-chinh-hinh.png"
+      ]
+    },
+    {
+      "archive": "Goi2_TabDung.zip",
+      "path": "design/all-spec-received/SceneForge_TatCa/extracted/Goi2_TabDung/SceneForge_DacTa_TabDung/anh-thiet-ke/xuat-video-v3.png",
+      "bytes": 505907,
+      "sha256": "1f6836f06a93eb72e1b6df7461a3db33e38fddf8714121c805373d506bb459bc",
+      "identical_previous": [
+        "design/editor-spec/anh-thiet-ke/xuat-video-v3.png"
+      ]
+    },
+    {
+      "archive": "Goi2_TabDung.zip",
+      "path": "design/all-spec-received/SceneForge_TatCa/extracted/Goi2_TabDung/SceneForge_DacTa_TabDung/anh-thiet-ke/khung-xem-video.png",
+      "bytes": 242310,
+      "sha256": "003e886485320f992198a2f5c08fba80bdeb448f72cd114b97d0e7b7855e90ac",
+      "identical_previous": [
+        "design/editor-spec/anh-thiet-ke/khung-xem-video.png"
+      ]
+    },
+    {
+      "archive": "Goi2_TabDung.zip",
+      "path": "design/all-spec-received/SceneForge_TatCa/extracted/Goi2_TabDung/SceneForge_DacTa_TabDung/anh-thiet-ke/ben-trong-timeline-v2.png",
+      "bytes": 312868,
+      "sha256": "8242cf5689c0df07c5d48af6ed98ff9b5f55eb9a662adece2728e98f73a45a3b",
+      "identical_previous": [
+        "design/editor-spec/anh-thiet-ke/ben-trong-timeline-v2.png"
+      ]
+    },
+    {
+      "archive": "Goi2_TabDung.zip",
+      "path": "design/all-spec-received/SceneForge_TatCa/extracted/Goi2_TabDung/SceneForge_DacTa_TabDung/anh-thiet-ke/bang-am-thanh-capcut.png",
+      "bytes": 196596,
+      "sha256": "a3020d21101baf8fb34a4949a05216ead945686843356b9265388c2835f5c09e",
+      "identical_previous": [
+        "design/editor-spec/anh-thiet-ke/bang-am-thanh-capcut.png"
+      ]
+    },
+    {
+      "archive": "Goi2_TabDung.zip",
+      "path": "design/all-spec-received/SceneForge_TatCa/extracted/Goi2_TabDung/SceneForge_DacTa_TabDung/anh-thiet-ke/bo-cuc-dung.png",
+      "bytes": 331771,
+      "sha256": "17fe0bb0c3a212a8648a8b15637d33755db8bf84764face8a9a25b93a2ce8209",
+      "identical_previous": [
+        "design/editor-spec/anh-thiet-ke/bo-cuc-dung.png"
+      ]
+    },
+    {
+      "archive": "Goi2_TabDung.zip",
+      "path": "design/all-spec-received/SceneForge_TatCa/extracted/Goi2_TabDung/SceneForge_DacTa_TabDung/DAC_TA_TAB_DUNG.md",
+      "bytes": 14246,
+      "sha256": "b7196a7927275f5bbfd6e8730462834a93834a8ad67dec899b2d12a2ac179c3c",
+      "identical_previous": [
+        "design/editor-spec/DAC_TA_TAB_DUNG.md"
+      ]
+    },
+    {
+      "archive": "Goi3_KhungSuonApp.zip",
+      "path": "design/all-spec-received/SceneForge_TatCa/extracted/Goi3_KhungSuonApp/SceneForge_KhungSuonApp/anh-thiet-ke/02-trang-chu-nhieu-video.png",
+      "bytes": 597292,
+      "sha256": "9433cb596a5052e523af2d821affbac462da513ad2dcd58085e9c8b02ffb7e9e",
+      "identical_previous": [
+        "design/app-shell-spec/anh-thiet-ke/02-trang-chu-nhieu-video.png"
+      ]
+    },
+    {
+      "archive": "Goi3_KhungSuonApp.zip",
+      "path": "design/all-spec-received/SceneForge_TatCa/extracted/Goi3_KhungSuonApp/SceneForge_KhungSuonApp/anh-thiet-ke/03-phong-lam-viec.png",
+      "bytes": 421691,
+      "sha256": "05387827c0fe073a183d0e5d8be33321e0e1e0a2b2c3313494ba55638c383f74",
+      "identical_previous": [
+        "design/app-shell-spec/anh-thiet-ke/03-phong-lam-viec.png"
+      ]
+    },
+    {
+      "archive": "Goi3_KhungSuonApp.zip",
+      "path": "design/all-spec-received/SceneForge_TatCa/extracted/Goi3_KhungSuonApp/SceneForge_KhungSuonApp/anh-thiet-ke/04-o-sang-dung.png",
+      "bytes": 507558,
+      "sha256": "29b07ddd2c221caa7855024fd783b43caca1720a02142ea58a2d32bbf5a5d424",
+      "identical_previous": [
+        "design/app-shell-spec/anh-thiet-ke/04-o-sang-dung.png"
+      ]
+    },
+    {
+      "archive": "Goi3_KhungSuonApp.zip",
+      "path": "design/all-spec-received/SceneForge_TatCa/extracted/Goi3_KhungSuonApp/SceneForge_KhungSuonApp/anh-thiet-ke/01-trang-chu.png",
+      "bytes": 736027,
+      "sha256": "90e540474ab7449e968dd92edf03689c18742c93d228b8542b3a048197f3863d",
+      "identical_previous": [
+        "design/app-shell-spec/anh-thiet-ke/01-trang-chu.png"
+      ]
+    },
+    {
+      "archive": "Goi3_KhungSuonApp.zip",
+      "path": "design/all-spec-received/SceneForge_TatCa/extracted/Goi3_KhungSuonApp/SceneForge_KhungSuonApp/anh-thiet-ke/05-hang-cho-ban-nhap.png",
+      "bytes": 778022,
+      "sha256": "955b8b668a943782da0f11a49745e31836648bebd7c3d80fd0d43aeea24bf073",
+      "identical_previous": [
+        "design/app-shell-spec/anh-thiet-ke/05-hang-cho-ban-nhap.png"
+      ]
+    },
+    {
+      "archive": "Goi3_KhungSuonApp.zip",
+      "path": "design/all-spec-received/SceneForge_TatCa/extracted/Goi3_KhungSuonApp/SceneForge_KhungSuonApp/DAC_TA_KHUNG_SUON_APP.md",
+      "bytes": 14391,
+      "sha256": "f64b51b3cb9d452e9f6a0d977f5c295aefe32d16e9fd4beceb10591c68b86e92",
+      "identical_previous": [
+        "design/app-shell-spec/DAC_TA_KHUNG_SUON_APP.md"
+      ]
+    },
+    {
+      "archive": "Goi5_CaiDat_ThongBao_ManChao_TaoVideoBanGop.zip",
+      "path": "design/all-spec-received/SceneForge_TatCa/extracted/Goi5_CaiDat_ThongBao_ManChao_TaoVideoBanGop/SceneForge_Goi5/anh-thiet-ke/02-tab-tao-video-ban-gop.png",
+      "bytes": 642153,
+      "sha256": "cc9a25d698733d873b750bb3074cd63e205c9613957d72a1f079d7552b18944b",
+      "identical_previous": [
+        "design/package-5-spec/SceneForge_Goi5/anh-thiet-ke/02-tab-tao-video-ban-gop.png"
+      ]
+    },
+    {
+      "archive": "Goi5_CaiDat_ThongBao_ManChao_TaoVideoBanGop.zip",
+      "path": "design/all-spec-received/SceneForge_TatCa/extracted/Goi5_CaiDat_ThongBao_ManChao_TaoVideoBanGop/SceneForge_Goi5/anh-thiet-ke/01-cai-dat-thong-bao-man-chao.png",
+      "bytes": 533147,
+      "sha256": "142a1f009e4d577d6fc898cc44f8ec6f6cdd14729ae87afa25803e49b60f6a09",
+      "identical_previous": [
+        "design/package-5-spec/SceneForge_Goi5/anh-thiet-ke/01-cai-dat-thong-bao-man-chao.png"
+      ]
+    },
+    {
+      "archive": "Goi5_CaiDat_ThongBao_ManChao_TaoVideoBanGop.zip",
+      "path": "design/all-spec-received/SceneForge_TatCa/extracted/Goi5_CaiDat_ThongBao_ManChao_TaoVideoBanGop/SceneForge_Goi5/DAC_TA_GOI_5.md",
+      "bytes": 13155,
+      "sha256": "0d9e6db408910221e52a9e42e68cddbea393d0601f309038b8cb19f165d6aeb5",
+      "identical_previous": [
+        "design/package-5-spec/SceneForge_Goi5/DAC_TA_GOI_5.md"
+      ]
+    },
+    {
+      "archive": "Goi5_CaiDat_ThongBao_ManChao_TaoVideoBanGop.zip",
+      "path": "design/all-spec-received/SceneForge_TatCa/extracted/Goi5_CaiDat_ThongBao_ManChao_TaoVideoBanGop/SceneForge_Goi5/SceneForge_BangThuThat.xlsx",
+      "bytes": 12193,
+      "sha256": "144ccd013523bd2d644ff118684340b70241202ed3d3b87052afb5540447837b",
+      "identical_previous": []
+    },
+    {
+      "archive": "Goi4_TrangChu_TaiKhoan_TuAnh_KhoKichBan.zip",
+      "path": "design/all-spec-received/SceneForge_TatCa/extracted/Goi4_TrangChu_TaiKhoan_TuAnh_KhoKichBan/SceneForge_Goi4/anh-thiet-ke/06-tab-tu-anh-dao-dien.png",
+      "bytes": 533637,
+      "sha256": "3678ad5fe0f48a86ae51198c987fa927ed80657aae6dcf1b61169fee4ad16c77",
+      "identical_previous": [
+        "design/package-4-received/SceneForge_Goi4/anh-thiet-ke/06-tab-tu-anh-dao-dien.png",
+        "design/package-4-spec/anh-thiet-ke/06-tab-tu-anh-dao-dien.png"
+      ]
+    },
+    {
+      "archive": "Goi4_TrangChu_TaiKhoan_TuAnh_KhoKichBan.zip",
+      "path": "design/all-spec-received/SceneForge_TatCa/extracted/Goi4_TrangChu_TaiKhoan_TuAnh_KhoKichBan/SceneForge_Goi4/anh-thiet-ke/05-hang-cho-2-lan.png",
+      "bytes": 357686,
+      "sha256": "8146b38f0e39ccf1a92ece501bf5e56b975de2039832458770f003b10953065a",
+      "identical_previous": [
+        "design/package-4-received/SceneForge_Goi4/anh-thiet-ke/05-hang-cho-2-lan.png",
+        "design/package-4-spec/anh-thiet-ke/05-hang-cho-2-lan.png"
+      ]
+    },
+    {
+      "archive": "Goi4_TrangChu_TaiKhoan_TuAnh_KhoKichBan.zip",
+      "path": "design/all-spec-received/SceneForge_TatCa/extracted/Goi4_TrangChu_TaiKhoan_TuAnh_KhoKichBan/SceneForge_Goi4/anh-thiet-ke/08-kho-kich-ban.png",
+      "bytes": 365670,
+      "sha256": "e0cfb03ce2a686e444af8fe7a8694aa46407df1acc38c8e4063478097c243a5f",
+      "identical_previous": [
+        "design/package-4-received/SceneForge_Goi4/anh-thiet-ke/08-kho-kich-ban.png"
+      ]
+    },
+    {
+      "archive": "Goi4_TrangChu_TaiKhoan_TuAnh_KhoKichBan.zip",
+      "path": "design/all-spec-received/SceneForge_TatCa/extracted/Goi4_TrangChu_TaiKhoan_TuAnh_KhoKichBan/SceneForge_Goi4/anh-thiet-ke/02-trang-chu-nut-video-moi.png",
+      "bytes": 713613,
+      "sha256": "4e053378bfae3ef4e164822647391177f938e35e4f15a281981f72af1b7ce26e",
+      "identical_previous": [
+        "design/package-4-received/SceneForge_Goi4/anh-thiet-ke/02-trang-chu-nut-video-moi.png",
+        "design/package-4-spec/anh-thiet-ke/02-trang-chu-nut-video-moi.png"
+      ]
+    },
+    {
+      "archive": "Goi4_TrangChu_TaiKhoan_TuAnh_KhoKichBan.zip",
+      "path": "design/all-spec-received/SceneForge_TatCa/extracted/Goi4_TrangChu_TaiKhoan_TuAnh_KhoKichBan/SceneForge_Goi4/anh-thiet-ke/03-tai-khoan-flow.png",
+      "bytes": 525191,
+      "sha256": "ad6a6e0d194f2d29b869e979fd22fc70572d09c54fc3537f689bef1c98500f0f",
+      "identical_previous": [
+        "design/package-4-received/SceneForge_Goi4/anh-thiet-ke/03-tai-khoan-flow.png",
+        "design/package-4-spec/anh-thiet-ke/03-tai-khoan-flow.png"
+      ]
+    },
+    {
+      "archive": "Goi4_TrangChu_TaiKhoan_TuAnh_KhoKichBan.zip",
+      "path": "design/all-spec-received/SceneForge_TatCa/extracted/Goi4_TrangChu_TaiKhoan_TuAnh_KhoKichBan/SceneForge_Goi4/anh-thiet-ke/01-trang-chu.png",
+      "bytes": 807624,
+      "sha256": "cb5c0220cf38d3464d2d220db02be8da81ecf01c2f2731029f0a92af61e9ce15",
+      "identical_previous": [
+        "design/package-4-received/SceneForge_Goi4/anh-thiet-ke/01-trang-chu.png",
+        "design/package-4-spec/anh-thiet-ke/01-trang-chu.png"
+      ]
+    },
+    {
+      "archive": "Goi4_TrangChu_TaiKhoan_TuAnh_KhoKichBan.zip",
+      "path": "design/all-spec-received/SceneForge_TatCa/extracted/Goi4_TrangChu_TaiKhoan_TuAnh_KhoKichBan/SceneForge_Goi4/anh-thiet-ke/04-tai-khoan-meta.png",
+      "bytes": 427413,
+      "sha256": "05d450d2026789da9e17b7ce55999c369b1314b8eef1736b0c8f48bf050c52d0",
+      "identical_previous": [
+        "design/package-4-received/SceneForge_Goi4/anh-thiet-ke/04-tai-khoan-meta.png",
+        "design/package-4-spec/anh-thiet-ke/04-tai-khoan-meta.png"
+      ]
+    },
+    {
+      "archive": "Goi4_TrangChu_TaiKhoan_TuAnh_KhoKichBan.zip",
+      "path": "design/all-spec-received/SceneForge_TatCa/extracted/Goi4_TrangChu_TaiKhoan_TuAnh_KhoKichBan/SceneForge_Goi4/anh-thiet-ke/07-clip-muse-trang-thai-loi.png",
+      "bytes": 471564,
+      "sha256": "515257d6781a7ed2714fb25a5a9805b8f10ad7618ac8d0b5a57a589317e733c1",
+      "identical_previous": [
+        "design/package-4-received/SceneForge_Goi4/anh-thiet-ke/07-clip-muse-trang-thai-loi.png",
+        "design/package-4-spec/anh-thiet-ke/07-clip-muse-trang-thai-loi.png"
+      ]
+    },
+    {
+      "archive": "Goi4_TrangChu_TaiKhoan_TuAnh_KhoKichBan.zip",
+      "path": "design/all-spec-received/SceneForge_TatCa/extracted/Goi4_TrangChu_TaiKhoan_TuAnh_KhoKichBan/SceneForge_Goi4/DAC_TA_GOI_4.md",
+      "bytes": 22643,
+      "sha256": "fe5eff13c04a840489bab40a0263dbf8b81cfe8f5926b48bb1933dc2b8ab1e0d",
+      "identical_previous": [
+        "design/package-4-received/SceneForge_Goi4/DAC_TA_GOI_4.md"
+      ]
+    }
+  ]
+}
