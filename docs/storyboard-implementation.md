@@ -4,7 +4,7 @@
 
 ## Đã triển khai
 
-- Kịch bản / Storyboard trong node Kịch bản. Chung `photoDraft.beats`: lời đọc, kiểu cảnh, góc máy, chuyển động, chữ trên hình; thời lượng chỉnh qua Sửa nhịp. Storyboard lấy poster từ clip đúng kiểu trong Bộ cảnh; thiếu clip hiện khung trống có tên kiểu cảnh. Không tạo ảnh AI.
+- Storyboard là node riêng, hiện cùng lúc với Kịch bản; kéo bằng tiêu đề và lưu vị trí theo từng phòng. Nút Xem node Storyboard trong Kịch bản đưa camera tới node. Có dây từ Kịch bản/Bộ cảnh tới Storyboard, rồi tới Đạo diễn. Con lăn trong danh sách Storyboard chỉ cuộn danh sách. Các node cũ giữ vị trí đã lưu. Chung `photoDraft.beats`: lời đọc, kiểu cảnh, góc máy, chuyển động, chữ trên hình; thời lượng chỉnh qua Sửa nhịp. Storyboard lấy poster từ clip đúng kiểu trong Bộ cảnh; thiếu clip hiện khung trống có tên kiểu cảnh. Không tạo ảnh AI.
 - 3 phương án: lấy công thức đầu Kho đã xếp hạng, gửi một yêu cầu Gemini cho cả ba bản và Storyboard. Mỗi bản có kiểu mở đầu riêng; nhịp đầu tối đa ba giây. Xem đủ nội dung trước khi chọn. Bản đang dùng giữ nguyên đến khi chọn; có nút giữ kịch bản trước. Không tạo clip/giọng/ghép/xuất qua các hành động này khi còn chờ chọn. Không tự gọi lại khi lỗi.
 - Nút AI viết kịch bản cũ cũng nhận chỉ dẫn Storyboard trong cùng phản hồi. Kiểm tra số nhịp, kiểu cảnh, trường chữ trước khi thay bản cũ; sai phản hồi giữ bản trước.
 - Ghi công thức và nguồn vào snapshot của phương án được chọn. Đánh giá sau xuất tiếp tục cộng đúng công thức.
@@ -16,7 +16,7 @@
 ## Kiểm tra
 
 - `python local_engine/check_storyboard.py`: một lượt cho ba phương án + Storyboard, từ chối trùng hook/lời đầu, sai kiểu cảnh/thiếu bản, không tự gửi lại; tương thích nút một bản. Gemini giả lập, không gọi dịch vụ thật.
-- `python scripts/app-shell/check_storyboard.py`: nhập chỉ số/lưu/validation; trọng số phiếu; sửa hai chiều; cảnh báo nguồn; một lượt ba bản; chặn tạo khi chưa chọn; reload giữ bản đã chọn và Storyboard.
+- `python scripts/app-shell/check_storyboard.py`: nhập chỉ số/lưu/validation; trọng số phiếu; sửa hai chiều khi hai node cùng hiện; kéo node bằng chuột/lưu vị trí qua reload và giữ vị trí các node cũ; cảnh báo nguồn; một lượt ba bản; chặn tạo khi chưa chọn; reload giữ bản đã chọn và Storyboard.
 - `python local_engine/check_recipes.py`: API rút công thức/chặn chép nguyên lời, video/recommend contracts.
 - `python scripts/app-shell/check_package6.py`, `check_workflow_navigation.py`, `check_shell_alignment.py`: dữ liệu cũ/legacy, thư viện, worker, chuyển luồng, khung ổn định và zoom được giữ.
 - Bài `check_recipes.py` cũ của app-shell còn chờ class `videoMenu` trong khi Gói 6 dùng `g6NewVideo`; đây là kỳ vọng cũ, không dùng bài đó làm bằng chứng đã qua.
