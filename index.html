@@ -275,6 +275,40 @@
 .directReferences .referenceAdd:hover{background:#303b25;border-color:#8ba753}
 .directReferences>article>p{font-size:11px;line-height:1.7;margin-top:15px;margin-bottom:0;color:#8a96a6;white-space:pre-wrap}
 .referenceFullPreview{display:block;max-width:100%;max-height:65dvh;object-fit:contain;margin:auto}
+
+/* Compact product navigation. Keep the desk and the existing product actions. */
+@media(min-width:621px){
+ #home .products{flex-basis:210px;width:210px;min-width:0;min-height:0;padding:24px 9px 16px;overflow:hidden;scrollbar-gutter:auto}
+ #home .products>header{margin:0 9px 20px;flex-shrink:0}
+ #home .products>header>b{font-size:14px;font-weight:600}
+ #home #newProduct{width:28px;height:28px;padding:0;display:grid;place-items:center;font-size:17px;border-radius:8px;background:#1e252e}
+ #home #productList{display:flex;flex-direction:column;gap:4px;min-height:0;min-width:0;width:100%;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#353f4a transparent;padding:2px}
+ #home .productRow{width:100%;min-width:0;flex:0 0 40px;height:40px;min-height:40px;margin:0;padding:0 9px;border-radius:9px;background:transparent;color:#8e9bab}
+ #home .g6ProductRow{height:40px;min-height:40px;padding:0 20px 0 14px!important}
+ #home .productRow:hover{background:#171d24}
+ #home .productRow.active{background:#222a33;box-shadow:inset 2px 0 #c7e74c}
+ #home .productName{display:grid;grid-template-columns:17px minmax(0,1fr) auto;align-items:center;gap:6px;width:100%;min-width:0}
+ #home .productName>b{display:block;min-width:0;font-size:12px;line-height:1.4;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;-webkit-line-clamp:unset}
+ #home .productRow.active .productName>b{font-weight:600;color:#edf1f5}
+ #home .productDot{width:10px;height:10px;margin-left:5px;box-shadow:0 0 0 1px #10151a}
+ #home .productDot:before{width:10px;height:10px;left:-5px}
+ #home .productName>span:last-child{font-size:10px;min-width:18px;max-width:42px;text-align:center;line-height:1.3;color:#6f7f91;font-variant-numeric:tabular-nums}
+ #home .productName>.attentionBadge,#home .productName>.errorBadge{font-size:10px;padding:3px 6px;min-width:26px;border-radius:12px;color:#efbd5c;background:#352e1c;white-space:nowrap}
+ #home .productName>.errorBadge{color:#e8a39b;background:#38272b}
+ #home [data-product=all]{flex-basis:34px;height:34px;min-height:34px;margin-bottom:7px;padding:0 9px}
+ #home [data-product=all] .productName{grid-template-columns:minmax(0,1fr) auto}
+ #home [data-product=all] .productName>span:last-child{max-width:none;min-width:0;padding-inline:7px;font-size:9px;white-space:nowrap}
+ #home .g6ProductGrip{font-size:10px;left:2px;color:#647388;opacity:0}
+ #home .g6ProductRow:hover .g6ProductGrip,#home .g6ProductRow:focus-within .g6ProductGrip{opacity:.65}
+ #home .g6ProductMore{right:3px;padding:0 3px;font-size:14px;line-height:19px;border-radius:4px;background:#323c49}
+ #home .g6ProductRow:focus-within .g6ProductMore{opacity:1}
+ #home .g6InlineRename{padding:3px 4px;font-size:11px;min-width:0;height:27px}
+ #home #archiveProduct{margin-top:auto;padding:12px 10px 4px;min-height:43px;flex-shrink:0;font-size:12px;border-top-color:#222b35}
+ #home #archiveProduct.active{border-radius:9px;padding-bottom:10px}
+ #home #archiveProduct svg{width:14px;height:16px}
+ #home #archiveCount{font-size:10px;color:#7b8c9e;min-width:20px;text-align:center}
+}
+@media(min-width:621px) and (max-width:950px){#home .products{flex-basis:185px;width:185px;padding-inline:7px}#home .productName>b{font-size:11px}}
 </style></head><body>
 <aside class="rail" aria-label="Điều hướng"><a class="logo" href="#overview" title="SceneForge · Trang chủ" aria-label="SceneForge"><svg viewBox="0 0 24 36" aria-hidden="true"><rect x="4" y="2" width="16" height="31" rx="4"/></svg></a><nav><button data-view="overview" title="Trang chủ" aria-label="Trang chủ"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5M5 9v12h5v-7h4v7h5V9"/></svg></button><button data-view="analysis" title="Tạo video · phòng gần nhất" aria-label="Tạo video"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3" width="11" height="18" rx="2"/><path d="m17 9 4 3-4 3"/></svg></button><button data-view="editor" title="Dựng · phòng gần nhất" aria-label="Dựng"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 9v11"/></svg></button></nav><div class="railBottom"><button id="openQueue" class="credit" title="Hàng chờ chung · Credit Flow chưa xác minh"><span class="creditTube"><i></i></span><b>—</b><small>credit</small></button><button id="openNotifications" title="Thông báo" aria-label="Thông báo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 7 3 9H3c0-2 3-2 3-9m3 12h6"/></svg><span id="notificationCount" hidden></span></button><button id="openStorage" title="Thư mục & dữ liệu trên máy" aria-label="Thư mục và dữ liệu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h7l2-3h9v16H3z"/></svg></button></div></aside>
 <main id="home"><aside class="products"><header><b>Sản phẩm</b><button id="newProduct" title="Tạo sản phẩm" aria-label="Tạo sản phẩm">＋</button></header><div id="productList"></div><button id="archiveProduct" class="archive">▣ <span>Lưu trữ</span><span id="archiveCount">0</span></button></aside><section class="desk"><header class="deskHeader"><div><small>Bàn sản xuất</small><h1 id="deskTitle">Tất cả</h1><p id="deskSummary"></p></div><div class="deskActions"><label class="search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6"/><path d="m15 15 6 6"/></svg><input id="searchRooms" placeholder="Tìm video…" aria-label="Tìm video"></label><button id="editProduct" title="Sửa tên và bộ ảnh">Bộ ảnh</button><button id="newFromPhotos" title="Tạo phòng từ ảnh và ý tưởng">Từ ảnh</button><button id="newVideo" class="primary">＋ Video mới</button></div></header><div id="board" class="board"></div><div id="dropHint" class="dropHint">Thả video dọc vào đây · mỗi video một phòng, tự lưu trên máy</div><div id="homeError" role="alert" hidden></div></section></main>
@@ -1173,7 +1207,7 @@ renderProducts=function(){
  const active=rooms.filter(r=>!r.trashedAt&&!archivedRoom(r)&&!productFor(r.productId)?.archived&&!productFor(r.productId)?.trashedAt),attention=attentionCount(active);
  stableHTML($('#productList'),'<button class="productRow '+(prefs.product==='all'?'active':'')+'" data-product="all"><span class="productName"><b>Tất cả</b><span class="'+(attention?'attentionBadge':'')+'">'+(attention?'● '+attention+' cần bạn':active.length)+'</span></span></button>'+products.filter(p=>!p.archived&&!p.trashedAt).map(p=>{
  const row=active.filter(r=>r.productId===p.id),n=attentionCount(row),errors=row.filter(r=>r.error).length;
- return '<button class="productRow g6ProductRow '+(prefs.product===p.id?'active':'')+'" data-product="'+p.id+'"><span class="g6ProductGrip" draggable="true" data-g6-drag-product="'+p.id+'" title="Kéo đổi thứ tự">⋮⋮</span><span class="productName"><i class="productDot" style="background:'+p.color+'"></i><b data-g6-rename="'+p.id+'">'+esc(p.name)+'</b><span class="'+(errors?'errorBadge':n?'attentionBadge':'')+'">'+(errors?'● '+errors+' lỗi':n?'● '+n:row.length)+'</span></span><span role="button" tabindex="0" class="g6ProductMore" data-g6-product-menu="'+p.id+'" aria-label="Tùy chỉnh '+esc(p.name)+'">⋯</span></button>';
+ return '<button class="productRow g6ProductRow '+(prefs.product===p.id?'active':'')+'" data-product="'+p.id+'" title="'+esc(p.name)+'"><span class="g6ProductGrip" draggable="true" data-g6-drag-product="'+p.id+'" title="Kéo đổi thứ tự">⋮⋮</span><span class="productName"><i class="productDot" style="background:'+p.color+'"></i><b data-g6-rename="'+p.id+'">'+esc(p.name)+'</b><span class="'+(errors?'errorBadge':n?'attentionBadge':'')+'">'+(errors?'● '+errors+' lỗi':n?'● '+n:row.length)+'</span></span><span role="button" tabindex="0" class="g6ProductMore" data-g6-product-menu="'+p.id+'" aria-label="Tùy chỉnh '+esc(p.name)+'">⋯</span></button>';
  }).join(''));
  $('#archiveCount').textContent=archiveRooms().length;$('#archiveProduct').classList.toggle('active',prefs.product==='archive');
 };
