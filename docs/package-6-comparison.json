@@ -1,0 +1,56 @@
+[
+  {
+    "file": "Goi2_TabDung.zip",
+    "bytes": 2725862,
+    "sha256": "7ac9b9ccbeeba128baef3f99ead82627730f1f8c1481b96229b54e114d65c46e",
+    "comparison": "identical"
+  },
+  {
+    "file": "SceneForge_PhanTichVideo.md",
+    "bytes": 9234,
+    "sha256": "b9165ed0d7614839a2190de60cea77016da70e534d4d115de8669f2a17779470",
+    "comparison": "different"
+  },
+  {
+    "file": "Goi5_CaiDat_ThongBao_ManChao_TaoVideoBanGop.zip",
+    "bytes": 1461774,
+    "sha256": "aa52fa05a73598b4bb2f53a6ec07ff00485565c783eb75d4c3fa877a9f96e6c2",
+    "comparison": "different"
+  },
+  {
+    "file": "DOC_TRUOC.md",
+    "bytes": 1352,
+    "sha256": "379e730e73aca6def97d905381eea45807eb11e87a42c24b82700b4dbecb2322",
+    "comparison": "different"
+  },
+  {
+    "file": "Goi6_TrangChu_VideoMoi_TabTaoVideoGop.zip",
+    "bytes": 2367598,
+    "sha256": "98f32f52b3f71719b6c1ba821e701a0bbb85986d3cfcfc4f3ab0f697cc39b777",
+    "comparison": "new"
+  },
+  {
+    "file": "SceneForge_BangThuThat.xlsx",
+    "bytes": 13023,
+    "sha256": "518dae72abdf5807e5f36b705466e46feb378cc2b50e5828e39c6619db0c2768",
+    "comparison": "different"
+  },
+  {
+    "file": "Goi4_TrangChu_TaiKhoan_TuAnh_KhoKichBan.zip",
+    "bytes": 4106780,
+    "sha256": "e237681bfca4dba3edf846fc5f85659173d482de5e999e2148b29426e28e75d9",
+    "comparison": "identical"
+  },
+  {
+    "file": "Goi1_TabTaoVideo.zip",
+    "bytes": 1662817,
+    "sha256": "992faa22bca0a2eef0ef3f6b4af3c8d90b1814ca91d9370ea474917877b55c13",
+    "comparison": "identical"
+  },
+  {
+    "file": "Goi3_KhungSuonApp.zip",
+    "bytes": 2986954,
+    "sha256": "22f47579bbcbb2d4b58d1cd7c209cc604008132ee9898100e441453966f4facc",
+    "comparison": "identical"
+  }
+]
