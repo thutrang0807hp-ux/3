@@ -3,34 +3,34 @@
   "font": "Bundled DejaVu Sans: actual font loaded in browser; cmap covers Ữ ặ ỡ ợ ẫ. Other OS fallback fonts not certified.",
   "measurements": [
     {
-      "samples": 76,
-      "median_ms": 16.699999999999932,
-      "p95_ms": 16.700000000000045,
-      "max_ms": 16.799999999999955,
+      "samples": 90,
+      "median_ms": 16.699999999999818,
+      "p95_ms": 16.700000000000273,
+      "max_ms": 33.30000000000018,
       "longtasks": 0,
       "max_longtask_ms": 0,
       "clips": 3,
-      "gesture_seconds": 1.16
+      "gesture_seconds": 1.403
     },
     {
-      "samples": 76,
+      "samples": 103,
       "median_ms": 16.699999999999818,
       "p95_ms": 16.799999999999727,
-      "max_ms": 50,
+      "max_ms": 49.899999999999636,
       "longtasks": 0,
       "max_longtask_ms": 0,
       "clips": 30,
-      "gesture_seconds": 1.195
+      "gesture_seconds": 1.657
     },
     {
-      "samples": 113,
+      "samples": 106,
       "median_ms": 16.699999999999818,
       "p95_ms": 16.800000000000182,
-      "max_ms": 150,
-      "longtasks": 2,
-      "max_longtask_ms": 144,
+      "max_ms": 166.59999999999945,
+      "longtasks": 1,
+      "max_longtask_ms": 148,
       "clips": 100,
-      "gesture_seconds": 2.011
+      "gesture_seconds": 1.848
     }
   ]
 }

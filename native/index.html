@@ -2788,7 +2788,7 @@ $("#cancelExport").onclick = () => {
   pause();
 };
 document.addEventListener("visibilitychange", () => {
-  if (recording && document.hidden) {
+  if (recording && !timelineExportBusy && document.hidden) {
     exportCancelled = true;
     pause();
   }
@@ -3717,7 +3717,7 @@ function updateFrameChrome(){
  const name=frameName();frameSelect.value=name;const label=projectFrame.width+' × '+projectFrame.height+' · '+(name==='custom'?'Tùy chỉnh':name);
  $('.previewHead>span:nth-child(2)').textContent=label;const title=$('header strong');title.textContent='SceneForge · Dựng video '+(name==='custom'?'Tùy chỉnh':name);
  $('#stage').style.aspectRatio=projectFrame.width+' / '+projectFrame.height;
- $('#exportDialog h2').textContent='Xuất video · '+label;
+ $('#exportDialog h2').textContent='Xuất video';
  for(const option of $$('#exportSize option')){const d=frameDimensions(Number(option.value));option.textContent=d.width+' × '+d.height;}
  $('#summary').textContent=$('#summary').textContent.replace(/9:16$/,name==='custom'?projectFrame.width+':'+projectFrame.height:name);
  const fitLabel=$('label[for=prop-fit]');if(fitLabel)fitLabel.textContent='Cách lấp khung '+(name==='custom'?'tùy chỉnh':name);
@@ -4185,6 +4185,115 @@ async function completeExportFile(name,blob){
   if(result.state!=='done')throw Error(result.error||'Đã hủy FFmpeg.');const mp4=await(await finishingRequest('jobs/'+job.id+'/file')).blob();if(exportCancelled)throw Error('Đã hủy xuất.');if(mp4.type!=='video/mp4'||mp4.size<500)throw Error('Kết quả không phải MP4 hợp lệ.');finishingFallback=null;return{name:name.replace(/\.(webm|mp4)$/i,'.mp4'),blob:mp4};
  }catch(e){$('#downloadUnfinishedExport').hidden=!finishingFallback;throw e;}finally{finishingJob=null;}
 }
+
+// Direct local rendering uploads source bytes + timeline; it never records playback.
+let timelineExportCapability=false,timelineExportId=null,timelineExportBusy=false;
+const engineRow=document.createElement('label');engineRow.className='designExportRow';engineRow.innerHTML='<span>Cách xuất</span><select id="timelineExportEngine"><option value="browser">Bộ ghi trình duyệt</option><option value="ffmpeg" disabled>FFmpeg · cần ứng dụng trên máy</option></select>';
+$('#designExportSettings').prepend(engineRow);
+const offlineHint=document.createElement('p');offlineHint.id='timelineExportHint';offlineHint.className='hint';engineRow.after(offlineHint);
+const sidecarRow=document.createElement('label');sidecarRow.className='checkLabel';sidecarRow.innerHTML='<input id="exportSidecarSrt" type="checkbox"> Kèm tệp phụ đề .srt';$('#exportProgress').before(sidecarRow);
+$('#exportSidecarSrt').checked=package5ExportPreferences.sidecarSrt;
+$('#exportSidecarSrt').onchange=()=>package5ExportPreferences.sidecarSrt=$('#exportSidecarSrt').checked;
+const originalExportIntro=[...$('#designExportSettings').querySelectorAll('p.hint')].find(n=>n.textContent.startsWith('Xuất thật bằng'));
+package5ExportObserver.disconnect();
+new MutationObserver(()=>{if($('#exportDialog').open)offlineEngineUi();}).observe($('#exportDialog'),{attributes:true,attributeFilter:['open']});
+$('#exportFrameRate').closest('label').classList.add('designExportRow');
+const exportLayout=document.createElement('div');exportLayout.id='timelineExportLayout';const exportPreview=document.createElement('aside');exportPreview.id='timelineExportPreview';exportPreview.innerHTML='<canvas width=180 height=320 aria-label="Ảnh xem trước bản dựng"></canvas><small></small>';$('#designExportSettings').before(exportLayout);exportLayout.append(exportPreview,$('#designExportSettings'));
+const exportChecks=document.createElement('section');exportChecks.id='timelineExportChecks';$('#exportProgress').before(exportChecks);
+const offlineDock=document.createElement('aside');offlineDock.id='timelineExportDock';offlineDock.hidden=true;offlineDock.innerHTML='<b>FFmpeg · xuất trên máy</b><span role="status"></span><button data-export-open>Mở tiến độ</button><button data-export-cancel>Hủy</button>';document.body.append(offlineDock);
+offlineDock.querySelector('[data-export-open]').onclick=()=>$('#exportDialog').showModal();offlineDock.querySelector('[data-export-cancel]').onclick=()=>$('#cancelExport').click();
+const copyExportError=document.createElement('button');copyExportError.id='copyTimelineExportError';copyExportError.hidden=true;copyExportError.textContent='Sao chép chi tiết lỗi';$('#exportStatus').after(copyExportError);
+copyExportError.onclick=async()=>{const text=$('#exportStatus').textContent.replace(/(?:AIza|sk-)[\w-]+/g,'[đã ẩn key]').replace(/(cookie|authorization|token|key)\s*[:=]\s*[^\s,;]+/gi,'$1=[đã ẩn]');try{await navigator.clipboard.writeText(text);notify('Đã sao chép lỗi FFmpeg.');}catch{notify('Trình duyệt không cho sao chép; hãy chọn dòng lỗi.');}};
+function offlineEngineUi(){
+ const direct=$('#timelineExportEngine').value==='ffmpeg';const dims=frameDimensions(Number($('#exportSize').value));$('#exportDialog h2').textContent='Xuất video';$('#exportInfo').textContent=fmt(total())+' · '+dims.width+' × '+dims.height+' · '+tracks.length+' track';exportPreview.querySelector('small').textContent=fmt(total())+' · '+dims.width+' × '+dims.height;
+ if(originalExportIntro)originalExportIntro.textContent=direct?'Tư liệu được chuyển vào FFmpeg trên máy. Không gửi video lên dịch vụ mạng.':'Xuất bằng bộ ghi trình duyệt, chạy theo thời gian video; cần giữ tab ở phía trước.';
+ finishingControls.hidden=!finishingCapability;
+ $('#useLocalMp4').closest('label').hidden=direct;
+ $('#timelineExportHint').textContent=direct?'Xuất trực tiếp từ clip gốc · H.264/AAC · chạy nền trên máy. Tối đa 10 phút / 512 MB tư liệu. Không cần phát lại video.':'Ghi theo thời gian thực; giữ tab ở phía trước. Định dạng phụ thuộc trình duyệt.';
+ finishingControls.querySelector('p').textContent=direct?'Giữ nguyên thời gian các điểm cắt. Hỗ trợ chữ tĩnh, âm lượng, vào/ra dần và chuyển cảnh tuyến tính. Keyframe, màu và effect âm thanh nâng cao sẽ được báo trước; không tự bỏ hiệu ứng.':'FFmpeg có thể đổi bản ghi thành MP4 sau khi ghi xong; bước ghi vẫn cần tab ở phía trước.';
+ $('#exportFormat').closest('.field').hidden=direct;$('#realExport').disabled=direct?timelineExportBusy:recording||!$('#exportFormat').options.length;
+ if(!timelineExportBusy&&$('#exportProgress').value===0)$('#exportStatus').textContent=direct?'Sẵn sàng xuất trực tiếp MP4 trên máy.':'Sẵn sàng ghi video trong trình duyệt.';
+ $('#codecHint').textContent=direct?'MP4 · H.264 / AAC · '+$('#exportFrameRate').value+' fps · CPU':'Ghi theo thời gian thực; fps thực phụ thuộc máy.';
+}
+$('#timelineExportEngine').onchange=offlineEngineUi;$('#exportSize').addEventListener('change',offlineEngineUi);$('#exportFrameRate').addEventListener('change',offlineEngineUi);
+if(localFinishingAllowed())fetch('/local-api/export/capabilities').then(r=>r.ok?r.json():null).then(d=>{timelineExportCapability=!!(d?.available&&d?.timeline);if(timelineExportCapability){const option=$('#timelineExportEngine option[value=ffmpeg]');option.disabled=false;option.textContent='FFmpeg · trực tiếp từ timeline';$('#timelineExportEngine').value='ffmpeg';offlineEngineUi();}}).catch(()=>{});
+function timelinePreflight(){
+ const problems=[];const visible=items.filter(i=>trackVisible(getTrack(i.trackId)));
+ for(const i of visible){const a=getAsset(i.assetId);if(i.kind!=='text'&&(!a?.url||a.missing))problems.push({at:i.start,id:i.id,severity:'error',text:'Thiếu tư liệu: '+i.name});
+  if(i.kind==='text'&&(i.textY>78||i.textX>82||i.textX<8))problems.push({at:i.start,id:i.id,severity:'warning',text:'Chữ có thể nằm dưới giao diện TikTok: '+i.text.slice(0,55)});
+ }
+ const visuals=visible.filter(i=>['video','image'].includes(i.kind)).sort((a,b)=>a.start-b.start);let endAt=0;
+ for(const i of visuals){if(i.start>endAt+.05)problems.push({at:endAt,id:i.id,severity:'warning',text:'Khoảng trống hình '+fmt(endAt)+' → '+fmt(i.start)});endAt=Math.max(endAt,end(i));}
+ if(endAt<total()-.05)problems.push({at:endAt,severity:'warning',text:'Cuối bản dựng còn khoảng trống hình.'});
+ exportChecks.innerHTML='<b>Kiểm tra trước khi xuất</b>'+ (problems.length?problems.map((p,n)=>'<button class="exportCheck '+p.severity+'" data-export-check="'+n+'">'+(p.severity==='error'?'⚠ ':'△ ')+esc(p.text)+' <small>'+fmt(p.at)+' →</small></button>').join(''):'<p class="hint">✓ Không thiếu tư liệu hoặc có khoảng trống hình. Chưa đo méo tiếng; cảnh báo vùng chữ chỉ dựa trên vị trí.</p>');
+ exportChecks.querySelectorAll('[data-export-check]').forEach(b=>b.onclick=()=>{const p=problems[Number(b.dataset.exportCheck)];pause();time=p.at;if(p.id){selection=p.id;selectedIds=new Set([p.id]);}render();$('#exportDialog').close();});return problems;
+}
+const timelineExportOpenBefore=$('#export').onclick;$('#export').onclick=()=>{timelineExportOpenBefore();timelinePreflight();offlineEngineUi();try{drawComposition(exportPreview.querySelector('canvas'));}catch{}$('#exportSidecarSrt').checked=package5ExportPreferences.sidecarSrt;};
+async function captionLayerBlob(i,dims){
+ await document.fonts.ready;
+ const c=document.createElement('canvas');c.width=dims.width;c.height=dims.height;
+ const g=c.getContext('2d'),w=c.width,h=c.height,font=i.fontSize*w/projectFrame.width;
+ g.font=`${i.bold?'750':'400'} ${font}px ${i.fontFamily}`;
+ if('letterSpacing'in g)g.letterSpacing=i.letterSpacing*w/projectFrame.width+'px';
+ const lines=textLines(g,i.text,w*.95),lineHeight=font*1.2,width=Math.max(0,...lines.map(l=>g.measureText(l).width)),height=lines.length*lineHeight;
+ g.globalAlpha=i.opacity;g.translate(w*i.textX/100,h*i.textY/100);g.rotate(i.rotation*Math.PI/180);g.scale(i.scale,i.scale);
+ if(i.textBg){g.fillStyle=i.background;g.fillRect(-width/2-w*.008,-height/2-w*.004,width+w*.016,height+w*.008);}
+ g.textAlign=i.align;g.textBaseline='middle';g.fillStyle=i.color;g.strokeStyle=i.outlineColor;g.lineJoin='round';g.lineWidth=i.outline*w/projectFrame.width*2;
+ const x=i.align==='left'?-width/2:i.align==='right'?width/2:0;
+ lines.forEach((line,n)=>{const y=-height/2+lineHeight*(n+.5);if(i.outline)g.strokeText(line,x,y);g.fillText(line,x,y);});
+ return await new Promise((resolve,reject)=>c.toBlob(b=>b?resolve(b):reject(Error('Không tạo được lớp chữ.')),'image/png'));
+}
+async function timelineExportBundle(){
+ const dims=frameDimensions(Number($('#exportSize').value)),sources=new Map(),clips=[];
+ const order=sortedVisuals(),audio=items.filter(i=>i.kind==='audio');
+ for(const i of [...order,...audio]){
+  const track=getTrack(i.trackId);if(!trackVisible(track))continue;
+  if(i.audioBypass===false)throw Error('FFmpeg: '+i.name+' có effect âm thanh nâng cao; dùng bộ ghi trình duyệt để giữ effect.');
+  if(i.look&&i.look!=='none'||i.brightness!==100||i.contrast!==100||i.saturation!==100||i.temperature||i.blur)throw Error('FFmpeg: '+i.name+' có chỉnh màu; dùng bộ ghi trình duyệt để giữ màu hiện tại.');
+  if(i.transition!=='none'&&i.transitionEasing!=='linear')throw Error('FFmpeg: chuyển cảnh cần chọn đường cong Tuyến tính.');
+  if(i.keyframes?.length)throw Error('FFmpeg: '+i.name+' có keyframe; dùng bộ ghi trình duyệt để giữ chuyển động.');
+  if(i.kind==='text'&&i.textAnimation!=='none')throw Error('FFmpeg: chữ động cần dùng bộ ghi trình duyệt. Chữ tĩnh được hỗ trợ.');
+  let key,blob;
+  if(i.kind==='text'){key='caption_'+clips.length;blob=await captionLayerBlob(i,dims);sources.set(key,blob);}
+  else{const a=getAsset(i.assetId);if(!a?.url||a.missing)throw Error('FFmpeg: thiếu tư liệu '+i.name);key='asset_'+assets.indexOf(a);blob=sources.get(key);if(!blob){const response=await fetch(a.url);if(!response.ok)throw Error('FFmpeg: không đọc được '+a.name);blob=await response.blob();sources.set(key,blob);}}
+  const r={...clone(i),asset:key,bytes:blob.size,track:i.trackId,direction:i.transitionDirection,easing:i.transitionEasing,preservePitch:i.audioPreservePitch,muted:!!track.muted||!!i.audioMuted};
+  if(i.kind==='text')Object.assign(r,{kind:'image',mediaIn:0,speed:1,opacity:1,rotation:0,scale:1,x:0,y:0,fit:'contain',flipX:false,flipY:false,transition:'none',keyframes:[],look:'none',brightness:100,contrast:100,saturation:100,temperature:0,blur:0});
+  clips.push(r);
+ }
+ return {model:{...dims,fps:Number($('#exportFrameRate').value),duration:total(),normalize:$('#normalizeLocalMp4').checked,clips},sources};
+}
+function timelineProgress(result){
+ const state=result.state==='queued'?'Đợi lượt':result.state==='uploading'?'Đang nhận tư liệu':'Đang mã hóa';const eta=result.eta_seconds==null?'':' · còn khoảng '+result.eta_seconds+' giây (ước tính)';
+ const text='FFmpeg · '+state+' · '+(result.progress||0)+'%'+eta;$('#exportProgress').value=result.progress||0;$('#exportStatus').textContent=text;offlineDock.querySelector('span').textContent=text;
+}
+const timelineBrowserExportBefore=$('#realExport').onclick;
+$('#realExport').onclick=async()=>{
+ if($('#timelineExportEngine').value!=='ffmpeg')return timelineBrowserExportBefore();
+ if(timelineExportBusy||recording)return;
+ if(!timelineExportCapability){notify('Cần mở bản chạy trên máy có FFmpeg.');return;}
+ if(!items.length){notify('Timeline đang trống.');return;}
+ if(timelinePreflight().some(p=>p.severity==='error')){notify('Chọn lại tư liệu bị thiếu trước khi xuất.');return;}
+ timelineExportBusy=true;recording=true;exportCancelled=false;pause();copyExportError.hidden=true;offlineDock.hidden=false;offlineDock.querySelector('[data-export-cancel]').hidden=false;$('#realExport').disabled=true;$('#cancelExport').hidden=false;
+ const exportName=($('#editorExportName').value||'sceneforge').replace(/[\\/:*?"<>|\x00-\x1f]/g,'-').replace(/\.(mp4|webm)$/i,'').trim()||'sceneforge';
+ try{
+  clearTimeout(editorSaveTimer);await flushEditorDraft();$('#exportStatus').textContent='FFmpeg · chuẩn bị timeline và tư liệu gốc…';
+  const {model,sources}=await timelineExportBundle();if(exportCancelled)throw Error('Đã hủy xuất.');
+  const created=await(await finishingRequest('timeline',{method:'POST',headers:{'X-SceneForge-Local':'1','Content-Type':'application/json'},body:JSON.stringify(model)})).json();timelineExportId=created.id;
+  for(const [key,blob]of sources){if(exportCancelled)throw Error('Đã hủy xuất.');$('#exportStatus').textContent='FFmpeg · chuyển tư liệu '+key+' vào động cơ trên máy…';await finishingRequest('timeline/'+created.id+'/assets/'+key,{method:'PUT',headers:{'X-SceneForge-Local':'1','Content-Type':'application/octet-stream'},body:blob});}
+  if(exportCancelled)throw Error('Đã hủy xuất.');let result=await(await finishingRequest('timeline/'+created.id+'/start',{method:'POST',headers:{'X-SceneForge-Local':'1'}})).json();
+  while(!['done','error','cancelled'].includes(result.state)){timelineProgress(result);await new Promise(r=>setTimeout(r,400));result=await(await finishingRequest('timeline/'+created.id)).json();}
+  if(result.state!=='done'||exportCancelled)throw Error(result.error||'Đã hủy xuất.');
+  const blob=await(await finishingRequest('timeline/'+created.id+'/file')).blob();if(exportCancelled)throw Error('Đã hủy xuất.');
+  downloadBlob(exportName+'.mp4',blob);$('#exportProgress').value=100;$('#exportStatus').textContent='✓ FFmpeg · xuất xong MP4 ('+(blob.size/1048576).toFixed(2)+' MB). Nhớ chọn nhãn nội dung do AI tạo khi đăng TikTok.';
+ }catch(e){if(timelineExportId&&!exportCancelled)try{await finishingRequest('timeline/'+timelineExportId+'/cancel',{method:'POST',headers:{'X-SceneForge-Local':'1'}});}catch{}$('#exportStatus').textContent=e.message||'FFmpeg: chưa xuất được video.';copyExportError.hidden=false;}
+ finally{timelineExportBusy=false;recording=false;timelineExportId=null;$('#realExport').disabled=false;$('#cancelExport').hidden=true;offlineDock.querySelector('span').textContent=$('#exportStatus').textContent;offlineDock.querySelector('[data-export-cancel]').hidden=true;offlineDock.onclick=e=>{if(e.target===offlineDock&&!timelineExportBusy)offlineDock.hidden=true;};}
+};
+const timelineCancelBefore=$('#cancelExport').onclick;$('#cancelExport').onclick=async e=>{timelineCancelBefore?.(e);if(timelineExportId)try{await finishingRequest('timeline/'+timelineExportId+'/cancel',{method:'POST',headers:{'X-SceneForge-Local':'1'}});}catch{}};
+// Background rendering is owned by the local process, not document animation frames.
+// Browser recording retains its existing visibility cancellation policy.
+window.addEventListener('beforeunload',e=>{if(timelineExportBusy){e.preventDefault();e.returnValue='';}});
+const timelineBootBefore=bootSharedEditor;bootSharedEditor=function(){timelineBootBefore();window.SceneForgeEditor.getExportReadiness=()=>({directFfmpeg:timelineExportCapability,busy:timelineExportBusy,job:timelineExportId});};
+const offlineStyle=document.createElement('style');offlineStyle.textContent=`#exportDialog{width:850px;max-width:95vw;max-height:94vh;overflow:auto;background:#171a20}#timelineExportLayout{display:grid;grid-template-columns:170px minmax(0,1fr);padding:6px 10px}#timelineExportPreview{padding:16px 5px;display:flex;flex-direction:column;gap:12px;align-items:center}#timelineExportPreview canvas{width:150px;height:auto;border-radius:9px;background:#090a0c}#timelineExportPreview small{font-size:10px;color:#8a909b;text-align:center}#designExportSettings{padding:4px 16px 12px}.designExportRow{margin:12px 0}#timelineExportChecks{padding:12px 0;border-top:1px solid #2b3038}#timelineExportChecks>b{display:block;margin-bottom:8px}.exportCheck{display:block;text-align:left;width:100%;margin:5px 0;padding:10px;background:#21252d;border:0;border-radius:8px}.exportCheck small{float:right;color:#3cc8e0}.exportCheck.error{color:#f0645a}.exportCheck.warning{color:#f5b544}#timelineExportDock{position:fixed;right:20px;bottom:20px;z-index:99;padding:14px;border:1px solid #2b3038;background:#171a20;border-radius:12px;box-shadow:0 8px 40px #0009;max-width:380px}#timelineExportDock:not([hidden]){display:flex;flex-wrap:wrap;gap:10px}#timelineExportDock span{width:100%;color:#8a909b}@media(max-width:640px){#timelineExportLayout{display:block}#timelineExportPreview{display:none}#designExportSettings{padding:8px}.designExportRow{grid-template-columns:110px minmax(0,1fr)}}#copyTimelineExportError{color:#f5b544}#timelineExportHint{margin:8px 0 12px}`;document.head.append(offlineStyle);
 
   init();
   booting=false;

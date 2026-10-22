@@ -1,0 +1,162 @@
+{
+  "files": [
+    {
+      "file": "design/consolidated-received/SceneForge_BanTongHop.zip",
+      "bytes": 9020311,
+      "sha256": "3f31fd6efb4c95a304369d78edfc0e4b6d8a6976d75efc67986a39cb2db8e6d3"
+    },
+    {
+      "file": "design/consolidated-received/extracted/SceneForge_BanTongHop/DAC_TA_TONG_HOP.md",
+      "bytes": 49282,
+      "sha256": "64344f99e4923bb891631739bb33ec3d3ec6357ec3811553559525426436f70e"
+    },
+    {
+      "file": "design/consolidated-received/extracted/SceneForge_BanTongHop/SceneForge_BangThuThat.xlsx",
+      "bytes": 13023,
+      "sha256": "518dae72abdf5807e5f36b705466e46feb378cc2b50e5828e39c6619db0c2768"
+    },
+    {
+      "file": "design/consolidated-received/extracted/SceneForge_BanTongHop/anh/01-trang-chu.png",
+      "bytes": 645644,
+      "sha256": "9a5d41202692767a27245602f2c7a9eae61ca8ae7cfe423dbdb155860b1a5ad0"
+    },
+    {
+      "file": "design/consolidated-received/extracted/SceneForge_BanTongHop/anh/02-hop-video-moi.png",
+      "bytes": 224483,
+      "sha256": "1c71f99b5bf8e603eee9ff7600c0c5ccdd494c2dd12643f848532a1b0440c955"
+    },
+    {
+      "file": "design/consolidated-received/extracted/SceneForge_BanTongHop/anh/03-video-chua-phan-tich.png",
+      "bytes": 288077,
+      "sha256": "368515c2f2f9e49be4fac1434673d68b51df2e3ce21e4730d779c36e0b3267b6"
+    },
+    {
+      "file": "design/consolidated-received/extracted/SceneForge_BanTongHop/anh/04-tab-tao-video.png",
+      "bytes": 654851,
+      "sha256": "414bdecd09b5584e5ec0e3727715a5c851d6a4396698b63a1e7abc440cc61f59"
+    },
+    {
+      "file": "design/consolidated-received/extracted/SceneForge_BanTongHop/anh/05-tab-tao-video-phong-to.png",
+      "bytes": 601447,
+      "sha256": "99f63e52bb9e49ce8d6baa44a6503b233516aa2cb752f1c900a155dbef0d18c6"
+    },
+    {
+      "file": "design/consolidated-received/extracted/SceneForge_BanTongHop/anh/06-bang-kich-ban-giong-doc.png",
+      "bytes": 299142,
+      "sha256": "4ce6c609baee99de1d22fb8012969f53f6db3d844847ec8566e21acc54c61e7e"
+    },
+    {
+      "file": "design/consolidated-received/extracted/SceneForge_BanTongHop/anh/07-cai-dat-thong-bao-man-chao.png",
+      "bytes": 533147,
+      "sha256": "142a1f009e4d577d6fc898cc44f8ec6f6cdd14729ae87afa25803e49b60f6a09"
+    },
+    {
+      "file": "design/consolidated-received/extracted/SceneForge_BanTongHop/anh/08-cai-dat-giong-thu-muc-xuat.png",
+      "bytes": 303852,
+      "sha256": "d9ba62fd5b425008c9b4162491ab0242f686c0612523629da8ef6137645dfc79"
+    },
+    {
+      "file": "design/consolidated-received/extracted/SceneForge_BanTongHop/anh/09-quy-trinh-cach-thay-nguoi.png",
+      "bytes": 224900,
+      "sha256": "71fe36c2cf00d20c1fb61f32c9d572454fa5d0f3beaa4a65d226d700406d0051"
+    },
+    {
+      "file": "design/consolidated-received/extracted/SceneForge_BanTongHop/anh/10-tai-khoan-flow.png",
+      "bytes": 525191,
+      "sha256": "ad6a6e0d194f2d29b869e979fd22fc70572d09c54fc3537f689bef1c98500f0f"
+    },
+    {
+      "file": "design/consolidated-received/extracted/SceneForge_BanTongHop/anh/11-tai-khoan-meta.png",
+      "bytes": 427413,
+      "sha256": "05d450d2026789da9e17b7ce55999c369b1314b8eef1736b0c8f48bf050c52d0"
+    },
+    {
+      "file": "design/consolidated-received/extracted/SceneForge_BanTongHop/anh/12-hang-cho.png",
+      "bytes": 357686,
+      "sha256": "8146b38f0e39ccf1a92ece501bf5e56b975de2039832458770f003b10953065a"
+    },
+    {
+      "file": "design/consolidated-received/extracted/SceneForge_BanTongHop/anh/13-dung-thanh-cong-cu-timeline-v2.png",
+      "bytes": 103143,
+      "sha256": "2720ec4bf99a0eb8d007dfacb1467b3b199f579e12191dfa698f3f2720eff995"
+    },
+    {
+      "file": "design/consolidated-received/extracted/SceneForge_BanTongHop/anh/14-dung-ben-trong-timeline-v2.png",
+      "bytes": 312868,
+      "sha256": "8242cf5689c0df07c5d48af6ed98ff9b5f55eb9a662adece2728e98f73a45a3b"
+    },
+    {
+      "file": "design/consolidated-received/extracted/SceneForge_BanTongHop/anh/15-dung-bang-am-thanh-capcut.png",
+      "bytes": 196596,
+      "sha256": "a3020d21101baf8fb34a4949a05216ead945686843356b9265388c2835f5c09e"
+    },
+    {
+      "file": "design/consolidated-received/extracted/SceneForge_BanTongHop/anh/16-dung-tab-dung-am-thanh.png",
+      "bytes": 138028,
+      "sha256": "63df8cda7ed2346d21e34a82c21c1018a1efc650c7fa9f46e5667c44f1c97b89"
+    },
+    {
+      "file": "design/consolidated-received/extracted/SceneForge_BanTongHop/anh/17-dung-khung-xem-video.png",
+      "bytes": 242310,
+      "sha256": "003e886485320f992198a2f5c08fba80bdeb448f72cd114b97d0e7b7855e90ac"
+    },
+    {
+      "file": "design/consolidated-received/extracted/SceneForge_BanTongHop/anh/18-dung-bang-chinh-hinh.png",
+      "bytes": 192444,
+      "sha256": "4079fb48fdab3f4ae8dbb5c3125985e2f10b3caa80686c064d5bea55f3a3993b"
+    },
+    {
+      "file": "design/consolidated-received/extracted/SceneForge_BanTongHop/anh/19-dung-chu-va-phu-de.png",
+      "bytes": 238555,
+      "sha256": "f64d822e98da5f9762d17ed4e1b5146d541a299dbc97a2093dfc6ac3a3de3702"
+    },
+    {
+      "file": "design/consolidated-received/extracted/SceneForge_BanTongHop/anh/20-dung-kho-tu-lieu.png",
+      "bytes": 344446,
+      "sha256": "6240f93a6532e5a08d0795e932a30d3bc93cfa29338e94d60b0d9ef26550df4c"
+    },
+    {
+      "file": "design/consolidated-received/extracted/SceneForge_BanTongHop/anh/21-dung-xuat-video-v3.png",
+      "bytes": 505907,
+      "sha256": "1f6836f06a93eb72e1b6df7461a3db33e38fddf8714121c805373d506bb459bc"
+    },
+    {
+      "file": "design/consolidated-received/extracted/SceneForge_BanTongHop/anh/22-dung-bo-cuc-dung.png",
+      "bytes": 331771,
+      "sha256": "17fe0bb0c3a212a8648a8b15637d33755db8bf84764face8a9a25b93a2ce8209"
+    },
+    {
+      "file": "design/consolidated-received/extracted/SceneForge_BanTongHop/anh/23-dung-tuy-chinh-bo-cuc.png",
+      "bytes": 228341,
+      "sha256": "eabb5cc936dd2fb336e505fd129de4572e9d0f5652d38d80145d7f6373537b56"
+    },
+    {
+      "file": "design/consolidated-received/extracted/SceneForge_BanTongHop/anh/24-tab-tu-anh.png",
+      "bytes": 533637,
+      "sha256": "3678ad5fe0f48a86ae51198c987fa927ed80657aae6dcf1b61169fee4ad16c77"
+    },
+    {
+      "file": "design/consolidated-received/extracted/SceneForge_BanTongHop/anh/25-clip-muse-loi.png",
+      "bytes": 471564,
+      "sha256": "515257d6781a7ed2714fb25a5a9805b8f10ad7618ac8d0b5a57a589317e733c1"
+    },
+    {
+      "file": "design/consolidated-received/extracted/SceneForge_BanTongHop/anh/26-kho-kich-ban.png",
+      "bytes": 365670,
+      "sha256": "e0cfb03ce2a686e444af8fe7a8694aa46407df1acc38c8e4063478097c243a5f"
+    },
+    {
+      "file": "design/consolidated-received/extracted/SceneForge_BanTongHop/tham-khao/DUNG_VIDEO_THONG_NHAT.md",
+      "bytes": 11292,
+      "sha256": "79131e9e07b5f194d6e51988e9fa53b23c92d1ee37c9b58a8e234ce899645c0d"
+    },
+    {
+      "file": "design/consolidated-received/extracted/SceneForge_BanTongHop/tham-khao/TOM_TAT_CHO_CLAUDE_MOI.md",
+      "bytes": 10771,
+      "sha256": "69005e5fd09ba8e85f1e3f74d759ce01a991df565bf281c6fd952c436ecc8cb2"
+    }
+  ],
+  "workbook_identical_to_goi6": true,
+  "keep_existing_30_tests": true,
+  "no_provider_live_test_claim": true
+}
