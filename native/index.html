@@ -1242,6 +1242,17 @@ body.media-collapsed{--media:34px!important}body.inspector-collapsed{--inspector
 #timeline{overflow:visible;z-index:6}#timelineScroll{border-radius:0 0 6px 6px}#editorLayoutMenu{z-index:1000}
 #editorStudioHome{font-size:17px;color:#24c2ce;letter-spacing:-.6px;font-weight:700;background:none;border:0;padding:0}.mediaContent #mediaTabs button{font-size:10px}#autoAssemble{width:27px;height:27px;padding:4px;font-size:15px}
 
+/* The host already shows the app identity and room navigation. */
+.hostedRoom.shared-multitrack-editor>header{height:66px;min-height:66px;padding:0 16px;background:#11161b}
+.hostedRoom #editorBrand{display:none}
+.hostedRoom #editorProjectTitle{position:static;transform:none;max-width:55%;gap:12px;min-width:0}
+.hostedRoom #editorProjectName{font-size:12px;width:180px;max-width:100%;padding:7px 9px;background:#1c232c;border-color:#2a3541;border-radius:7px}
+.hostedRoom #editorProjectTitle:before{content:'Bản dựng';font-size:11px;white-space:nowrap;color:#8391a2}
+.hostedRoom.shared-multitrack-editor main{height:calc(100dvh - 66px);padding:0}
+@media(max-width:780px){.hostedRoom #editorProjectTitle{max-width:44%;gap:5px}.hostedRoom #editorProjectTitle:before{display:none}.hostedRoom #editorProjectName{width:105px}.hostedRoom.shared-multitrack-editor>header{padding:0 8px}}
+
+.hostedRoom #editorProjectTitle{order:-1;flex:0 1 auto}.hostedRoom>header>.actions{order:1}
+
 /* Interior redesign: flat divisions, two levels of inspector navigation and consistent controls. */
 :root{--media:304px;--inspector:304px;--timeline:266px;--label:184px;--mint:#19bec9}
 .shared-multitrack-editor{font-size:12px;background:#111214}
@@ -4153,6 +4164,8 @@ const downloadBeforeRoomShell=downloadBlob;downloadBlob=function(name,file){down
 const assetsBeforeRoomShell=renderAssets;renderAssets=function(){assetsBeforeRoomShell();if(!editorRoomId)return;for(const asset of assets.filter(a=>a.newVersion&&a.workflowScene)){const card=$('[data-asset="'+asset.id+'"]');if(!card)continue;const existing=items.find(i=>{const old=getAsset(i.assetId);return old?.workflowScene===asset.workflowScene&&old?.workflowPart===asset.workflowPart&&old.id!==asset.id;});if(!existing)continue;const button=document.createElement('button');button.textContent='Thay vào timeline';button.dataset.replaceWorkflow=asset.id;button.title='Chỉ thay cảnh này khi bạn bấm; giữ các chỉnh sửa khác';card.append(button);}};
 document.addEventListener('click',e=>{const button=e.target.closest('[data-replace-workflow]');if(!button)return;e.stopImmediatePropagation();const asset=getAsset(button.dataset.replaceWorkflow),target=items.find(i=>{const old=getAsset(i.assetId);return old?.workflowScene===asset.workflowScene&&old?.workflowPart===asset.workflowPart&&old.id!==asset.id;});if(!target)return;if(getTrack(target.trackId)?.locked){notify('Mở khóa hàng trước khi thay clip.');return;}if(!confirm('Thay cảnh này bằng '+asset.name+'? Giữ vị trí và hiệu ứng; nếu clip mới ngắn hơn thì rút ngắn cảnh. Có thể hoàn tác.'))return;activeClipDrag?.cancel?.();pause();transact(()=>{target.assetId=asset.id;target.name=asset.name;target.mediaIn=0;target.duration=Math.min(target.duration,asset.duration/target.speed);target.fadeIn=Math.min(target.fadeIn,target.duration);target.fadeOut=Math.min(target.fadeOut,target.duration);target.transitionDuration=Math.min(target.transitionDuration,target.duration);});},true);
 if(editorRoomId){const style=document.createElement('style');style.textContent='#editorBrand nav{display:none}';document.head.append(style);}
+
+if(parent!==window&&new URLSearchParams(location.search).get('host')==='1')document.body.classList.add('hostedRoom');
 
 // Export preferences affect defaults only; each export can still be adjusted manually.
 let package5ExportPreferences={resolution:1080,fps:30,sidecarSrt:false},package5ExportDirty=false;
