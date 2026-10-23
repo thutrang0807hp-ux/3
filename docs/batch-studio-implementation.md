@@ -6,7 +6,7 @@ Có tab riêng ngay trong SceneForge, dùng chung thanh bên, sản phẩm, bộ
 
 Mở nút **Hàng loạt** ở thanh trái hoặc URL `?demo=1#batch`. Bấm **Thử ngay 6 cảnh mẫu**: app nạp prompt, thêm sáu việc và chạy mô phỏng tối đa ba việc cùng lúc. Có thể tự nhập mỗi prompt một dòng rồi thêm vào hàng chờ. Số lượt đồng thời chỉnh từ 1 tới 4. Tab video hiện chỉ tạo ảnh minh họa cho job video, không tạo MP4.
 
-Giao diện dùng màu tối/lime cùng app: bên trái chuẩn bị prompt và tham chiếu, giữa là hàng chờ, bên phải là kết quả. Header giữ cố định, nội dung cuộn riêng; màn hình nhỏ dùng hộp xem kết quả. Trạng thái và kết quả mô phỏng được ghi nhãn, không hiển thị credit/quota hoặc account giả.
+Giao diện tối/lime được đổi thành hai vùng: cột trái chuẩn bị lượt tạo, bên phải là gallery ảnh lớn theo prompt. Không còn cột preview hẹp và danh sách thumbnail nhỏ chiếm giữa. Header / thanh công cụ và nút thêm hàng chờ giữ cố định; form và gallery cuộn riêng. Bấm ảnh mở hộp xem chi tiết. Màn hình nhỏ xếp hai vùng theo chiều dọc. Trạng thái và kết quả mô phỏng được ghi nhãn, không hiển thị credit/quota hoặc account giả.
 
 ## Đã hoạt động
 
@@ -34,3 +34,16 @@ Các việc mô phỏng chạy trong trang, không chạy tiếp khi đóng trì
 - Hồi quy `check_home_archive.py`, `check_shell_alignment.py`, `check_workflow_navigation.py`: giữ DOM/focus/vị trí cuộn, header/rail/logo, iframe/camera và dữ liệu hai workflow.
 
 Các kiểm tra thực hiện trên Linux/Chromium. Không kiểm chứng đăng nhập, model hay hạn mức nhà cung cấp; không công bố đã hoàn thành engine thật.
+
+## Cập nhật gallery theo phản hồi ảnh Phoma
+
+Chọn cơ chế hữu ích quan sát được trong ảnh, tự triển khai trong SceneForge; không khẳng định đã đọc mã nguồn hay tích hợp engine Phoma.
+
+- Nhập từng dòng hoặc JSON mảng chuỗi / object `{ "prompt": "…", "refs": [1,2] }`. Kiểm tra toàn bộ trước khi thêm, JSON sai không tạo một phần công việc. Giữ chế độ nhập cùng bản nháp qua tải lại.
+- Một prompt có 1–4 kết quả, nhóm ảnh riêng với tên prompt, sản phẩm, tỉ lệ, trạng thái và số tham chiếu. Công việc bản cũ vẫn xuất hiện, không xóa hoặc đổi file.
+- Tham chiếu dùng chung, ghép 1–1 theo thứ tự ảnh đã chọn, hoặc tự chỉ định refs trong JSON (số thứ tự 1-based theo gallery ảnh tham chiếu). Ghép 1–1 yêu cầu số ảnh bằng số prompt. Mock Canvas chỉ minh họa ảnh đầu tiên, hoặc kết quả trước khi bật nối; không phải mô hình hợp nhất nhiều ảnh.
+- Cài đặt gọn trong mục mở rộng: đồng thời 1–4, 1–60 prompt / nhóm, nghỉ giữa nhóm và giãn lần bắt đầu 0–60 giây. Nhóm sau đợi nhóm trước kết thúc; giãn việc và nghỉ nhóm chạy thật trong bộ mô phỏng. Không lấy đây làm hạn mức provider.
+- Chọn kết quả / tải nhóm thành một ZIP chứa byte PNG, JPG, WebP, MP4 hoặc WebM hiện có và prompts.json; tối đa 256 MB / ZIP. Kiểm tra thiếu file trước khi xuất. Tạo lại thêm công việc mới, giữ job và mọi phiên bản trước; không tự gọi AI.
+- Trạng thái tổng hợp gọn; lọc, chuyển cỡ hiển thị, tạm dừng và hủy vẫn hoạt động. Không thêm tài khoản giả hay cơ chế tăng tốc đa tài khoản chưa được kiểm chứng.
+
+Kiểm thử bổ sung `check_batch_gallery.py`: JSON lỗi không thêm job, 1–1 / custom đúng tham chiếu, hai kết quả mỗi prompt, khoảng nghỉ thực tế, ZIP CRC và byte PNG, tạo lại giữ kết quả cũ, giữ checkbox tham chiếu khi paint, header không di chuyển khi cuộn, responsive 760/1000/1440/1920. Các kiểm tra batch trước và checkpoint cục bộ vẫn được chạy.
