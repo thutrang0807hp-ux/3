@@ -582,15 +582,28 @@ function cpuProgressDialog(){modal('Phân tích trên máy','<div class="cpuProg
 async function cpuStart(options){
  if(cpuJob||busy||liveAnalysisJob)throw Error('Đợi lượt phân tích hiện tại trước khi chạy thêm.');const file=cpuSourceFile();if(!file)throw Error('Không còn tệp nguồn.');
  const roomId=project.id,source=project.source.asset,signature=cpuSignature();cpuJob={roomId,source,signature};cpuProgressDialog();render();
- try{const mime=file.type||(/\.webm$/i.test(file.name)?'video/webm':/\.mov$/i.test(file.name)?'video/quicktime':'video/mp4');const response=await workflowLocalRequest('analysis/local/jobs',{...options,duration:project.source.duration,mime_type:mime,video_data:await cpuEncode(file)});cpuJob.id=response.id;project.analysis.localJob={id:response.id,source,signature,at:Date.now()};await storeProject();await cpuPoll();}catch(e){if($('#cpuProgressError'))$('#cpuProgressError').textContent=e.message;else toast(e.message);}finally{cpuJob=null;render();}
+ try{const mime=file.type||(/\.webm$/i.test(file.name)?'video/webm':/\.mov$/i.test(file.name)?'video/quicktime':'video/mp4');const response=await workflowLocalRequest('analysis/local/jobs',{...options,room_id:project.id,duration:project.source.duration,mime_type:mime,video_data:await cpuEncode(file)});cpuJob.id=response.id;project.analysis.localJob={id:response.id,source,signature,at:Date.now()};await storeProject();await cpuPoll();}catch(e){if($('#cpuProgressError'))$('#cpuProgressError').textContent=e.message;else toast(e.message);}finally{cpuJob=null;render();}
 }
 async function cpuPoll(){
  const captured=cpuJob;
  while(cpuJob===captured){const response=await workflowLocalRequest('analysis/local/jobs/'+captured.id);if(project.id!==captured.roomId)throw Error('Phòng đã đổi; chưa áp vào phòng khác.');if($('#cpuPhase'))$('#cpuPhase').textContent=response.phase||response.state;if($('#cpuProgress'))$('#cpuProgress').value=response.progress||0;
-  if(response.state==='done'){project.analysis.pendingCPU={source:captured.source,signature:captured.signature,at:Date.now(),result:response.result};delete project.analysis.localJob;await storeProject();cpuReview();return;}
+  if(response.state==='done'){await cpuVerifyResult(response.result,captured);project.analysis.pendingCPU={source:captured.source,signature:captured.signature,at:Date.now(),result:response.result};delete project.analysis.localJob;await storeProject();cpuReview();return;}
   if(response.state==='error'||response.state==='cancelled'){delete project.analysis.localJob;await storeProject();throw Error(response.error||'Đã dừng phân tích; dữ liệu cũ giữ nguyên.');}
   await new Promise(r=>setTimeout(r,500));
  }
+}
+async function cpuVerifyResult(result,captured){
+ if(!result||!Array.isArray(result.scenes)||!result.scenes.length||!Array.isArray(result.transcript))throw Error('Kết quả đo thiếu dữ liệu. Chưa áp hoặc thay đổi cảnh.');
+ const file=assets.get(captured.source);if(!file||project.id!==captured.roomId||project.source?.asset!==captured.source)throw Error('Video nguồn đã đổi; chưa áp kết quả cũ.');
+ const digest=await crypto.subtle.digest('SHA-256',await file.arrayBuffer()),hash=[...new Uint8Array(digest)].map(x=>x.toString(16).padStart(2,'0')).join('');
+ if(project.id!==captured.roomId||project.source?.asset!==captured.source||hash!==result?.source_sha256)throw Error('Kết quả đo không khớp tệp nguồn hiện tại. Chưa áp hoặc thay đổi cảnh.');
+}
+async function cpuRecoverJob(id){
+ if(cpuJob){if(cpuJob.id!==id)throw Error('Đang xem một lượt phân tích khác.');cpuProgressDialog();return;}
+ if(busy||liveAnalysisJob)throw Error('Đợi lượt phân tích hiện tại trước.');
+ const source=project.source?.asset;if(!source||!cpuSourceFile())throw Error('Không còn video nguồn để đối chiếu kết quả.');
+ const previous=project.analysis.localJob,captured={id,roomId:project.id,source,signature:previous?.id===id?previous.signature:cpuSignature(),at:previous?.at||Date.now()};cpuJob=captured;
+ try{project.analysis.localJob={id,source,signature:captured.signature,at:captured.at};await storeProject();cpuProgressDialog();await cpuPoll();}catch(e){if($('#cpuProgressError'))$('#cpuProgressError').textContent=e.message;else toast(e.message);}finally{cpuJob=null;render();}
 }
 actions['cpu-resume']=async()=>{if(cpuJob)return;const old=project.analysis.localJob;if(!old)return;cpuJob={...old,roomId:project.id};cpuProgressDialog();try{await cpuPoll();}catch(e){if($('#cpuProgressError'))$('#cpuProgressError').textContent=e.message;else toast(e.message);}finally{cpuJob=null;render();}};
 actions['cpu-cancel']=async()=>{if(!cpuJob?.id)return;try{await workflowLocalRequest('analysis/local/jobs/'+cpuJob.id+'/cancel',{});}catch(e){toast(e.message);}};
@@ -644,7 +657,7 @@ const sourceBeforeCPU=uploadSource;uploadSource=async function(file){if(cpuJob||
 const analyzeBeforeCPU=analyzeSource;analyzeSource=async function(){if(cpuJob||liveAnalysisJob)return toast('Đợi phân tích hiện tại.');return analyzeBeforeCPU();};actions.analyze=()=>analyzeSource();
 const liveBeforeCPU=actions['live-analysis-run'];actions['live-analysis-run']=async()=>{if(cpuJob)return toast('Đợi hoặc dừng CPU trước khi gửi Gemini.');return liveBeforeCPU();};
 const helpBeforeCPU=actions['analysis-help'];actions['analysis-help']=()=>modal('Phân tích: máy đo, Gemini hiểu và viết','<p><b>Đo trên máy · CPU:</b> PySceneDetect tìm mốc, FFmpeg trích khung, OpenCV đo chuyển động/độ sáng/độ nét/dò mặt; RapidOCR đọc chữ ở mẫu; faster-whisper chép lời khi có model. Không tải model hay gọi AI trong nền.</p><p><b>Gemini:</b> xem/nghe video để mô tả, viết prompt Việt–Anh và dịch/viết lời mới. Một phản hồi dùng chung mô tả và công thức, không gọi lại cho từng cảnh.</p><p><b>Đối chiếu:</b> số đo/lời/chữ không khớp thì tô vàng; bạn xem lại. Không thấy mặt không có nghĩa không có người; OCR thấy chữ không có nghĩa đó là logo. Mốc video VFR cần kiểm tra lại.</p><p>Web công khai vẫn giữ dò cảnh trong trình duyệt và nhập clip thủ công. Động cơ CPU chạy ở bản cục bộ; thay người/sản phẩm vẫn cần Flow/Muse.</p>');
-const initBeforeCPU=init;init=async function(){await initBeforeCPU();const api=window.SceneForgeWorkflow,old=api.isAnalyzing,flush=api.flushRoom;api.isAnalyzing=()=>!!cpuJob||!!old?.();api.flushRoom=async()=>{if(cpuJob||cpuCleaning)throw Error('Đợi hoặc dừng xử lý CPU trước khi đổi phòng.');return flush();};api.localAnalysis={open:cpuDialog,review:cpuReview};};
+const initBeforeCPU=init;init=async function(){await initBeforeCPU();const api=window.SceneForgeWorkflow,old=api.isAnalyzing,flush=api.flushRoom;api.isAnalyzing=()=>!!cpuJob||!!old?.();api.flushRoom=async()=>{if(cpuJob||cpuCleaning)throw Error('Đợi hoặc dừng xử lý CPU trước khi đổi phòng.');return flush();};api.localAnalysis={open:cpuDialog,review:cpuReview,resume:cpuRecoverJob};};
 
 for(const key of ["new","projects"]){const before=actions[key];actions[key]=async()=>{if(cpuJob||cpuCleaning)return toast("Đợi hoặc dừng xử lý CPU trước khi đổi dự án.");return before();};}
 
