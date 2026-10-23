@@ -26,13 +26,20 @@ Mặc định SDK/model nằm trong `SCENEFORGE_LOCAL_DATA/engines/vieneu` (nế
 
 ## Tình trạng kiểm chứng thật
 
-Trong môi trường phát triển, đã thử tải model từ Hugging Face bằng SDK. **Proxy trả HTTP 403 cả trong lần thử thông thường và lần thử quyền mạng mở rộng.** Vì vậy:
+Model đã được cài từ các file người dùng cung cấp, gồm 13 file VieNeu/MOSS. Hai decoder, encoder MOSS, tokenizer, các graph acoustic/backbone và đầu ra tiếng nói đã chạy thật trên CPU.
 
-- SDK cài và import được.
-- Model thật chưa tải hoàn tất, chưa khởi tạo được.
-- Chưa có giọng đọc thật được tạo để nghe hoặc đánh giá chất lượng.
-- Trạng thái môi trường vẫn là `model_ready: false`, phase `blocked`.
+- Đã giải nén và kiểm tra đủ 7 phần backbone cùng heads; kiểm tra CRC/SHA256 và kích thước.
+- Đã tạo WAV từ câu tiếng Việt mới, sau đó khởi động lại worker và tạo lại trong chế độ offline.
+- Có 25 preset giọng; không cần thu âm mẫu để dùng các preset.
+- `scripts/app-shell/check_voice_local.py` đã chạy bằng model thật: bấm Tạo giọng trong trình duyệt → endpoint TTS → CPU → WAV 48 kHz mono, lưu vào dự án và mở lại. Hai nhịp có thời lượng 2,96 và 2,48 giây; một yêu cầu TTS, không gọi Flow/Muse/Gemini.
+- Đã kiểm đường chọn giọng, cập nhật thời lượng từng nhịp và giữ file sau reload. Chưa đánh giá chất lượng phát âm toàn bộ 25 giọng hoặc tốc độ trên Windows/GPU.
 
-Kiểm thử `python -m local_engine.check_local_tts` dùng SDK fixture để kiểm đường subprocess, trạng thái chuẩn bị online/offline, chọn giọng, WAV/timing và chặn model thiếu/hỏng. Đây không phải chứng nhận model thật tạo giọng thành công. Các kiểm tra local API và cài đặt hiện có cũng đã qua sau thay đổi.
+Nguồn tải Hugging Face trong môi trường này vẫn bị proxy 403, nhưng model hiện đã đủ nhờ file gửi lên và chạy trực tiếp từ thư mục offline; không cần giả lập cache hay revision Hub.
 
-Bộ ZIP chứa code và bộ cài; không nhúng model tải dở, cache, tài khoản hoặc âm thanh giả làm kết quả thật.
+## Gói model offline
+
+`artifacts/VieNeu-CPU-Offline.zip` chứa 13 file model, manifest SHA256 và thông tin nguồn. Không kèm tài khoản, cache trình duyệt hoặc Python venv. Chạy `install-voice-offline.bat` và kéo ZIP model vào BAT nếu dùng riêng. Gói đầy đủ đặt ZIP sẵn ở `models/VieNeu-CPU-Offline.zip` để dùng một bộ tải.
+
+Bộ cài SDK/Python dependencies vẫn cần mạng lần đầu; trọng số model được lấy hoàn toàn từ ZIP, không tải từ Hugging Face. Import chỉ đọc danh sách 13 tên file cho phép, xác minh kích thước/SHA256 và không ghi đè bộ trọng số khác đã có. `prepare_voice --offline` chỉ đánh dấu sẵn sàng sau khi tạo WAV thật thành công.
+
+Kiểm thử `python -m local_engine.check_local_tts` vẫn dùng SDK fixture cho các nhánh lỗi. Bằng chứng model thật nằm ở bài trình duyệt `check_voice_local.py` và mẫu `artifacts/voices/SceneForge-HaiDang-CPU.wav`.
