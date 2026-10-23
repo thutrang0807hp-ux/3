@@ -24,3 +24,7 @@ Giữ bộ đo cục bộ hiện có (FFmpeg/PySceneDetect/OpenCV, OCR và Whisp
 `check_reference_production.py`: node và dây/bố cục, gói Chat, từ chối thay lời gốc không sửa dự án, phụ đề riêng/cảnh báo cũ/lấy lại, WAV thật giải mã và lưu qua reload, payload bật/tắt nhạc/âm lượng, nhập vào editor thành track audio/text riêng với cỡ/vị trí đúng; không POST API.
 
 `check_flow_speech.py` và kiểm tra HD: giữ lời Việt chính xác, giọng và chia lời qua clip; chỉ dẫn ảnh HD không lẫn vào prompt video. Bộ `check_workflow.py` cũ không chạy đến phần dựng vì selector màn chọn workflow đã lỗi thời; không coi là kiểm tra đạt cho bản này.
+
+## Chỉ dẫn đầu ra sạch · 24/10/2026
+
+Prompt ảnh khung Việt/Anh và prompt Veo tự kèm yêu cầu không thêm watermark, logo góc, chữ trang trí/phụ đề; ảnh có thêm chữ ký, video có thêm huy hiệu kênh. Giữ thương hiệu thật/chữ trên bao bì. Veo chừa mép an toàn, không tự thêm chuyển động zoom 10%. Gói Gemini Chat yêu cầu cùng nguyên tắc. Đây là chỉ dẫn cho mô hình, không bảo đảm loại watermark do dịch vụ chèn. Không sửa file đã tạo, không gửi tác vụ AI hoặc tạo lại clip.
