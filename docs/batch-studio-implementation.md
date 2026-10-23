@@ -33,7 +33,7 @@ Trong hộp xem ảnh có **Thêm vào Bộ ảnh** cho ảnh nhập hoặc ản
 
 `local_engine/batch_images.py` dùng key trong Vault, endpoint loopback chịu cùng session/Host/Origin middleware. Gọi duy nhất endpoint Google cố định, không tải URL tùy ý từ phản hồi. Không retry mạng, 429, 5xx, không model fallback. Có giới hạn bốn kết nối provider, tối đa 16 yêu cầu đang giữ phía server; vượt giới hạn từ chối trước gửi.
 
-`requests.sqlite` ghi claim và fingerprint trước network. Mã request cố định theo job, một request không gửi lại được, kể cả lỗi hoặc không rõ. Thành công cache metadata kết quả; sau restart các claim đang gửi chuyển unknown. Provider task chạy phía companion nên đóng tab không tự hủy; đóng companion chuyển sang unknown. File trả về được kiểm tra MIME, giải mã và giới hạn size rồi giữ nguyên byte trong DATA/batch-images; sau tải vào app được checkpoint vào thư viện hiện có. Không xóa file gốc/phiên bản. Nhật ký chỉ ghi metadata, không ghi key, prompt hoặc base64. Chưa biết phí thực tế thì cost=null.
+`requests.sqlite` ghi claim và fingerprint trước network. Mã request cố định theo UUID của job và checkpoint cả lượt xuống thư viện trước khi gửi, một request không gửi lại được, kể cả lỗi hoặc không rõ. Thành công cache metadata kết quả; sau restart các claim đang gửi chuyển unknown. Provider task chạy phía companion nên đóng tab không tự hủy; đóng companion chuyển sang unknown. File trả về được kiểm tra MIME, giải mã và giới hạn size rồi giữ nguyên byte trong DATA/batch-images; sau tải vào app được checkpoint vào thư viện hiện có. Không xóa file gốc/phiên bản. Nhật ký chỉ ghi metadata, không ghi key, prompt hoặc base64. Chưa biết phí thực tế thì cost=null.
 
 ## Kiểm thử
 
