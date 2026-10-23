@@ -1,49 +1,46 @@
-# SceneForge · Tab Tạo hàng loạt · 23/10/2026
+# SceneForge · Tạo hàng loạt · 23/10/2026
 
-Có tab riêng ngay trong SceneForge, dùng chung thanh bên, sản phẩm, bộ ảnh, bộ cảnh và kho lưu trữ. Trang chủ bốn cột, workflow node và Dựng được giữ. Không sử dụng mã nguồn Phoma; repo được giới thiệu chỉ có README/bộ cài, không đủ cơ sở xác định hoặc tích hợp implementation của họ.
+Tab Hàng loạt dùng chung sản phẩm, Bộ ảnh, Bộ cảnh và lưu trữ của SceneForge. Gallery theo prompt, form bên trái cuộn riêng; header / thanh công cụ giữ vị trí. Giữ board bốn cột, workflow node và Dựng. Các cơ chế tham khảo từ ảnh Phoma được tự triển khai; không dùng hoặc khẳng định đã đọc mã nguồn Phoma.
 
-## Cách thử
+## Hai chế độ
 
-Mở nút **Hàng loạt** ở thanh trái hoặc URL `?demo=1#batch`. Bấm **Thử ngay 6 cảnh mẫu**: app nạp prompt, thêm sáu việc và chạy mô phỏng tối đa ba việc cùng lúc. Có thể tự nhập mỗi prompt một dòng rồi thêm vào hàng chờ. Số lượt đồng thời chỉnh từ 1 tới 4. Tab video hiện chỉ tạo ảnh minh họa cho job video, không tạo MP4.
+**Mô phỏng trên máy:** dùng được trên web và cục bộ, không gửi prompt/ảnh tới provider. Canvas tạo PNG có nhãn minh họa, không suy luận prompt như mô hình AI. Job video chỉ tạo ảnh minh họa, chưa tạo MP4. Bấm Thử ngay 6 cảnh mẫu để thử hàng chờ.
 
-Giao diện tối/lime được đổi thành hai vùng: cột trái chuẩn bị lượt tạo, bên phải là gallery ảnh lớn theo prompt. Không còn cột preview hẹp và danh sách thumbnail nhỏ chiếm giữa. Header / thanh công cụ và nút thêm hàng chờ giữ cố định; form và gallery cuộn riêng. Bấm ảnh mở hộp xem chi tiết. Màn hình nhỏ xếp hai vùng theo chiều dọc. Trạng thái và kết quả mô phỏng được ghi nhãn, không hiển thị credit/quota hoặc account giả.
+**Gemini · API tạo ảnh:** adapter thực sự gửi `generateContent` và đọc ảnh inline trả về. Chỉ chạy ở localhost / 127.0.0.1 trong bản cục bộ; bản `?demo=1` khóa việc gửi. Dùng key Gemini được mã hóa trong Cài đặt → Phân tích (AI), không sử dụng phiên Flow hay tài khoản ChatGPT. Không có key/model được cung cấp để kiểm chứng một lượt tạo thật trong phiên triển khai này; toàn bộ kiểm thử provider dùng transport/HTTP fixture, không phát sinh phí.
 
-## Đã hoạt động
+Cách dùng: lưu key → chọn Gemini trong tab Hàng loạt → Đọc model từ key → chọn model → thêm prompt và ảnh → thêm vào hàng chờ → Chạy lượt tạo → rà số yêu cầu/model/thông báo có thể tính phí → bấm Gửi. Đọc model không gửi tạo ảnh; danh sách chỉ lấy model có tên chứa image và hỗ trợ generateContent từ chính key. Việc có tên trong danh sách chưa chứng minh quyền tạo, quota hay giá. Không đoán model, không fallback trả phí hoặc tự chuyển tài khoản.
 
-- Nhập nhiều prompt (tối đa 60 dòng/lượt, 4.000 ký tự/prompt; bản thử giữ tối đa 200 việc). Chọn sản phẩm, ảnh hoặc job video xem thử, tỉ lệ 9:16 / 16:9 / 1:1.
-- Thêm tối đa tám ảnh tham chiếu PNG/JPEG/WebP, mỗi file tối đa 6 MB; kiểm tra ảnh đọc được và tạo thumbnail nhỏ. Khi không chọn ảnh riêng, dùng ảnh sản phẩm tại thời điểm thêm job. Job giữ bản tham chiếu riêng, thay form/sản phẩm sau đó không đổi job cũ.
-- Scheduler mô phỏng có giới hạn đồng thời; các việc độc lập chạy song song. Khi chọn nối cảnh, mỗi việc chờ kết quả của việc trước cùng lượt; lấy poster đó làm tham chiếu cho ảnh xem thử tiếp theo. Phụ thuộc bị hủy/lỗi thì chặn các việc sau, không bỏ qua liên kết.
-- Tạm dừng chỉ ngừng nhận thêm việc; việc đang chạy được hoàn tất. Hủy từng việc, lọc trạng thái, xếp lại có chủ động. Tải lại trang chuyển việc đang chạy thành bị ngắt, giữ chờ và **không tự chạy tiếp**. Không có yêu cầu provider nào để gửi lại.
-- Mô phỏng tạo PNG thật bằng Canvas, có chữ nhận diện mô phỏng, dựa trên tham chiếu và prompt để minh họa bố cục. Đây không phải mô hình AI, không suy luận nội dung prompt và không bảo đảm đồng nhất nhân vật. Tiến độ là tiến độ bộ mô phỏng, không phải tiến độ Veo/GPT/Grok.
-- Xem/tải ảnh PNG xem thử. Có thể nhập ảnh/video thật từ máy vào từng việc, giải mã để lấy preview, lưu file bằng key phiên bản mới; giữ các file kết quả trước. Video nhập MP4/WebM tối đa 100 MB. Đóng preview/tab dừng phát và giải phóng URL tạm.
-- Chỉ tư liệu **đã nhập** có nút thêm vào Bộ ảnh/Bộ cảnh sản phẩm. Ảnh mô phỏng không tự được thêm vào các bộ dùng tạo thật. Thêm chỉ bổ sung master; các phòng đã có tiếp tục giữ bộ riêng. Không ghi đè file phiên bản cũ khi nhập bản khác.
-- Lấy nội dung prompt/cảnh đã lưu từ một phòng làm bản nháp, không sửa phòng nguồn. Xuất danh sách JSON gồm metadata; đây không phải ZIP đủ media. ZIP thư viện đầy đủ đã có vẫn là cách mang cả file sang máy khác.
+Ảnh tham chiếu được chuẩn hóa PNG tối đa 1024px trước khi gửi; ảnh tham chiếu riêng đã có thumbnail tối đa 768px. Mỗi yêu cầu có đầy đủ ảnh được gán (tối đa tám ảnh); khi bật nối cảnh, dùng kết quả trước thay nhóm tham chiếu. Mô phỏng Canvas chỉ minh họa ảnh đầu tiên. Một yêu cầu ứng với một kết quả; 1–4 bản / prompt là nhiều yêu cầu riêng và có thể tính phí riêng.
 
-## Dữ liệu và giới hạn
+## Hàng chờ và dữ liệu
 
-Metadata nằm trong store `prefs`, key `batch-studio-v1`; ảnh gốc và kết quả là Blob/File trong store `files` của app. Bộ chạy cục bộ tự checkpoint qua thư viện SQLite/kho hash đang có. Khôi phục sang profile trình duyệt mới giữ metadata và byte ảnh. Bản `?demo=1` dùng namespace thử tách biệt. Dữ liệu tab không hợp lệ/phiên bản tương lai được từ chối mở mà không ghi đè bản lưu.
+- Nhập từng dòng hoặc JSON mảng chuỗi / object `{ "prompt": "…", "refs": [1,2] }`. Kiểm tra hết trước khi thêm, không tạo một phần khi JSON sai. Tối đa 60 prompt/lượt, 4.000 ký tự/prompt và 200 công việc trong bản hiện tại.
+- Tham chiếu dùng chung / ghép 1–1 / tùy chỉnh refs trong JSON. 1–1 yêu cầu số ảnh được chọn bằng số prompt; số thứ tự JSON bắt đầu từ 1 theo danh sách ảnh. Tối đa tám file PNG/JPEG/WebP, 6 MB/file.
+- Số việc đồng thời 1–4, số prompt/nhóm 1–60, giãn bắt đầu và nghỉ nhóm 0–60 giây. Nhóm sau đợi nhóm trước. Chọn Gemini mặc định về một việc; chọn nhiều hơn không chứng minh hạn mức dịch vụ cho phép.
+- Tạm dừng ngăn nhận việc mới; việc đã gửi tiếp tục lấy kết quả và có thể vẫn tính phí. Không giả tiến độ phần trăm Gemini: hiển thị đang chờ dịch vụ. Lỗi / kết quả chưa rõ dừng hàng chờ, không tự gửi lại. Bản mô phỏng vẫn có hủy từng việc như trước.
+- Tải lại trang luôn tạm dừng. Việc Gemini bị ngắt dùng nút **Kiểm tra kết quả API**: chỉ GET lại mã cũ và tải file nếu đã hoàn tất, không POST tạo lại. Không chuyển yêu cầu chưa rõ thành chờ để gửi lại.
+- Tạo lại thêm job và phiên bản mới, giữ kết quả trước. Với Gemini phải bấm chạy và xác nhận gửi lại. Dù đổi sản phẩm trong form, job cũ giữ sản phẩm/tham chiếu đã chụp lúc thêm.
+- Chọn / tải nhóm thành một ZIP chứa byte file và prompts.json, tối đa 256 MB/ZIP. File thiếu thì báo lỗi trước khi xuất; không bỏ qua âm thầm. Xuất danh sách JSON chỉ có metadata, không thay ZIP thư viện đầy đủ.
+- Job và refs nằm trong prefs `batch-studio-v1`; file trong store files dưới key batch có phiên bản. Đọc được dữ liệu cũ, giữ file và mọi phiên bản. Record sai/phiên bản tương lai bị từ chối mà không ghi đè. Companion checkpoint SQLite/kho hash giữ metadata và byte file khi đổi profile trình duyệt.
 
-Đây là **mô phỏng tương tác**, không có adapter tạo ảnh/video thật. Các lựa chọn Google/Veo, Grok, ChatGPT đều khóa và ghi chưa kết nối. Không gửi prompt/ảnh ra các dịch vụ đó, không đăng nhập hoặc thay đổi tài khoản, không tạo fingerprint, không thêm retry tính phí. Chưa có đồng bộ job với hàng chờ provider hoặc tự chèn kết quả vào node/timeline. Không lấy timer mô phỏng làm bằng chứng provider hỗ trợ bốn lượt/tài khoản.
+## Đưa kết quả vào sản xuất
 
-Các việc mô phỏng chạy trong trang, không chạy tiếp khi đóng trình duyệt. Quy tắc phụ thuộc/giới hạn này minh họa cơ chế điều phối cho adapter tương lai; mức đồng thời thật phải theo dịch vụ, model và hạn mức tài khoản đã xác minh. CPU/FFmpeg companion vẫn dùng ngân sách một việc nặng riêng như bản trước.
+Trong hộp xem ảnh có **Thêm vào Bộ ảnh** cho ảnh nhập hoặc ảnh Gemini. Video nhập thật vẫn có **Thêm vào Bộ cảnh**. Bổ sung master, không đổi snapshot các phòng cũ; ảnh mô phỏng không được chuyển vào các bộ tạo thật.
+
+**Đưa vào workflow…** cho phép chọn phòng từ video mẫu thuộc cùng sản phẩm và cảnh nhận. Mở workflow đó và thêm một phiên bản khung `pending`; không đổi khung đã duyệt, chosen clip, lời/kịch bản hoặc timeline. Cần người dùng duyệt khung trước khi tạo clip. Cùng resultKey/cảnh gửi lại được bỏ trùng. Payload nhiều ảnh được kiểm tra toàn bộ trước khi thay state. Hiện không đưa trực tiếp ảnh vào node của workspace ảnh mới; có thể thêm vào Bộ ảnh để dùng. Không tự gọi tạo clip hoặc tự xuất MP4.
+
+## Phần phía sau
+
+`local_engine/batch_images.py` dùng key trong Vault, endpoint loopback chịu cùng session/Host/Origin middleware. Gọi duy nhất endpoint Google cố định, không tải URL tùy ý từ phản hồi. Không retry mạng, 429, 5xx, không model fallback. Có giới hạn bốn kết nối provider, tối đa 16 yêu cầu đang giữ phía server; vượt giới hạn từ chối trước gửi.
+
+`requests.sqlite` ghi claim và fingerprint trước network. Mã request cố định theo job, một request không gửi lại được, kể cả lỗi hoặc không rõ. Thành công cache metadata kết quả; sau restart các claim đang gửi chuyển unknown. Provider task chạy phía companion nên đóng tab không tự hủy; đóng companion chuyển sang unknown. File trả về được kiểm tra MIME, giải mã và giới hạn size rồi giữ nguyên byte trong DATA/batch-images; sau tải vào app được checkpoint vào thư viện hiện có. Không xóa file gốc/phiên bản. Nhật ký chỉ ghi metadata, không ghi key, prompt hoặc base64. Chưa biết phí thực tế thì cost=null.
 
 ## Kiểm thử
 
-- `check_batch_studio.py`: ba mô phỏng đồng thời, dừng nhận việc mới, sáu PNG thật, hủy cha chặn con, tham chiếu và nhập ảnh/video thật, giữ phiên bản, thêm vào master giữ snapshot phòng cũ, tải lại không tự chạy, quay về board bốn cột, responsive và không gọi API trong demo. Kiểm tra từ chối metadata có ID chèn HTML và giữ nguyên bản lưu.
-- `check_batch_local.py`: companion + Chromium, checkpoint metadata/PNG xuống SQLite, mở profile mới khôi phục đúng Blob và trạng thái, không gửi provider.
-- Hồi quy `check_home_archive.py`, `check_shell_alignment.py`, `check_workflow_navigation.py`: giữ DOM/focus/vị trí cuộn, header/rail/logo, iframe/camera và dữ liệu hai workflow.
+- `local_engine/check_batch_images.py`: mock transport chạy chính adapter: model discovery, xác nhận, payload tham chiếu, byte ảnh thật của fixture, duplicate claim, khôi phục restart, timeout/429 không retry, ảnh lỗi và log không chứa nội dung/key.
+- `check_batch_provider.py`: UI bản cục bộ + HTTP fixtures: không gửi trước xác nhận, bấm để sau gửi zero, đúng model/tham chiếu/origin, recover và reload không POST thêm.
+- `check_batch_workflow.py`: nhập PNG thực, chọn sản phẩm/phòng/cảnh, thêm khung pending, giữ approved/clip/chosen, bỏ trùng và từ chối payload lỗi không thêm một phần.
+- `check_batch_studio.py`, `check_batch_gallery.py`, `check_batch_local.py`: concurrency/pause/chain, JSON và mapping, ZIP CRC/PNG, phiên bản bất biến, local SQLite/profile mới, responsive, không API trong demo.
+- `check_workflow_navigation.py`, `check_runtime_safety.py`: hai workflow, dữ liệu cũ, header/iframe; bảo vệ session và duplicate/recovery.
 
-Các kiểm tra thực hiện trên Linux/Chromium. Không kiểm chứng đăng nhập, model hay hạn mức nhà cung cấp; không công bố đã hoàn thành engine thật.
-
-## Cập nhật gallery theo phản hồi ảnh Phoma
-
-Chọn cơ chế hữu ích quan sát được trong ảnh, tự triển khai trong SceneForge; không khẳng định đã đọc mã nguồn hay tích hợp engine Phoma.
-
-- Nhập từng dòng hoặc JSON mảng chuỗi / object `{ "prompt": "…", "refs": [1,2] }`. Kiểm tra toàn bộ trước khi thêm, JSON sai không tạo một phần công việc. Giữ chế độ nhập cùng bản nháp qua tải lại.
-- Một prompt có 1–4 kết quả, nhóm ảnh riêng với tên prompt, sản phẩm, tỉ lệ, trạng thái và số tham chiếu. Công việc bản cũ vẫn xuất hiện, không xóa hoặc đổi file.
-- Tham chiếu dùng chung, ghép 1–1 theo thứ tự ảnh đã chọn, hoặc tự chỉ định refs trong JSON (số thứ tự 1-based theo gallery ảnh tham chiếu). Ghép 1–1 yêu cầu số ảnh bằng số prompt. Mock Canvas chỉ minh họa ảnh đầu tiên, hoặc kết quả trước khi bật nối; không phải mô hình hợp nhất nhiều ảnh.
-- Cài đặt gọn trong mục mở rộng: đồng thời 1–4, 1–60 prompt / nhóm, nghỉ giữa nhóm và giãn lần bắt đầu 0–60 giây. Nhóm sau đợi nhóm trước kết thúc; giãn việc và nghỉ nhóm chạy thật trong bộ mô phỏng. Không lấy đây làm hạn mức provider.
-- Chọn kết quả / tải nhóm thành một ZIP chứa byte PNG, JPG, WebP, MP4 hoặc WebM hiện có và prompts.json; tối đa 256 MB / ZIP. Kiểm tra thiếu file trước khi xuất. Tạo lại thêm công việc mới, giữ job và mọi phiên bản trước; không tự gọi AI.
-- Trạng thái tổng hợp gọn; lọc, chuyển cỡ hiển thị, tạm dừng và hủy vẫn hoạt động. Không thêm tài khoản giả hay cơ chế tăng tốc đa tài khoản chưa được kiểm chứng.
-
-Kiểm thử bổ sung `check_batch_gallery.py`: JSON lỗi không thêm job, 1–1 / custom đúng tham chiếu, hai kết quả mỗi prompt, khoảng nghỉ thực tế, ZIP CRC và byte PNG, tạo lại giữ kết quả cũ, giữ checkbox tham chiếu khi paint, header không di chuyển khi cuộn, responsive 760/1000/1440/1920. Các kiểm tra batch trước và checkpoint cục bộ vẫn được chạy.
+Kiểm tra trên Linux/Chromium; không phải bằng chứng đăng nhập, hạn mức, chất lượng hoặc giá của tài khoản Gemini thật. Flow/Veo, Muse, GPT, Grok và tạo video từ prompt chưa được nối trong tab này.
