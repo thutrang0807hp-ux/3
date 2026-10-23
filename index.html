@@ -1670,7 +1670,7 @@ window.SceneForgeApp.recovery={refresh:refreshLocalJobs,attention:roomAttention,
 const batchStoreKey='batch-studio-v1';
 let batchState=null,batchLoading=null,batchSaving=Promise.resolve(),batchOpen=false,batchBooted=false,batchPumping=false,batchSelected=null,batchFilter='all',batchPreviewSignature='';
 const batchWorkers=new Map();
-const batchNav=document.createElement('button');batchNav.id='openBatchStudio';batchNav.title='Tạo hàng loạt';batchNav.setAttribute('aria-label','Tạo hàng loạt');batchNav.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M17.5 14v7M14 17.5h7"/></svg><small>Hàng loạt</small>';$('.rail nav').append(batchNav);
+const batchNav=document.createElement('button');batchNav.id='openBatchStudio';batchNav.title='Tạo hàng loạt';batchNav.setAttribute('aria-label','Tạo hàng loạt');batchNav.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M17.5 14v7M14 17.5h7"/></svg><small>Hàng loạt</small>';$('.rail nav [data-view="overview"]').after(batchNav);
 const batchPage=document.createElement('section');batchPage.id='batchStudio';batchPage.hidden=true;$('.desk').append(batchPage);
 const batchLabels={waiting:'Đang chờ',running:'Đang mô phỏng',done:'Hoàn tất',cancelled:'Đã hủy',interrupted:'Bị ngắt',blocked:'Chờ xử lý cảnh trước',failed:'Có lỗi'};
 function batchPersist(){const snapshot=clone(batchState);batchSaving=batchSaving.catch(()=>{}).then(()=>io('prefs','readwrite',batchStoreKey,snapshot));return batchSaving;}
