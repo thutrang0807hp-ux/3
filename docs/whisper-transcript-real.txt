@@ -1,0 +1,2 @@
+0.00–2.78: Xin chào, đây là dọc đọc được tạo ngày trong SimForge
+2.78–5.30: Phần mềm đã dùng model trên máy để đọc kích bản này
