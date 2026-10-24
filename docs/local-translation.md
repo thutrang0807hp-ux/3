@@ -1,4 +1,6 @@
-# Dịch local Trung → Việt: đường tích hợp, chưa kiểm chứng model thật
+# Dịch local Trung → Việt: tùy chọn, chưa kiểm chứng model thật
+
+Hướng dùng trước hiện là Gemini Chat qua sao chép/dán; xem `chat-translation.md`. Không cài M2M100/NLLB trong lượt cập nhật này.
 
 Model chọn: hai gói Argos Translate `translate-zh_en-1_9` và `translate-en_vi-1_9`, chạy trực tiếp bằng CTranslate2 CPU int8 và SentencePiece. Kho index chính thức đã đọc không có gói trực tiếp zh → vi, nên dùng zh → en → vi. Đây là dịch máy chuyên dụng, không phải LLM/Ollama. Không gọi API trả phí, không dùng tài khoản AI.
 
