@@ -6,6 +6,7 @@ Theo thống nhất, tài khoản thật để kiểm thử sau. Ollama vẫn đ
 
 | Repo / công cụ | Kết quả đã kiểm tra | Chưa hoàn tất |
 | --- | --- | --- |
+| Gemini web SDK `1ad0d4a` | Đã build/cài môi trường riêng, pip check, kiểm hợp đồng file/ảnh/metadata hội thoại bằng fixture. Khoảng 155 MiB Linux, không tải model. | Chưa đăng nhập/tạo nội dung thật; chưa nối tự gửi/nhận trong SceneForge. Nút Chat vẫn thủ công. Xem gemini-web-installation.md. |
 | flow2api `018f75539fe97d5602e0dcac6783638093bb6479` | Cài dependencies riêng, import app, đọc được 82 model từ route xác thực của repo. Adapter SceneForge đã kiểm bằng transport fixture. | Đăng nhập, credit, tạo nội dung, đa luồng dịch vụ thật. |
 | muse2api `5542a479ec6ba036a9717e8776380ff5aacf3fe7` | Cài dependencies riêng, `pip check` và import app/route ảnh-video thành công. | Repo này dùng **muse.ai**, chưa xác minh đúng Meta. Chưa nối lựa chọn Muse/Meta trong app. Không chạy browser/keepalive hoặc nhập tài khoản. |
 | VieNeu-TTS `04044e1b8f822f946bafb2c88b716459f4164152` | Build và cài SDK 3.8.3, `pip check`, import class `Vieneu` thành công trong chế độ offline; không có PyTorch. | Đã cài model từ file người dùng cung cấp, có 25 preset và qua kiểm thử tạo giọng thật từ UI trên CPU/offline. Chưa đánh giá toàn bộ giọng hoặc máy Windows. Xem local-voice-integration.md. |
@@ -16,6 +17,8 @@ Theo thống nhất, tài khoản thật để kiểm thử sau. Ollama vẫn đ
 Đường dẫn môi trường phát triển: `/workspace/engines/flow-managed`, `/workspace/engines/muse-ready`, `/workspace/engines/vieneu-ready`. Đây không phải bằng chứng các công cụ đã được cài trên máy người dùng.
 
 ## Bộ cài được cung cấp
+
+- Gemini web: `local_engine/install-gemini-web.bat` (Python 3.11+ và Git); chỉ chuẩn bị SDK riêng, không tự đọc cookie/đăng nhập hoặc bật adapter.
 
 - Flow: `local_engine/install-flow.bat`; sau đó `start-flow.bat` cho bước đăng nhập khi sẵn sàng. Xem `photo-flow-integration.md`.
 - VieNeu: `local_engine/install-voice-offline.bat` dùng model trong gói đầy đủ; `install-voice.bat` tải model khi không có file offline. Giọng đọc đã nối app và kiểm chứng model thật.
