@@ -29,3 +29,6 @@ Theo thống nhất, tài khoản thật để kiểm thử sau. Ollama vẫn đ
 Các bộ cài cần Git/Python và mạng để lấy repo/thư viện. Không chứa tài khoản/cookie. ZIP công khai nhỏ không chứa model; gói đầy đủ kèm model được bàn giao riêng. Tách môi trường tránh đổi dependencies của SceneForge. Model VieNeu và Whisper đã khởi tạo/chạy thật offline; Flow/Muse vẫn chưa kiểm thử sinh nội dung với tài khoản thật.
 
 **Cài repo, có adapter và chạy được với tài khoản/model thật là ba trạng thái khác nhau.** Bản này chỉ xác nhận đúng các bước trong bảng; không tuyên bố đã hoàn tất toàn bộ pipeline AI.
+
+
+Muse web SDK: đã cài riêng và kiểm tra import/fixture, adapter tạo clip đã nối trong Từ ảnh & ý tưởng; chưa đăng nhập hoặc tạo nội dung thật. Không phải muse2api cũ. Xem [muse-web-integration.md](muse-web-integration.md).
