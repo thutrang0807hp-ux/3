@@ -1,3 +1,7 @@
+# Cập nhật gửi/nhận trong app
+
+Ngoài cách thủ công bên dưới, có nút **Gửi / nhận bằng Gemini trong SceneForge**. Dùng tài khoản Gemini Chat đã kiểm trong Cài đặt, nhận JSON rồi rà trước khi áp dụng. Không tự dùng API, không đổi lời gốc hoặc mốc. Xem [multi-account-dispatch.md](multi-account-dispatch.md). Đã kiểm fixture, chưa kiểm tài khoản Google thật.
+
 # Dịch bằng Gemini Chat — lựa chọn thủ công
 
 Gemini Chat giữ làm lựa chọn sao chép/dán thủ công. Đường local hiện đã chuyển sang M2M100; Argos đã bỏ khỏi worker và bộ cài. M2M100 chưa tải được trọng số do proxy 403; xem `local-translation.md`. Không tự động hóa phiên đăng nhập Chat và không gọi Gemini API.

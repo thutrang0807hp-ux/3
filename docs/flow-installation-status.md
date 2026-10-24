@@ -16,3 +16,7 @@ Subsequent work added the SceneForge loopback generation adapter, toolbar, durab
 Do not launch the upstream defaults as a production service: the example configuration binds all interfaces, includes default credentials, enables third-party captcha configuration and retry behavior. Local configuration and integration must be reviewed before running with an account. No credentials were copied into this checkout.
 
 Muse/Meta integration remains unresolved; the previously inspected `muse2api` targets muse.ai and must not be represented as a verified Meta integration.
+
+## Cập nhật ghim tài khoản
+
+Chạy `start-flow.bat` bản mới, đồng bộ và kiểm tra tài khoản trong Cài đặt. Wrapper ghim ID tại engine và kiểm phản hồi. Xem [multi-account-dispatch.md](multi-account-dispatch.md). Chưa kiểm generation tài khoản thật.

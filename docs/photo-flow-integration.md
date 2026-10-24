@@ -37,3 +37,7 @@ Tệp kết quả engine còn lưu trong thư mục dữ liệu `flow-results` �
 - `python -m local_engine.check_local`: bảo vệ local API, mã hóa tài khoản và trạng thái phiên chưa xác minh.
 
 Các kiểm tra không gửi yêu cầu AI thật hoặc sử dụng credit.
+
+## Cập nhật ghim tài khoản
+
+Chạy `start-flow.bat` bản mới, đồng bộ và kiểm tra tài khoản trong Cài đặt. Wrapper ghim ID tại engine và kiểm phản hồi. Xem [multi-account-dispatch.md](multi-account-dispatch.md). Chưa kiểm generation tài khoản thật.

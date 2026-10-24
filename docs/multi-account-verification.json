@@ -1,0 +1,25 @@
+{
+  "date_local": "2026-10-25",
+  "timezone": "Asia/Bangkok",
+  "real_account_login": false,
+  "real_generation": false,
+  "windows_tested": false,
+  "passed": [
+    "check_account_failover",
+    "check_gemini_chat_routes",
+    "check_chat_ui",
+    "check_direct_workflow",
+    "check_gemini_chat_worker (Gemini SDK venv)",
+    "check_flow_account_engine (Flow venv)",
+    "check_muse_browser",
+    "check_muse_selection",
+    "check_muse_provider",
+    "check_muse_worker (Muse SDK venv)",
+    "check_flow_provider",
+    "check_local",
+    "check_storyboard",
+    "check_batch_chat.py"
+  ],
+  "not_run_full_cpu_suite": "check_analysis_v3 blocked by unavailable cv2 in current app Python; Chat analysis route covered separately by fixture",
+  "scope": "Owned adapters, UI and service fixtures; no live account/quota/quality certification"
+}
