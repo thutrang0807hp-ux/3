@@ -9,6 +9,9 @@ SceneForge có adapter tạo **clip video Muse**, tham khảo giao thức SDK t�
 - Tài khoản → Muse → Kết nối: email/OTP hoặc nhập JSON cookie của `muse.ai`. Kiểm tra phiên không tự tạo video hoặc bịa số dư.
 - Từ ảnh & ý tưởng → **Video: Muse → Kết nối Muse → Tạo clip còn thiếu**. Rà prompt/ảnh trước khi gửi; **Kiểm tra kết quả** nhận clip vào đúng nhịp và giữ các phiên bản cũ. Chuyển sang Flow vẫn dùng adapter Flow cũ.
 - Tối đa 3 tác vụ dịch vụ cùng lúc, **mỗi tài khoản một tác vụ**. Có thể chọn một tài khoản hoặc tự chia việc giữa các tài khoản đã kiểm tra. Không tự đổi tài khoản và gửi lại khi lỗi.
+- **Lựa chọn dùng chung:** bấm dùng tài khoản A trong Cài đặt thì thanh tạo clip dùng A. Đổi lựa chọn trên thanh cũng cập nhật Cài đặt, áp dụng cho mọi phòng; lựa chọn cũ lưu riêng trong phòng không còn được dùng để gửi việc. Tài khoản đầu tiên kiểm tra thành công được chọn mặc định; đăng nhập thêm B không thay A.
+- Trong Cài đặt → Tài khoản → Muse, **Chia việc giữa tài khoản** bật/tắt cùng chế độ ở thanh tạo clip. Tắt thì chỉ tài khoản đã chọn nhận việc; bật thì chia các việc mới giữa tài khoản đủ điều kiện. Đây không phải chuyển tài khoản để gửi lại một lượt đã lỗi.
+- Bảng rà hiển thị tài khoản/chế độ thực tế. Đổi lựa chọn, tắt hoặc xóa tài khoản trong khi bảng rà đang mở làm lượt rà cũ hết hiệu lực; backend từ chối trước khi nhận việc. Việc đã nhận giữ tài khoản đã giao, đổi lựa chọn chỉ áp dụng việc mới. Tài khoản bị tắt trước khi việc bắt đầu thì việc dừng, không âm thầm chuyển sang tài khoản khác.
 - Mã yêu cầu bền vững ngăn gửi trùng. Sau khi đứt kết nối/khởi động lại, lượt chưa rõ kết quả không tự phát lại. Cần kiểm tra lịch sử Muse trước khi chủ động tạo lượt mới.
 - Chỉ nhận kết quả gắn được với một hội thoại mới; bỏ fallback upstream chọn hội thoại gần nhất. Phải ffprobe đọc được video trước khi ghi hoàn tất.
 
@@ -36,5 +39,6 @@ SDK đọc dữ liệu video RPC vào bộ nhớ; không phải tải streaming 
 ## Kiểm thử
 
 - `python -m local_engine.check_muse_provider`: giả lập OTP/cookie, mã hóa, API JSON, song song nhiều tài khoản, ngăn gửi trùng, kiểm tra video thật bằng ffprobe, phục hồi sau ngắt và không lọt bí mật vào log.
+- `python -m local_engine.check_muse_selection`: chọn tài khoản/bật chia việc qua route Cài đặt tác động trực tiếp tới bộ gửi; từ chối lựa chọn cũ trước khi claim; không đổi tài khoản của việc đã nhận; giữ lựa chọn sau mở lại và không dùng tài khoản khác khi tài khoản đã chọn bị tắt. Dịch vụ Muse được giả lập.
 - Python của venv Muse chạy `-m local_engine.check_muse_worker`: kiểu dữ liệu/parser SDK thật, fake transport, phiên OTP và chặn nhầm hội thoại/URL.
 - Trình duyệt Chromium: chọn Muse, bảng OTP, rà gửi, nhận video thử vào đúng nhịp và không nhập trùng khi kiểm tra lại. Tài khoản/kết quả dịch vụ được giả lập.
