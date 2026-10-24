@@ -1,39 +1,50 @@
-# Dịch local Trung → Việt: tùy chọn, chưa kiểm chứng model thật
+# Một model dịch đa ngôn ngữ M2M100
 
-Hướng dùng trước hiện là Gemini Chat qua sao chép/dán; xem `chat-translation.md`. Không cài M2M100/NLLB trong lượt cập nhật này.
+Theo chốt triển khai: bỏ đường Argos Trung → Anh → Việt, dùng **facebook/m2m100_418M** với CTranslate2 CPU int8. Một bộ model dịch trực tiếp các ngôn ngữ hỗ trợ về tiếng Việt; không tải từng cặp. Whisper vẫn là bộ chép lời, không thay bằng M2M100. Gemini Chat giữ làm lựa chọn thủ công, không tự gửi hoặc làm fallback.
 
-Model chọn: hai gói Argos Translate `translate-zh_en-1_9` và `translate-en_vi-1_9`, chạy trực tiếp bằng CTranslate2 CPU int8 và SentencePiece. Kho index chính thức đã đọc không có gói trực tiếp zh → vi, nên dùng zh → en → vi. Đây là dịch máy chuyên dụng, không phải LLM/Ollama. Không gọi API trả phí, không dùng tài khoản AI.
+## Đã triển khai / chưa hoàn tất
 
-## Tình trạng thực tế
+- Worker, endpoint, bộ cài, danh sách 100 mã ngôn ngữ (có Trung `zh`, Ý `it`, Việt `vi`) đã chuyển sang M2M100. Không còn tải/chạy gói Argos trong đường tích hợp hiện tại. Dữ liệu/bản dịch đã có giữ nguyên.
+- Runtime CTranslate2 4.8.x và SentencePiece đã có ở môi trường CPU phát triển. Mỗi lượt dùng worker riêng, CPU int8, hai thread; dùng chung ngân sách tài nguyên với Whisper và xuất video.
+- Nguồn chính thức Hugging Face và Meta đều bị proxy trả 403, kể cả kiểm tra quyền mở rộng. **Chưa có trọng số M2M100, chưa tạo được bản dịch thật hoặc đo RAM/tốc độ.** Không báo cài xong hoặc chứng nhận chất lượng. Các bài kiểm hiện dùng fixture có ghi nhãn.
+- Không cài Torch/Transformers lớn trong môi trường phát triển vì nguồn model đang bị chặn. Chỉ đường chuẩn bị/chuyển đổi dùng các thư viện này trong môi trường tách biệt; runtime dịch không cần chúng.
 
-Đã cài runtime SentencePiece và có CTranslate2 trong môi trường CPU phát triển; đã nối endpoint, worker, bộ cài và nút trong bảng Kịch bản. Hai gói model CHƯA tải được: host argos-net.com trả proxy 403, kể cả lượt kiểm tra quyền mở rộng. Không có bằng chứng dịch thật hoặc đo RAM/thời gian; không báo model sẵn sàng. Kiểm thử hiện tại dùng fixture để xác nhận đường dữ liệu và bảo toàn bản lời.
+## Dung lượng
 
-Ước lượng lựa chọn: model mức vài trăm MB và RAM khoảng 1–2 GB khi chạy; chưa có số đo thực tế. Chỉ nạp một chặng tại một thời điểm, hai CPU thread; thoát tiến trình khi xong. Bản dịch qua tiếng Anh có thể sai/mất sắc thái; lỗi nhận dạng Whisper có thể truyền sang dịch. Không quảng cáo tương đương Gemini hoặc dịch chính xác tuyệt đối.
+Ước lượng trước khi chạy: bộ int8 khoảng 450–800 MB; RAM dịch khoảng 1–2 GB hoặc hơn tùy câu/bộ chạy. Chưa đo thực tế. **Bộ gốc tải để chuyển đổi lớn hơn (cỡ 1,9 GB)**; cùng cache và thư viện chuẩn bị có thể chiếm vài GB. Không được hiểu “model int8 vài trăm MB” là toàn bộ lượt cài chỉ tải chừng đó. Chuyển đổi cần thêm RAM; nếu máy yếu nên chuẩn bị bộ CT2 int8 trên máy khác rồi nhập.
 
-## Cài
+## Cài trên máy
 
-`local_engine/install-translation.bat` cài runtime và chủ động tải hai gói khi chạy. Dịch trong workflow không tải model. Nếu tải riêng, đặt hai file dưới thư mục `models` cạnh `local_engine`:
+Python 3.10–3.12. Chạy `local_engine/install-translation.bat` rồi khởi động lại SceneForge.
 
-- https://argos-net.com/v1/translate-zh_en-1_9.argosmodel
-- https://argos-net.com/v1/translate-en_vi-1_9.argosmodel
+- Nếu đã có bộ CT2 int8 tại `models/m2m100-418m-int8` cạnh `local_engine`, bộ cài nhập offline, không tải lại hoặc cần Torch.
+- Nếu chưa có, kiểm tra truy cập nguồn trước. Truy cập được mới tạo `.venv-translation-setup`, cài Torch CPU và Transformers, tải bộ gốc chính thức rồi chuyển CT2 int8. Không tải CUDA, không gọi API trả phí.
+- Nếu nguồn bị chặn thì dừng, không báo hoàn tất hoặc đổi ngầm sang Gemini.
 
-Hoặc chạy CLI:
+Thư mục dùng lâu dài: `SCENEFORGE_LOCAL_DATA/models/translation/m2m100-418m-int8`, mặc định dưới thư mục dữ liệu SceneForge. Bộ nhập giữ model khác đã có, không ghi đè. Tệp model Argos cũ nếu người dùng từng tự cài không bị xóa âm thầm; code mới không đọc chúng.
+
+Nhập bộ CT2 đã có:
 
 ```
-python -m local_engine.prepare_translation --zh-en /path/translate-zh_en-1_9.argosmodel --en-vi /path/translate-en_vi-1_9.argosmodel
+python -m local_engine.prepare_translation --from-directory models/m2m100-418m-int8
 ```
 
-Thư mục đích là `SCENEFORGE_LOCAL_DATA/models/translation` (mặc định thư mục dữ liệu SceneForge). Bộ nhập kiểm cặp ngôn ngữ, giới hạn giải nén, đường dẫn, chỉ lấy model/tokenizer/metadata, không chạy mã trong gói. Chỉ ghi model sau khi nạp và dịch thử có kết quả. Không ghi đè thư mục model có sẵn; gói tải bị lỗi không được báo hoàn tất.
+Cần `model.bin`, `config.json`, `shared_vocabulary.json`, `sentencepiece.bpe.model`. Bộ cài chỉ ghi ready sau khi nạp và dịch thử câu Trung, câu Ý có đầu ra khác nguồn; đây là kiểm cơ chế, chưa chứng nhận chất lượng. Marker ghi hash/kích thước. Không dùng cờ trust_remote_code.
 
-## Sử dụng
+Nguồn bộ gốc: https://huggingface.co/facebook/m2m100_418M/tree/main . Không yêu cầu người dùng chia/gửi hàng chục phần RAR nếu có thể chạy bộ cài trên máy truy cập được nguồn.
 
-Sau khi Whisper chép lời, mở Kịch bản → Dịch Việt · trên máy. Chọn tiếng Trung/Anh, mặc định bỏ qua câu đã có bản dịch. Xem kết quả rồi áp dụng vào cột Dịch sát. Không tự thay lời mới gửi Flow, giữ nguyên lời gốc, ID, mốc câu, clip và timeline. Nguồn thay đổi trong lúc dịch thì chặn áp dụng. Muốn dùng bản dịch làm lời đọc, sửa/chọn lời mới sau khi rà. Đây là nút dịch hàng loạt, chưa tự động dịch sau mỗi lượt phân tích.
+## Dùng trong workflow
 
-Giới hạn 300 câu, 3.000 ký tự/câu, tổng 30.000 ký tự; xử lý worker riêng tối đa 300 giây, không log lời nguồn; dùng ngân sách CPU chung để không chạy cùng công việc nặng khác. Câu dài chia thành các đoạn không quá 192 token để không lặng lẽ cắt bỏ phần sau. Kết quả sai ID hoặc rỗng thì không áp dụng. Không có model/lỗi thì trả lỗi, không chuyển ngầm sang Gemini/OpenAI.
+Kịch bản → **Dịch Việt · local**. Mặc định lấy ngôn ngữ Whisper đã nhận; thiếu thì yêu cầu chọn, không tự đoán Trung. Có danh sách ngôn ngữ để sửa khi nhận sai; mã không hỗ trợ được báo lỗi. Bộ này không tự nhận ngôn ngữ từ bản chữ, không hứa hỗ trợ mọi tiếng.
 
-## Kiểm thử
+Mặc định dịch câu chưa có bản dịch; có lựa chọn dịch lại. Xem rồi Áp dụng vào cột Dịch sát. Giữ lời gốc, ID, mốc câu, lời mới nhập tay, clip và timeline; nguồn thay đổi thì chặn áp dụng. Không tự viết quảng cáo hoặc xác minh công dụng.
 
-- `python -m local_engine.check_local_translation`: thiếu model, dữ liệu đầu vào, hợp đồng kết quả worker, dọn file tạm, ZIP có đường dẫn không an toàn. Model/transport giả lập.
-- `python scripts/workflow/check_local_translation.py`: giao diện xem trước/áp dụng, giữ lời mới nhập tay và mốc, bỏ qua bản dịch cũ, chặn nguồn đã đổi, không gọi route AI trả phí. Model phản hồi giả lập.
+Giới hạn 300 câu, 3.000 ký tự/câu, tổng 30.000 ký tự; worker tối đa 300 giây. Câu dài được chia thành các phần không quá 192 token, không cắt mất đuôi câu theo mặc định CT2. Giữ source language prefix / EOS và target `__vi__` theo tokenizer M2M100. Không log lời nguồn; dọn file tạm sau kết thúc. Dịch là thao tác hàng loạt có nút, chưa tự chạy sau mọi lượt chép lời.
 
-Chưa kiểm chất lượng Trung/Việt thực tế hoặc gói tải thật vì thiếu model. Gói app có mã/bộ cài, không chứa hai model dịch này.
+## Kiểm tra
+
+- `python -m local_engine.check_local_translation`: 100 mã ngôn ngữ, tag Trung/Ý → Việt trực tiếp, giữ đủ token câu dài, unload engine, thiếu model không fallback, sai ID, dọn file, import/marker và không ghi đè. Model/tokenizer/transport fixture.
+- `python scripts/workflow/check_local_translation.py`: chọn tiếng Ý, xem/áp dụng, giữ lời nhập tay/mốc và bản dịch cũ, chặn nguồn thay đổi; không gọi route trả phí. Phản hồi model fixture.
+- `python scripts/workflow/check_chat_translation.py`: đường Chat tùy chọn còn hoạt động thủ công, không tự gửi.
+
+Giữ thông tin thật về kiểm chứng: chưa chạy model M2M100 thật vì chưa tải được trọng số; giấy phép model card cụ thể và chất lượng cần đối chiếu khi nhận bộ nguồn. Tài liệu Fairseq đã xác minh hỗ trợ 100 ngôn ngữ; không dùng giấy phép mã runtime để suy diễn giấy phép của mọi bộ trọng số bên thứ ba.

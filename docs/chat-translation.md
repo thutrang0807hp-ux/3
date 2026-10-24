@@ -1,6 +1,6 @@
-# Dịch bằng Gemini Chat — hướng dùng trước
+# Dịch bằng Gemini Chat — lựa chọn thủ công
 
-Theo lựa chọn ngày 24/10/2026: chưa cài M2M100/NLLB; dùng Gemini Chat đang có để dịch lời đã được Whisper chép. Không phải tự động hóa phiên đăng nhập và không gọi Gemini API. Model local Argos vẫn là tùy chọn chưa có đủ trọng số trong môi trường phát triển.
+Gemini Chat giữ làm lựa chọn sao chép/dán thủ công. Đường local hiện đã chuyển sang M2M100; Argos đã bỏ khỏi worker và bộ cài. M2M100 chưa tải được trọng số do proxy 403; xem `local-translation.md`. Không tự động hóa phiên đăng nhập Chat và không gọi Gemini API.
 
 ## Thao tác
 
