@@ -21,6 +21,10 @@ R1: pipeline tự động trước đây chỉ nhìn cờ file model Whisper. Đ
 
 Xem `docs/storage-lifecycle-v2.md` và `review/STORAGE_LIFECYCLE_CHECKS.json`: ba thao tác dọn/xóa, lease, quarantine, release/deleted, restore, registry kết quả và giới hạn đã được bổ sung. Những giới hạn còn được nêu riêng; không chứng nhận Windows/online.
 
+## Duyệt bản mới nhất và tự dọn bản cũ
+
+Xem `docs/latest-version-approval.md` và `review/VERSION_APPROVAL_CHECKS.json`. Node video có ô theo từng phần prompt; node ảnh theo cảnh. Duyệt giữ bản mới nhất và tự dọn các bản trước đủ điều kiện, có bảo vệ timeline/dùng chung. Các lỗi claim/register và dung lượng unknown nêu trong phản hồi chưa được coi là đã sửa.
+
 ## Chưa thể kết luận hoàn toàn liên thông trên dịch vụ thật
 
 1. Chưa có account thật cho một vòng Gemini → ảnh → Flow/Muse → clip. SDK import/fixture không chứng minh phiên/credit/captcha/quyền model thật hoạt động.

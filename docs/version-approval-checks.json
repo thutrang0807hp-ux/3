@@ -1,0 +1,29 @@
+{
+  "date_local": "2026-10-26",
+  "scope": "Reference-video latest candidate + approval scoped immediate cleanup; frames and clip parts",
+  "environment": "Linux, isolated Chromium and temporary SQLite/files",
+  "user_data_deleted": false,
+  "real_provider_generation": false,
+  "windows_tested": false,
+  "passed": [
+    "check_version_approval (actual files, scoped deletion, history/backups, timeline/shared protection, stale target, restart)",
+    "check_approval_ui (actual browser/API/files, per-part latest, approval cleanup, regenerate targeted slot, lost response after commit recovery)",
+    "check_direct_workflow (service fixtures)",
+    "check_storage_lifecycle",
+    "check_storage_jobs",
+    "check_storage_ui"
+  ],
+  "known_limits": [
+    "Protected/shared/pinned files and external copies remain",
+    "File-lock failures retry through existing operation journal",
+    "Generic claim/register and unknown disk-reservation issues from feedback are not part of this change",
+    "Standalone/static preview cannot delete managed local files"
+  ],
+  "pages": {
+    "index.html": "92563b4cd45ba355b243b4608a1d2115418d0246f43f3a4df7fa947753a93df6",
+    "studio.html": "92563b4cd45ba355b243b4608a1d2115418d0246f43f3a4df7fa947753a93df6",
+    "workflow.html": "6b0c555c5b7ee6591fcafefd692fadbb98499d7c7a8ea637c14e69febce28a08",
+    "photos.html": "28afc14555c1e8e8dcc0a396c4904739e208881fdfc857a0f3d0b91bf666de26",
+    "native/index.html": "e0623b9652ec838edb66588e556dcd5db5a091fee1e6e43fad3e1aea671107f6"
+  }
+}
