@@ -1,6 +1,6 @@
 # Gói code Lưu trữ / Thu gọn sau xuất
 
-Snapshot mã hiện tại 26/10/2026, lưu trữ v2 (nền bản 59cc255). Mục tiêu là mang đi phân tích, không thay đổi logic hoặc tự dọn dữ liệu khi đóng gói.
+Snapshot mã hiện tại 26/10/2026, lưu trữ v2 và receipt schema 3 sau củng cố luồng Video mẫu. Mục tiêu là mang đi phân tích, không thay đổi logic hoặc tự dọn dữ liệu khi đóng gói.
 
 Đọc `review/BAN_DO_CODE.md` trước. Danh sách file trọng tâm và số dòng nằm trong `review/core-files.json`. `review/CAU_HOI_CAN_RA.md` nêu các giới hạn và điểm cần kiểm thêm; không coi mô tả trong docs là bằng chứng code đã làm đủ.
 

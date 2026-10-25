@@ -22,7 +22,7 @@
 
 Áp dụng cho luồng Video mẫu, hai node Ảnh khung và Video Veo/Flow/Muse. Bản GitHub Pages chỉ xem/duyệt trong browser; xóa file vật lý cần app local và kho đang kết nối. Node ảnh tĩnh/storyboard của luồng riêng không được đổi trong đợt này.
 
-Không cài repo/model mới, không chạy tài khoản online, không xóa dữ liệu người dùng trong môi trường làm việc. Các lỗi P1 khác từ đánh giá bên ngoài (claim/register, dự phòng ổ của unknown, xung đột revision tổng quát) chưa được coi là đã giải quyết bởi thay đổi này. Khôi phục sau mất ACK được bổ sung riêng cho đường duyệt/dọn mới.
+Không cài repo/model mới, không chạy tài khoản online, không xóa dữ liệu người dùng trong môi trường làm việc. Đợt sau đã bổ sung sửa claim/register, dự phòng ổ unknown và biên nhận checkpoint/dọn tổng quát; xem `docs/reference-flow-improvements.md` và báo cáo mới. Phép thử vẫn không thay cho kiểm tài khoản/Windows thật.
 
 ## Kiểm chứng
 

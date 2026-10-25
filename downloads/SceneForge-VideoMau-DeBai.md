@@ -22,13 +22,17 @@ Không coi cắt cảnh là đã hiểu hành động. Không dùng ảnh chưa 
 
 ## Các nghi vấn cần kiểm độc lập
 
-- **Ảnh gửi ở bước viết prompt:** `referencePromptFiles()` hiện lấy `scene.thumbs.slice(0,3)`. Worker tạo thumbnail rộng khoảng 180 px, đồng thời có `evidence_frames` lớn hơn. Truy vết xem nhánh nào còn dùng ảnh nhỏ, tác động đến nhãn sản phẩm/tay/chữ và nên ưu tiên ảnh bằng chứng thế nào. Đây là phát hiện đọc code, chưa có phép đo chất lượng đầu ra so sánh.
-- **Hiểu chuyển động:** OpenCV đo nền/camera bằng LK + RANSAC, không nhận biết toàn chuỗi hành động người/tay. Các mẫu đầu/giữa/cuối có thể bỏ lỡ thao tác ngắn. Kiểm dữ liệu thực sự Gemini nhận ở từng nhánh; không suy tên nút thành đã gửi toàn video.
-- **RAM video lớn:** đường upload backend là binary nhưng `cpuVerifyResult()` còn đọc `file.arrayBuffer()` để SHA-256. Kiểm đỉnh RAM, upload/dedup/caches và khả năng làm nhiều phòng; chưa có benchmark 10 video thật.
-- **Mốc và chia clip:** proxy tối đa 24 fps, VFR/chuyển mềm cần rà; clip còn chia theo khoảng 8 giây, chưa ánh xạ đủ thời lượng mọi model. Kiểm câu vắt cảnh, lời lặp/mất và hình/tiếng khi ghép.
-- **Muse đúng dịch vụ chưa:** SDK hiện dùng muse.ai; chưa xác nhận Meta AI mà người dùng mong muốn. Không đánh dấu đã hỗ trợ Meta chỉ vì tên Muse giống nhau.
-- **Tài khoản và credit:** kiểm selection token, tài khoản thực được ghim, giới hạn đồng thời, task nhận nhưng response mất, timeout/restart, kết quả trả lệch thứ tự. Fixture không chứng minh hạn mức dịch vụ thật.
-- **Xuất/lưu/dọn:** xác nhận file thành phẩm đã vào kho và mở được trước khi cho dọn; job chưa nhận phải được bảo vệ. Kiểm dùng chung, lịch sử, giọng, nhạc, phụ đề và đường tải kết quả sau restart.
+Đợt mới đã xử lý job chuẩn bị thất bại, dự phòng ổ của unknown, biên nhận lưu/dọn, checkpoint CPU, ảnh evidence, hash Worker và chia clip. Đọc `docs/reference-flow-improvements.md` cùng `review/REFERENCE_FLOW_FIX_CHECKS.json`; không suy từ mô tả rằng mọi tình huống đã được chứng minh.
+
+- **Job và dung lượng:** thử hết ổ/đứt trong preparing, kiểm submitted chỉ xuất hiện sau chuẩn bị. Unknown giữ bằng chứng nhưng không giữ 500 MB vĩnh viễn. Kiểm lại admission trước download và canonical copy, không tự gửi lại khi kết quả chưa rõ.
+- **Lưu/dọn:** mất ACK đã có receipt trong cùng transaction và so digest local. Kiểm trường hợp sửa thêm trong cache, khác library ID, receipt hết vòng lưu, nhiều lượt dọn và file bị khóa. Không chấp nhận cách sửa ghi đè local chỉ vì revision khác.
+- **CPU tiếp tục:** checkpoint theo nguồn/options, scene và đoạn ASR 30 giây. Kiểm timeout/cancel/restart, mốc từ tuyệt đối và overlap không lặp; các bước chưa xong vẫn phải chạy lại. Dữ liệu tạm tối đa 7 ngày, không tự giữ vô hạn.
+- **Ảnh viết prompt:** đã ưu tiên evidence lớn thay thumbnail, vẫn fallback khi chưa có. Kiểm chất lượng nhãn/sản phẩm và giới hạn số ảnh; bài 768 px chỉ chứng minh đường dữ liệu, không chứng minh prompt luôn tốt.
+- **RAM:** đã dùng Worker theo khối để xác minh nguồn; kiểm đỉnh RAM thực tế nhiều phòng. Chưa có benchmark 10 video trên PC người dùng.
+- **Hiểu chuyển động:** LK + RANSAC đo nền/camera, không hiểu toàn chuỗi tay/người. Các mẫu đầu/giữa/cuối vẫn có thể bỏ lỡ thao tác ngắn. Truy dữ liệu thực sự Gemini nhận, không suy tên nút thành đã gửi toàn video.
+- **Chia clip:** mới có cân mốc câu/hành động nhập tay, tùy chọn đuôi tĩnh và nối từ khung cuối đã duyệt. Không tự đọc đủ duration của mọi model; thời lượng dựng không đồng nghĩa model tạo được đúng thời lượng. Kiểm chuỗi phụ thuộc, lời ở biên và bảo toàn layout/lời của clip cũ.
+- **Muse đúng dịch vụ chưa:** SDK vẫn dùng muse.ai, chưa xác nhận Meta AI. Không đánh dấu đã hỗ trợ Meta vì tên Muse giống nhau.
+- **Tài khoản và credit:** kiểm selection token, tài khoản thực ghim, giới hạn đồng thời, nhận request nhưng mất response, timeout/restart, kết quả lệch thứ tự. Fixture không chứng minh hạn mức hay phiên thật.
 
 ## Cách trả kết quả đánh giá
 

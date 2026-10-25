@@ -1,5 +1,7 @@
 # Kiểm lại quy trình video mẫu và model
 
+Cập nhật 26/10: xem `reference-flow-improvements.md` và báo cáo mới về tiếp tục CPU, receipt lưu/dọn, evidence/hash Worker và chia clip. Các mục dưới ghi đợt kiểm trước, không phải mọi hạn chế vẫn giữ nguyên.
+
 Ngày 25/10/2026. Kiểm trên Linux phát triển; không coi là đã cài trên Windows của người dùng.
 
 ## Đã sửa

@@ -1,0 +1,52 @@
+{
+  "date_local": "2026-10-26",
+  "scope": "Reference video job/storage/CPU/prompt/clip planning improvements",
+  "environment": "Linux; CPU real checks use existing app .venv; isolated SQLite/data roots and Chromium profiles",
+  "library_schema": 3,
+  "real_online_generation": false,
+  "user_data_deleted": false,
+  "new_models_downloaded": false,
+  "windows_tested": false,
+  "passed": [
+    "check_reference_fixes (disk-full negative proof through actual Flow admission, preparing crash, unknown reservations, download budget, mutation idempotence, missing-byte count)",
+    "check_admission_recovery",
+    "check_cpu_resume (actual FFmpeg/PySceneDetect/OpenCV, injected timeout, source hash, restart, scene checkpoint reused)",
+    "check_cpu_analysis (actual cuts/OCR/inpaint; cancellation now pause, explicit discard)",
+    "check_cpu_audio_chunks (real audio extraction, fixture ASR boundary overlap and cached resume)",
+    "check_cpu_pipeline_resume_ui (service fixture; same ID/source upload; zero Gemini posts)",
+    "check_whisper_real (existing local base int8; real video, words/timings; recognition errors remain)",
+    "check_cpu_stream (real 200 MiB binary transport/proxy; padded 0.5s synthetic, not performance benchmark)",
+    "check_clip_planning_ui (actual workflow planner, speech/action boundaries, static-tail option, continuity gate, 768px evidence, 20MiB Worker hash)",
+    "check_library_ack_recovery_ui (actual browser/API/SQLite; checkpoint and cleanup ACK lost after commit; preserve divergent unsaved edits)",
+    "check_approval_ui",
+    "check_storage_ui",
+    "check_version_approval",
+    "check_storage_lifecycle",
+    "check_storage_jobs",
+    "check_library (actual SQLite/files, send2trash fixture only)",
+    "check_library_api",
+    "check_direct_workflow (provider fixtures)",
+    "check_reference_voice_ui (service fixtures, actual media, explicit clip approval then handoff)",
+    "check_flow_provider (transport fixture)",
+    "check_muse_provider (SDK runner fixture)",
+    "check_timeline_export (actual MP4 five transitions plus final-still hold, audio/captions)",
+    "check_export_commit (actual IndexedDB, quota fixture)"
+  ],
+  "limits": [
+    "Still no local semantic action-understanding VLM",
+    "Whisper base, not small; word errors and chunk boundaries need review",
+    "Input max10min, per-worker-attempt max600s; incomplete step may repeat, completed units retained",
+    "Paused CPU scratch retained up to7days and at most4 tracked attempts; success/discard removes scratch",
+    "Provider duration capability not verified across models; timeline target differs from generated duration",
+    "Continuity opt-in is sequential within a scene and not guaranteed identity preservation",
+    "Muse SDK remains muse.ai, not verified Meta AI",
+    "No Windows/real account/10-video RAM benchmark"
+  ],
+  "runtime_page_hashes": {
+    "index.html": "32354b6b36d9c7bc26fd0ee68384ec9e7b0f1bb3b24823b7c63738b364853ed0",
+    "studio.html": "32354b6b36d9c7bc26fd0ee68384ec9e7b0f1bb3b24823b7c63738b364853ed0",
+    "workflow.html": "36a896ce9bf0516fbf4b98aadf53e0127361c6a4791aee1e4fe6a12f0067a69e",
+    "photos.html": "28afc14555c1e8e8dcc0a396c4904739e208881fdfc857a0f3d0b91bf666de26",
+    "native/index.html": "e0623b9652ec838edb66588e556dcd5db5a091fee1e6e43fad3e1aea671107f6"
+  }
+}

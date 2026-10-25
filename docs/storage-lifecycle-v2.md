@@ -1,5 +1,7 @@
 # Lưu trữ và dọn dung lượng v2 — 26/10/2026
 
+Cập nhật sau: kho đã lên schema 3 để thêm biên nhận checkpoint/dọn và khôi phục mất ACK. Xem `reference-flow-improvements.md`; thiết kế vòng đời v2 bên dưới vẫn áp dụng.
+
 Đợt này triển khai riêng lưu trữ. Không cài thêm model/repo, không chạy tài khoản AI thật và không dọn dữ liệu người dùng trong môi trường làm việc. Kiểm thử dùng thư mục/profile tạm.
 
 ## Cách dùng
