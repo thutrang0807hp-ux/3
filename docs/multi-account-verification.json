@@ -18,7 +18,10 @@
     "check_flow_provider",
     "check_local",
     "check_storyboard",
-    "check_batch_chat.py"
+    "check_batch_chat.py",
+    "check_video_concurrency: actual Muse/Flow adapters, 7 jobs overlap on one account, 2 queue, 9 results; fixtures",
+    "check_chat_ui: Flow slot control persists 12 via Settings endpoint fixture",
+    "check_flow_account_engine: authenticated limit endpoint updates token and manager, rejects 99"
   ],
   "not_run_full_cpu_suite": "check_analysis_v3 blocked by unavailable cv2 in current app Python; Chat analysis route covered separately by fixture",
   "scope": "Owned adapters, UI and service fixtures; no live account/quota/quality certification"

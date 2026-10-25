@@ -20,7 +20,7 @@ Bản này nối lựa chọn tài khoản Gemini Chat, Muse và Flow từ Cài 
 
 Dự phòng chỉ sang B khi A bị từ chối rõ ràng trước khi nhận việc: SDK báo hết hạn mức hoặc phiên không hợp lệ. Generic HTTP 429, mất mạng, lỗi prompt, kết quả một phần và kết quả không rõ đều không tự gửi lại. Flow kiểm phiên/số dư trước khi tạo, chuyển khi xác minh số dư video bằng 0; không đoán giá khi số dư dương nhưng có thể thiếu. Lỗi sau khi Flow đã nhận yêu cầu không tự chuyển B.
 
-Mỗi hồ sơ một việc; mỗi dịch vụ tối đa ba việc đồng thời. Chia việc phân các việc mới, không có nghĩa chạy vô hạn. ID bền vững chặn phát lại cùng lượt. Sau khi tiến trình chết, lượt chưa rõ không tự gửi lại.
+Flow/Muse có mức 1–16 clip đồng thời mỗi tài khoản trong Cài đặt (mặc định 1), tổng dịch vụ tối đa max(3, mức mỗi tài khoản); Gemini Chat vẫn một việc mỗi hồ sơ, tối đa ba việc. Xem [video-same-account-concurrency.md](video-same-account-concurrency.md). Chia việc phân các việc mới, không có nghĩa chạy vô hạn. ID bền vững chặn phát lại cùng lượt. Sau khi tiến trình chết, lượt chưa rõ không tự gửi lại.
 
 ## Cài và khởi động
 
