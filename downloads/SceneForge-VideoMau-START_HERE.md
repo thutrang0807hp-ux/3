@@ -2,7 +2,7 @@
 
 Mục tiêu: kiểm toàn bộ đường chọn video ở trang chủ → phòng Video mẫu → CPU/Whisper/OCR → Gemini hiểu cảnh và viết → ảnh khung được duyệt → clip Flow/Muse → giọng/phụ đề/nhạc → Dựng → MP4 → trạng thái phòng.
 
-Đây là mã nguồn + bản web dựng sẵn để rà liên kết, không phải chứng nhận đã chạy một video thành phẩm bằng tài khoản online thật. Snapshot sau đợt sửa reliability 25/10/2026 (nền d7e9d30/R1); manifest ghi hash chính xác từng file trong gói.
+Đây là mã nguồn + bản web dựng sẵn để rà liên kết, không phải chứng nhận đã chạy một video thành phẩm bằng tài khoản online thật. Snapshot sau đợt lưu trữ v2 ngày 26/10/2026; manifest ghi hash chính xác từng file trong gói.
 
 ## Nên đọc theo thứ tự
 

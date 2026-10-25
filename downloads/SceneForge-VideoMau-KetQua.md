@@ -17,6 +17,10 @@ R1: pipeline tự động trước đây chỉ nhìn cờ file model Whisper. Đ
 
 Đã triển khai biên nhận chưa gửi, phục hồi từng job, sửa JSON, batch 8 cảnh, evidence nguồn rõ hơn, Flow/Muse journal và đối soát, ACK thành phẩm, cache bộ cài. Xem `docs/reference-reliability-update.md` để đối chiếu từng P0/P1/P2, phép thử và phần chưa làm. Không tự nâng model/slot Gemini.
 
+## Lưu trữ v2 — 26/10/2026
+
+Xem `docs/storage-lifecycle-v2.md` và `review/STORAGE_LIFECYCLE_CHECKS.json`: ba thao tác dọn/xóa, lease, quarantine, release/deleted, restore, registry kết quả và giới hạn đã được bổ sung. Những giới hạn còn được nêu riêng; không chứng nhận Windows/online.
+
 ## Chưa thể kết luận hoàn toàn liên thông trên dịch vụ thật
 
 1. Chưa có account thật cho một vòng Gemini → ảnh → Flow/Muse → clip. SDK import/fixture không chứng minh phiên/credit/captcha/quyền model thật hoạt động.
