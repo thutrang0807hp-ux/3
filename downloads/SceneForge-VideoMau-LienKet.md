@@ -22,6 +22,6 @@
 | Phụ đề theo audio thật | speech-captions.js + reference-production.js | POST speech/transcribe binary; GET speech/capabilities | speech_captions.py → speech_worker.py → Whisper | Chép lại clip/giọng được chọn, không dịch hoặc thay script nguồn; review cues trước áp dụng. Không phải forced alignment chính xác tuyệt đối |
 | Nhạc | reference-production.js | file/thư mục → project.merge.musicLibrary | Trình duyệt đọc file, đặt track | Tắt / bài chỉ định / ngẫu nhiên trong danh sách đã nhập; không tự tải nhạc |
 | Sang Dựng | workflow/room-shell.js: openInEditor | workflow-open-editor → shell → editor workflow-import | native-preview/workflow-import.js | assembled cần đủ clip; library cho tự ghép; mang file, phiên bản, captions, voice, music và clipVolume |
-| Xuất MP4 | native-preview/timeline-export.js | local-api/timeline/* hoặc bộ xuất browser | timeline_export.py / exports.py → FFmpeg | Không gọi AI; giữ trạng thái job và file xuất; app shell nhận kết quả export cập nhật phòng |
+| Xuất MP4 | native-preview/timeline-export.js | local-api/export/timeline/* hoặc bộ xuất browser | timeline_export.py / exports.py → FFmpeg | Không gọi AI; giữ trạng thái job và file xuất; app shell nhận kết quả export cập nhật phòng |
 
 Tên API đầy đủ/method/file backend được lấy từ app tại `routes.json`; bảng trên mô tả hợp đồng, không thay cho chứng cứ live-provider.
