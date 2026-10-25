@@ -29,7 +29,7 @@ Xem `docs/storage-lifecycle-v2.md` và `review/STORAGE_LIFECYCLE_CHECKS.json`: b
 4. Camera được đo bằng optical flow/RANSAC. Hành động tay/người chưa có model local hiểu toàn bộ chuỗi; Gemini dựa ảnh mẫu/lời, có thể thiếu hành động giữa ảnh.
 5. Phụ đề là ASR có mốc, chưa forced alignment theo câu chuẩn. Nhận dạng có lỗi. Giọng riêng có thể dài hơn hình, cần chỉnh trong Dựng; hạ tiếng clip là gain cố định 15%, không tự duck theo khoảng thoại.
 6. Kho Kịch bản tự rút khung nhịp từ mốc; không mặc nhiên có đủ lời quảng cáo hoặc cập nhật lại mọi nội dung khi mốc không đổi.
-7. Trạng thái library/cleanup không tự xóa mọi bản media backend tải về. File trong browser và file engine có thể cùng tồn tại.
+7. Lưu trữ v2 đã gom kết quả mới được quản lý vào kho hash và ánh xạ URL cũ; không suy thành đã dọn mọi file backend cũ. File legacy chưa đủ liên kết được giữ; preview/gốc, browser và bản xuất ngoài app vẫn có thể chiếm dung lượng riêng. Xem báo cáo storage-v2.
 8. Các bài Chromium có đường dẫn Linux. Bộ cài BAT có trong gói nhưng chưa chạy thử Windows. Codec nhập còn phụ thuộc trình duyệt/FFmpeg.
 
 Các kết quả real-model đi kèm từ môi trường phát triển với đường dẫn model đã cấu hình. Gói review không chứa các model/venv đó. Trước khi thử account thật, đọc `THU_BANG_TAI_KHOAN_THAT.md`.

@@ -6,11 +6,12 @@ Mục tiêu: kiểm toàn bộ đường chọn video ở trang chủ → phòng
 
 ## Nên đọc theo thứ tự
 
-1. `review/LIEN_KET_TUNG_BUOC.md`: bước, file, endpoint, động cơ, tài khoản và đầu ra.
-2. `review/KET_QUA_VA_CHO_CHUA_CHAC.md`: phép thử thật/fixture và các khoảng trống đang biết.
-3. `review/THU_BANG_TAI_KHOAN_THAT.md`: cách thử một phòng với tài khoản của bạn, ghi chi phí và kết quả; không tự gửi yêu cầu.
-4. `review/routes.json`: endpoint lấy từ chính FastAPI app trong môi trường dữ liệu rỗng.
-5. `review/manifest.json`: SHA-256 từng file nguồn, giao diện và báo cáo.
+1. `review/DE_BAI_DANH_GIA.md`: phạm vi cần rà, câu hỏi cụ thể và các nghi vấn từ lần đọc code gần nhất.
+2. `review/LIEN_KET_TUNG_BUOC.md`: bước, file, endpoint, động cơ, tài khoản và đầu ra.
+3. `review/KET_QUA_VA_CHO_CHUA_CHAC.md`: phép thử thật/fixture và các khoảng trống đang biết.
+4. `review/THU_BANG_TAI_KHOAN_THAT.md`: cách thử một phòng với tài khoản của bạn, ghi chi phí và kết quả; không tự gửi yêu cầu.
+5. `review/routes.json`: endpoint lấy từ chính FastAPI app trong môi trường dữ liệu rỗng.
+6. `review/manifest.json`: SHA-256 từng file nguồn, giao diện và báo cáo.
 
 ## Chạy và dựng lại
 
