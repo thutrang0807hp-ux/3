@@ -1,3 +1,7 @@
+## Cập nhật 25/10/2026
+
+Đường CPU mới nhận binary tới 500 MB/10 phút; đã nối VieNeu ở video mẫu, phụ đề từ audio và prompt hai giai đoạn. Trạng thái kiểm chứng hiện tại: [reference-workflow-runtime-audit.md](reference-workflow-runtime-audit.md). Nội dung cũ bên dưới mô tả bản trước.
+
 # Local AI · triển khai từ tài liệu nhận ngày 22/10/2026
 
 Nguồn: `Local-AI-phan-mem-tai-tao-video.docx`, giữ nguyên trong `design/local-ai-received/` cùng bản trích nội dung để đối chiếu. Bổ sung trên SceneForge hiện tại; không thay trang chủ, không tách thêm workflow, không xóa file hay clip cũ.

@@ -23,6 +23,6 @@
     "check_chat_ui: Flow slot control persists 12 via Settings endpoint fixture",
     "check_flow_account_engine: authenticated limit endpoint updates token and manager, rejects 99"
   ],
-  "not_run_full_cpu_suite": "check_analysis_v3 blocked by unavailable cv2 in current app Python; Chat analysis route covered separately by fixture",
-  "scope": "Owned adapters, UI and service fixtures; no live account/quota/quality certification"
+  "scope": "Owned adapters, UI and service fixtures; no live account/quota/quality certification",
+  "cpu_follow_up": "CPU libraries restored in app venv; actual model/motion/OCR/binary upload checked. See reference-runtime-verification.json."
 }

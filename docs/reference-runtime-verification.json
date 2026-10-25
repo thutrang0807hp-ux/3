@@ -1,0 +1,41 @@
+{
+  "at": 1792925817.6367826,
+  "checks": {
+    "ffmpeg": true,
+    "opencv": true,
+    "scenedetect": true,
+    "ocr": true,
+    "whisper": true,
+    "whisper_model": true,
+    "vieneu_model": true,
+    "whisper_decode_probe": true
+  },
+  "missing": [],
+  "online_accounts": "not tested by this check",
+  "whisper_probe_requested": true,
+  "vieneu_probe": "prepared WAV hash and offline asset sizes checked",
+  "cpu_video_max_mb": 500,
+  "cpu_video_max_seconds": 600,
+  "date_local": "2026-10-25",
+  "windows_tested": false,
+  "pip_check": {
+    "app": true,
+    "gemini": true,
+    "muse": true,
+    "flow": true,
+    "vieneu": true
+  },
+  "real_tests": [
+    "check_whisper_real",
+    "check_cpu_analysis",
+    "check_analysis_v3 (motion/image real; AI fixture)",
+    "check_cpu_stream (200 MiB padded MP4 transport)",
+    "voice-caption-real-check.json (real models/API)",
+    "check_timeline_export (real FFmpeg)"
+  ],
+  "browser_fixture_tests": [
+    "check_reference_voice_ui",
+    "check_chat_ui",
+    "check_direct_workflow"
+  ]
+}
