@@ -1,0 +1,69 @@
+{
+  "runtime_release": "c7ea29a",
+  "runtime_modified": false,
+  "live_provider_verified": false,
+  "windows_verified": false,
+  "checks": [
+    {
+      "name": "check_batch_chat",
+      "result": "PASS",
+      "command": "python scripts/app-shell/check_batch_chat.py",
+      "evidence": "PASS Gemini Chat batch browser bridge: no send before confirmation, cancel confirmation sends zero, references/model/real-origin retained, download recovery does not resubmit, interrupted reload recovers without new generation. API fixtures only.",
+      "log": "review/logs/check_batch_chat.log",
+      "log_sha256": "af5bcfc0cebc54b900cb11436b232a6e8ce3aff11c4709dabf6675b8cd3380c2"
+    },
+    {
+      "name": "check_batch_gallery",
+      "result": "PASS",
+      "command": "python scripts/app-shell/check_batch_gallery.py",
+      "evidence": "PASS JSON atomic validation, 1–1/custom references, two variants grouped per prompt, actual scheduling gaps, valid ZIP/PNG bytes, regenerate preserves originals, reference selections, fixed header, responsive gallery.",
+      "log": "review/logs/check_batch_gallery.log",
+      "log_sha256": "175a63c116002c475557add1cd884613a1da0f1bf62444e200d1a2df3a5cf3f3"
+    },
+    {
+      "name": "check_batch_images",
+      "result": "PASS",
+      "command": "python -m local_engine.check_batch_images",
+      "evidence": "PASS actual Gemini adapter with mock transport: model discovery, explicit send, reference payload, original image bytes, duplicate/restart protection, unknown/429 no retry, invalid refs blocked, metadata-only logs. No external AI calls.",
+      "log": "review/logs/check_batch_images.log",
+      "log_sha256": "9d48bd4d07bc36174d284bc0b10f4697894cacebdc5ee0bbad13c84f794d64c7"
+    },
+    {
+      "name": "check_batch_local",
+      "result": "PASS",
+      "command": "python scripts/app-shell/check_batch_local.py",
+      "evidence": "PASS real SQLite batch metadata + PNG asset checkpoint; fresh browser profile restores jobs and actual files; no automatic restart/provider submission.",
+      "log": "review/logs/check_batch_local.log",
+      "log_sha256": "53e11dfc805a3aa25b2f6042a8768e29f7d6227b6554dce2a3b07434b97193ff"
+    },
+    {
+      "name": "check_batch_provider",
+      "result": "PASS",
+      "command": "python scripts/app-shell/check_batch_provider.py",
+      "evidence": "PASS local browser bridge: no send before confirmation, cancel confirmation sends zero, references/model/real-origin retained, download recovery does not resubmit, interrupted reload recovers without new generation. API fixtures only.",
+      "log": "review/logs/check_batch_provider.log",
+      "log_sha256": "ee5a1a288e8b4a3c8e7550425e0495ae789f361469ade86ac2cbe95af6848874"
+    },
+    {
+      "name": "check_batch_studio",
+      "result": "PASS",
+      "command": "python scripts/app-shell/check_batch_studio.py",
+      "evidence": "PASS 3 concurrent simulations; pause drains running only; dependency/cancel propagation; real PNG download; reference/image/video import and immutable versions; master library preserves room refs; interrupted reload stays paused; board navigation/responsive fit; zero provider/API calls in demo.",
+      "log": "review/logs/check_batch_studio.log",
+      "log_sha256": "52c0bff61886ef0e41a296bdf163f81e661c067e056e5200c3154a36bdb69c65"
+    },
+    {
+      "name": "check_batch_workflow",
+      "result": "PASS",
+      "command": "python scripts/app-shell/check_batch_workflow.py",
+      "evidence": "PASS real imported PNG into selected product/room/scene; frame pending, approved frame/clip choices retained; repeated delivery deduplicated; invalid multi-item payload atomic. No AI calls.",
+      "log": "review/logs/check_batch_workflow.log",
+      "log_sha256": "d3fbfd9f58584674f16e7deef68eb00428cd7582879a8ee20200da4c6fa8f611"
+    }
+  ],
+  "test_adjustment": {
+    "file": "scripts/app-shell/check_batch_studio.py",
+    "reason": "Old test attempted hidden product/archive sidebar controls while Batch intentionally hides sidebar; adapted to visible product dropdown and Home navigation. Runtime unchanged.",
+    "original_failure_log": "review/logs/check_batch_studio-original.log"
+  }
+}
