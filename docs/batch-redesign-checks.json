@@ -1,0 +1,53 @@
+{
+  "snapshot": "batch-redesign-20261027",
+  "checks": [
+    {
+      "name": "ui",
+      "exit_code": 0,
+      "seconds": 3.8
+    },
+    {
+      "name": "multisource",
+      "exit_code": 0,
+      "seconds": 9.5,
+      "rerun": true,
+      "initial_failure": "Expected source label restored in cards"
+    },
+    {
+      "name": "settings",
+      "exit_code": 0,
+      "seconds": 3.3
+    },
+    {
+      "name": "storage_hub",
+      "exit_code": 0,
+      "seconds": 3.4
+    },
+    {
+      "name": "storage_local",
+      "exit_code": 0,
+      "seconds": 2.0,
+      "rerun": true,
+      "initial_failure": "Fixture now waits for app boot before mutating library"
+    },
+    {
+      "name": "receipts",
+      "exit_code": 0,
+      "seconds": 13.7
+    },
+    {
+      "name": "storage_jobs",
+      "exit_code": 0,
+      "seconds": 0.5
+    },
+    {
+      "name": "direct preview",
+      "exit_code": 0
+    }
+  ],
+  "real_provider_generation_tested": false,
+  "windows_tested": false,
+  "simulation_only_for_preview": true,
+  "automatic_24h_deletion_added": false,
+  "closed_lot_pins_and_external_refs_preserved": true
+}
