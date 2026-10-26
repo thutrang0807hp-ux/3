@@ -68,23 +68,53 @@ function workflowJsonObject(text){if(typeof text!=='string'||text.length>500000)
 window.SFProviderReceipts={jobWireId,jobPostFailure,jobReadRecord,jobReadError,workflowJsonObject};
 })();
 
-// Shared duration planner. Inputs are explicit; this module never sends provider requests.
+// Pure shared planner: timeline targets are not provider billing durations.
 (function(){
 function partId(index){let value='';for(let n=index+1;n>0;n=Math.floor((n-1)/26))value=String.fromCharCode(97+(n-1)%26)+value;return value;}
+function textTimeline(text,seconds){
+ text=String(text||'');
+ const graphemes=typeof Intl.Segmenter==='function'?[...new Intl.Segmenter(undefined,{granularity:'grapheme'}).segment(text)].map(s=>({text:s.segment,offset:s.index+s.segment.length})):(()=>{let at=0;return Array.from(text,c=>({text:c,offset:at+=c.length}));})();
+ const wordEnds=new Set(typeof Intl.Segmenter==='function'?[...new Intl.Segmenter(undefined,{granularity:'word'}).segment(text)].filter(s=>s.isWordLike).map(s=>s.index+s.segment.length):[]);
+ const total=graphemes.reduce((n,g)=>n+(/\s/u.test(g.text)?0:1),0);let weight=0;
+ const breaks=[{offset:0,at:0,kind:'sentence'}],ends=[];
+ for(let i=0;i<graphemes.length;i++){
+  const g=graphemes[i],next=graphemes[i+1]?.text||'';if(!/\s/u.test(g.text))weight++;
+  const sentence=/[.!?。！？\n]/u.test(g.text)&&!/[.!?。！？\n]/u.test(next);
+  const kind=sentence?'sentence':/[,;:，、；：]/u.test(g.text)?'clause':wordEnds.has(g.offset)||/\s/u.test(g.text)||/[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u.test(g.text)?'word':null;
+  if(kind){const point={offset:g.offset,at:total?seconds*weight/total:0,kind};breaks.push(point);if(sentence)ends.push(point);}
+ }
+ if(breaks.at(-1).offset!==text.length)breaks.push({offset:text.length,at:seconds,kind:'sentence'});
+ else breaks.at(-1).at=seconds;
+ if(ends.at(-1)?.offset!==text.length)ends.push({offset:text.length,at:seconds,kind:'sentence'});
+ let from=0,start=0;const lines=ends.map(end=>{const row={start,end:end.at,text:text.slice(from,end.offset),from,to:end.offset};from=end.offset;start=end.at;return row;}).filter(l=>l.text.trim());
+ return {text,breaks,lines};
+}
+function assignText(text,seconds,parts){
+ const timeline=textTimeline(text,seconds);let from=0;
+ return parts.map((p,i)=>{
+  let to=timeline.text.length,splitSentence=false;
+  if(i<parts.length-1){const choices=timeline.breaks.filter(b=>b.offset>=from&&b.offset<timeline.text.length);
+   choices.sort((a,b)=>Math.abs(a.at-p.end)-Math.abs(b.at-p.end)||(a.kind==='sentence'?-1:1));
+   const cut=choices[0]||{offset:from,kind:'word'};to=cut.offset;splitSentence=cut.kind!=='sentence';
+  }
+  const value={id:p.id,text:timeline.text.slice(from,to).trim(),from,to,splitSentence};from=to;return value;
+ });
+}
 function plan(s,options={},lines=[]){
  const max=8,total=s.end-s.start;if(!Number.isFinite(total)||total<=0)return[];
  const cuts=(options.actionCuts||[]).filter(t=>Number.isFinite(t)&&t>s.start&&t<s.end);
  let count=Math.ceil((total-.001)/max),hold=0;
  const tail=total-(count-1)*max;
  if(options.holdTail&&count>1&&tail>0&&tail<=1.2&&!lines.some(l=>l.end>s.end-tail+.001&&l.start<s.end)){count--;hold=tail;}
- const parts=[];let at=s.start;
+ // A short scene is valid. Only multi-part scenes need a balanced minimum.
+ const minimum=Math.min(3,(total-hold)/count),parts=[];let at=s.start;
  for(let i=0;i<count;i++){
-  const remaining=count-i,last=remaining===1,ideal=at+(s.end-at-hold)/remaining;
-  let end=s.end;
+  const remaining=count-i,last=remaining===1,ideal=at+(s.end-at-hold)/remaining;let end=s.end;
   if(!last){
-   const lo=Math.max(at+.2,s.end-(remaining-1)*max-hold),hi=Math.min(at+max,s.end-(remaining-1)*.2);
-   const candidates=[Math.max(lo,Math.min(hi,ideal)),...lines.flatMap(l=>[l.start,l.end]),...cuts].filter(t=>t>=lo-.001&&t<=hi+.001);
-   const cost=t=>Math.abs(t-ideal)+ (lines.some(l=>l.start<t-.02&&l.end>t+.02)?1000:0) -(cuts.includes(t)?10:0);
+   const lo=Math.max(at+minimum,s.end-(remaining-1)*max-hold),hi=Math.min(at+max,s.end-(remaining-1)*minimum-hold);
+   const hints=(options.textBreaks||[]).filter(b=>b.at>=lo-.001&&b.at<=hi+.001);
+   const candidates=[...(hints.length?[]:[Math.max(lo,Math.min(hi,ideal))]),...lines.flatMap(l=>[l.start,l.end]),...cuts,...hints.map(b=>b.at)].filter(t=>t>=lo-.001&&t<=hi+.001);
+   const cost=t=>Math.abs(t-ideal)+(lines.some(l=>l.start<t-.02&&l.end>t+.02)?2:0)-(cuts.includes(t)?2:0)-(hints.some(b=>Math.abs(b.at-t)<.001&&b.kind==='clause')?.4:0)-(hints.some(b=>Math.abs(b.at-t)<.001&&b.kind==='word')?.25:0);
    end=candidates.sort((a,b)=>cost(a)-cost(b))[0];
   }
   end=Math.round(end*1000)/1000;const duration=end-at,extra=last?hold:0;
@@ -92,7 +122,7 @@ function plan(s,options={},lines=[]){
  }
  return parts;
 }
-window.SFClipPlanning={plan,partId};
+window.SFClipPlanning={plan,partId,textTimeline,assignText};
 })();
 
 // Text-only image direction. Never resizes, changes a file or calls an upscaler.
@@ -445,33 +475,51 @@ photoFlowDialog=async function(){await flowDialogBeforeAccounts();if(!$('#photoF
 // A storyboard remains ONE planning image. Per-scene generated frames are optional.
 const photoPendingStates=new Set(['prepared','preparing','submitted','running','queued','unknown','done']);
 let photoApprovalBusy=false;
-function photoLatest(b,part='a'){return(b.clips||[]).filter(c=>(c.part||'a')===part).at(-1)||null;}
+function photoLatest(b,part='a'){const p=photoParts(b).find(p=>p.id===part);return p?(b.clips||[]).filter(c=>(c.part||'a')===part&&photoContentMatches(b,p,c)).sort((a,b)=>photoOrder(a)-photoOrder(b)).at(-1)||null:null;}
 function photoLatestFrame(b){return(b.frames||[]).at(-1)||null;}
 function photoBeatLocked(b){return !!(b.clips?.length||draft.flowJobs?.some(j=>j.beatId===b.id)||b.partText&&Object.keys(b.partText).length);}
-function photoSentenceCues(b){
- const chunks=(b.text||'').match(/[^.!?。！？\n]+[.!?。！？\n]*|[.!?。！？\n]+/g)||[];
- const total=chunks.reduce((n,t)=>n+t.length,0);let at=0;
- return chunks.map(text=>{const start=at;at+=b.seconds*text.length/(total||1);return{start,end:at,text};});
-}
+function photoTextTimeline(b){return SFClipPlanning.textTimeline(b.text,b.seconds);}
+function photoSentenceCues(b){return photoTextTimeline(b).lines;}
+function photoPlanParts(b,options=b.clipPlanning||{}){const timeline=photoTextTimeline(b);return SFClipPlanning.plan({start:0,end:b.seconds},{...options,textBreaks:timeline.breaks},timeline.lines);}
+
 function photoParts(b){
  if(b.clipPlan?.seconds===b.seconds)return b.clipPlan.parts;
  // Keep the old one-prompt layout of existing projects. Do not remap their files.
  if(photoBeatLocked(b)&&!b.clipPlan)return[{id:'a',start:0,end:b.seconds,duration:b.seconds,generationDuration:b.seconds,legacy:true}];
- return SFClipPlanning.plan({start:0,end:b.seconds},b.clipPlanning||{},photoSentenceCues(b));
+ return photoPlanParts(b);
 }
 function photoFreezeParts(b){b.clipPlan??={seconds:b.seconds,parts:structuredClone(photoParts(b))};}
+function photoLegacyText(b,p){
+ // Preserve the actual wording of pre-update generations; never reinterpret their speech.
+ for(const item of [...(b.clips||[]),...(draft.flowJobs||[]).filter(j=>j.beatId===b.id)].reverse()){
+  if((item.part||'a')!==p.id||!item.signature)continue;
+  try{const old=JSON.parse(item.signature);if(Array.isArray(old)&&old.length===7&&old[0]===photoSignatureBeforeFlow(b)&&old[6]?.id===p.id&&typeof old[6].text==='string')return old[6].text;}catch{}
+ }
+ return null;
+}
 function photoPartText(b,p){
  if(Object.hasOwn(b.partText||{},p.id))return b.partText[p.id];
- const parts=photoParts(b),words=(b.text||'').match(/\S+\s*/g)||[];
- const from=Math.round(words.length*p.start/b.seconds),to=parts.at(-1).id===p.id?words.length:Math.round(words.length*p.end/b.seconds);
- return words.slice(from,to).join('').trim();
+ const legacy=photoLegacyText(b,p);if(legacy!==null)return legacy;
+ return SFClipPlanning.assignText(b.text,b.seconds,photoParts(b)).find(row=>row.id===p.id)?.text||'';
 }
 const photoSignatureBeforeFlow=photoSceneSignature;
-photoSceneSignature=function(b,p=null){return JSON.stringify([photoSignatureBeforeFlow(b),draft.storyboardImage||null,photoOverall()?.key||null,b.approvedFrame||null,b.clipPlan||null,b.clipPlanning||null,p?{id:p.id,text:photoPartText(b,p),prompt:b.partPrompts?.[p.id]||null}:{text:b.partText||{},prompts:b.partPrompts||{}}]);};
+photoSceneSignature=function(b,p=null){
+ if(!p)return JSON.stringify(photoParts(b).map(part=>photoSceneSignature(b,part)));
+ // Fingerprint only inputs used to generate this clip. Storyboard is a writing input.
+ return JSON.stringify({version:2,room:room.id,beat:b.id,part:p.id,start:p.start,end:p.end,generationDuration:p.generationDuration||p.duration,prompt:photoPartPrompt(b,p),frameId:b.approvedFrame||null,refs:photoRefsFor(b).map(r=>({role:r.role,images:r.images.map(i=>i.key||i.image)}))});
+};
+function photoContentMatches(b,p,item){
+ if(item.stale)return false;
+ if(!item.signature||item.signature===photoSceneSignature(b,p))return true;
+ try{const old=JSON.parse(item.signature);return Array.isArray(old)&&old.length===7&&old[0]===photoSignatureBeforeFlow(b)&&old[3]===(b.approvedFrame||null)&&JSON.stringify(old[4])===JSON.stringify(b.clipPlan||null)&&JSON.stringify(old[5])===JSON.stringify(b.clipPlanning||null)&&JSON.stringify(old[6])===JSON.stringify({id:p.id,text:photoPartText(b,p),prompt:b.partPrompts?.[p.id]||null})&&(!item.prompt||item.prompt===photoPartPrompt(b,p));}catch{return false;}
+}
+function photoOrder(item){return item.generationOrder||item.version||0;}
+function photoNextOrder(b,part){return 1+Math.max(0,...[...(b.clips||[]),...(b.staleClips||[]),...(draft.flowJobs||[]).filter(j=>j.beatId===b.id)].filter(c=>(c.part||'a')===part).map(photoOrder));}
+
 function photoSlotJob(b,p){return draft.flowJobs?.filter(j=>j.beatId===b.id&&(j.part||'a')===p.id&&photoPendingStates.has(j.state)).at(-1);}
 function photoClipValid(b,p,c=photoLatest(b,p.id),chain=true){
- if(!c||c.reviewDecision?.status!=='accepted'||c.duration+.025<(p.generationDuration||p.duration))return false;
- if(c.signature&&c.signature!==photoSceneSignature(b,p)||c.frameId&&c.frameId!==b.approvedFrame)return false;
+ if(!c||!Number.isFinite(c.duration)||c.reviewDecision?.status!=='accepted'||c.duration+.025<(p.generationDuration||p.duration))return false;
+ if(!photoContentMatches(b,p,c)||c.frameId&&c.frameId!==b.approvedFrame)return false;
  if(c.slotStart!=null&&(Math.abs(c.slotStart-p.start)>.002||Math.abs(c.slotEnd-p.end)>.002))return false;
  if(b.clipPlan&&b.clipPlan.seconds!==b.seconds)return false;
  if(photoSlotJob(b,p))return false;
@@ -504,10 +552,11 @@ async function photoPartReferences(b,p){
  if(!result.length)throw Error('Thêm ít nhất một ảnh sản phẩm/người/bối cảnh trước.');
  return result;
 }
+function photoPlanSummary(b){const parts=photoParts(b),rows=SFClipPlanning.assignText(b.text,b.seconds,parts);return parts.length+' lượt gen dự kiến · '+parts.map(p=>p.id+': '+p.duration.toFixed(1)+'s').join(' · ')+(rows.some(r=>r.splitSentence)?' · Có câu phải chia: rà lời từng phần.':'');}
 function photoPlanningDialog(){
  const id=room.id;
- modal('Chia clip · Từ ảnh & ý tưởng','<p>Cân thời lượng theo nhịp và mốc câu ước lượng. Chưa có giọng thực thì phải rà lời từng clip. Thời lượng dựng khác thời lượng dịch vụ tính phí.</p>'+draft.beats.map(b=>'<section data-photo-plan="'+b.id+'"><b>'+esc(b.name)+' · '+b.seconds+'s</b><p>'+photoParts(b).map(p=>p.id+': '+p.duration.toFixed(1)+'s').join(' · ')+'</p><label>Mốc hành động, giây<input data-photo-cuts placeholder="Ví dụ 3.5, 7" value="'+esc((b.clipPlanning?.actionCuts||[]).join(', '))+'" '+(photoBeatLocked(b)?'disabled':'')+'></label><label><input type="checkbox" data-photo-continuity '+(b.clipPlanning?.continuity?'checked':'')+' '+(photoBeatLocked(b)?'disabled':'')+'> Nối khung cuối · chờ duyệt phần trước</label><label><input type="checkbox" data-photo-hold '+(b.clipPlanning?.holdTail?'checked':'')+' '+(photoBeatLocked(b)?'disabled':'')+'> Đuôi tĩnh ≤1,2s · chỉ khi nhịp không có lời</label>'+(photoBeatLocked(b)?'<small>Đã có clip/lượt gửi/lời riêng: giữ cách chia để không gán nhầm bản cũ.</small>':'')+'</section>').join(''),'<button id="photoSavePlanning" class="primary">Lưu cách chia</button>');
- $('#photoSavePlanning').onclick=async()=>{try{if(id!==room.id)throw Error('Phòng đã đổi.');const updates=[];for(const row of $$('[data-photo-plan]')){const b=draft.beats.find(b=>b.id===row.dataset.photoPlan);if(photoBeatLocked(b))continue;const raw=row.querySelector('[data-photo-cuts]').value.trim(),cuts=raw?raw.split(/[,;\s]+/).map(Number):[];if(cuts.some(t=>!Number.isFinite(t)||t<=0||t>=b.seconds))throw Error('Mốc phải nằm trong nhịp.');if(row.querySelector('[data-photo-hold]').checked&&b.text.trim())throw Error('Đuôi tĩnh chỉ dùng cho nhịp không lời.');const options={actionCuts:cuts,continuity:row.querySelector('[data-photo-continuity]').checked,holdTail:row.querySelector('[data-photo-hold]').checked};updates.push({b,options});}for(const{b,options}of updates){b.clipPlanning=options;b.clipPlan={seconds:b.seconds,parts:SFClipPlanning.plan({start:0,end:b.seconds},options,photoSentenceCues(b))};delete b.partPrompts;}draft.plan=[];await save();$('#photoDialog').close();render();}catch(e){toast(e.message);}};
+ modal('Chia clip · Từ ảnh & ý tưởng','<p>Cân thời lượng theo nhịp và mốc câu ước lượng. Chưa có giọng thực thì phải rà lời từng clip. Tổng '+draft.beats.reduce((n,b)=>n+photoParts(b).length,0)+' lượt gen cho toàn bộ cách chia này; chưa trừ clip đã có. Thời lượng dựng khác thời lượng dịch vụ tính phí.</p>'+draft.beats.map(b=>'<section data-photo-plan="'+b.id+'"><b>'+esc(b.name)+' · '+b.seconds+'s</b><p>'+esc(photoPlanSummary(b))+'</p><label>Mốc hành động, giây<input data-photo-cuts placeholder="Ví dụ 3.5, 7" value="'+esc((b.clipPlanning?.actionCuts||[]).join(', '))+'" '+(photoBeatLocked(b)?'disabled':'')+'></label><label><input type="checkbox" data-photo-continuity '+(b.clipPlanning?.continuity?'checked':'')+' '+(photoBeatLocked(b)?'disabled':'')+'> Nối khung cuối · chờ duyệt phần trước</label><label><input type="checkbox" data-photo-hold '+(b.clipPlanning?.holdTail?'checked':'')+' '+(photoBeatLocked(b)?'disabled':'')+'> Đuôi tĩnh ≤1,2s · chỉ khi nhịp không có lời</label>'+(photoBeatLocked(b)?'<small>Đã có clip/lượt gửi/lời riêng: giữ cách chia để không gán nhầm bản cũ.</small>':'')+'</section>').join(''),'<button id="photoSavePlanning" class="primary">Lưu cách chia</button>');
+ $('#photoSavePlanning').onclick=async()=>{try{if(id!==room.id)throw Error('Phòng đã đổi.');const updates=[];for(const row of $$('[data-photo-plan]')){const b=draft.beats.find(b=>b.id===row.dataset.photoPlan);if(photoBeatLocked(b))continue;const raw=row.querySelector('[data-photo-cuts]').value.trim(),cuts=raw?raw.split(/[,;\s]+/).map(Number):[];if(cuts.some(t=>!Number.isFinite(t)||t<=0||t>=b.seconds))throw Error('Mốc phải nằm trong nhịp.');if(row.querySelector('[data-photo-hold]').checked&&b.text.trim())throw Error('Đuôi tĩnh chỉ dùng cho nhịp không lời.');const options={actionCuts:cuts,continuity:row.querySelector('[data-photo-continuity]').checked,holdTail:row.querySelector('[data-photo-hold]').checked};updates.push({b,options});}for(const{b,options}of updates){b.clipPlanning=options;b.clipPlan={seconds:b.seconds,parts:photoPlanParts(b,options)};delete b.partPrompts;}draft.plan=[];await save();$('#photoDialog').close();render();}catch(e){toast(e.message);}};
 }
 const photoRenderProvidersBeforeFlow=photoRenderProviders;
 photoRenderProviders=function(){photoRenderProvidersBeforeFlow();const b=document.createElement('button');b.id='photoPlanClips';b.textContent='Chia clip';b.onclick=photoPlanningDialog;$('#photoRunClips').before(b);};
@@ -521,11 +570,11 @@ async function photoSlotDialog(beatId,partId='a'){
  modal('Clip · '+b.name+' / '+p.id,(c?'<video id="photoLatestVideo" controls playsinline preload="metadata" style="width:100%;max-height:340px"></video><p>Bản '+c.version+' · '+esc(c.name)+'</p>':'<p>Chưa có clip. Dùng bộ ảnh sản phẩm, không cần cắt storyboard.</p>')+'<label>Lời riêng phần này · rà trước khi tạo<textarea id="photoPartDialogue" rows="3">'+esc(photoPartText(b,p))+'</textarea></label><label>Chuyển động riêng phần này<textarea id="photoPartMotion" rows="3">'+esc(b.partPrompts?.[p.id]?.motionPrompt||b.motionPrompt||b.movement||'')+'</textarea></label><button id="photoSavePartText">Lưu lời / chuyển động</button><label>Prompt video<textarea id="photoSlotPrompt" readonly rows="9">'+esc(photoPartPrompt(b,p))+'</textarea></label>'+(job?'<p>Có lượt '+esc(job.id)+' · '+esc(job.state)+'. Kiểm tra kết quả trước; không gửi lặp.</p>':''),'<button id="photoCopySlot">Chép prompt</button><button id="photoImportSlot">Nhập clip</button><button id="photoRegenerateSlot">'+(c?'Tạo lại phần này':'Tạo phần này')+'</button><button id="photoApproveSlot" class="primary" '+(!c||job?'disabled':'')+'>Duyệt bản mới nhất</button>');
  if(c){const file=await bridge.getFile(c.key);if(urls.has('slot-preview'))URL.revokeObjectURL(urls.get('slot-preview'));const url=file?URL.createObjectURL(file):'';urls.set('slot-preview',url);if($('#photoLatestVideo'))$('#photoLatestVideo').src=url;}
  $('#photoCopySlot').onclick=()=>photoCopyText($('#photoSlotPrompt'));$('#photoImportSlot').onclick=()=>clipFile.click();$('#photoRegenerateSlot').onclick=()=>photoRunClips({beatId:b.id,part:p.id,regenerate:true}).catch(e=>toast(e.message));$('#photoApproveSlot').onclick=()=>photoApproveSlots([{b,p}]).catch(e=>toast(e.message));
- if(product.sceneBank?.length){$('#photoDialogBody').insertAdjacentHTML('beforeend','<label>Dùng clip đã có trong Bộ cảnh<select id="photoBankSlot">'+product.sceneBank.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.name)+' · '+c.duration.toFixed(1)+'s</option>').join('')+'</select></label><button id="photoUseBankSlot">Nhập vào ô này · không tạo AI</button>');$('#photoUseBankSlot').onclick=async()=>{if(photoSlotJob(b,p))return toast('Đối soát lượt đang gửi trước.');const source=product.sceneBank.find(c=>c.id===$('#photoBankSlot').value);photoMediaBusy++;try{const file=await bridge.getFile(source.key);if(!file)throw Error('Thiếu clip Bộ cảnh.');const info=await photoReadClip(file,p.generationDuration||p.duration);photoFreezeParts(b);b.clips??=[];b.clips.push({...structuredClone(source),id:uid(),part:p.id,bankSourceId:source.id,version:1+Math.max(0,...b.clips.filter(c=>(c.part||'a')===p.id).map(c=>c.version||0)),signature:photoSceneSignature(b,p),frameId:null,continuityFrom:photoPreviousId(b,p),slotStart:p.start,slotEnd:p.end,reviewDecision:{status:'pending'},...info});draft.plan=[];await save();render();await photoSlotDialog(b.id,p.id);}catch(e){toast(e.message);}finally{photoMediaBusy--;}};}
+ if(product.sceneBank?.length){$('#photoDialogBody').insertAdjacentHTML('beforeend','<label>Dùng clip đã có trong Bộ cảnh<select id="photoBankSlot">'+product.sceneBank.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.name)+' · '+c.duration.toFixed(1)+'s</option>').join('')+'</select></label><button id="photoUseBankSlot">Nhập vào ô này · không tạo AI</button>');$('#photoUseBankSlot').onclick=async()=>{if(photoSlotJob(b,p))return toast('Đối soát lượt đang gửi trước.');const source=product.sceneBank.find(c=>c.id===$('#photoBankSlot').value);photoMediaBusy++;try{const file=await bridge.getFile(source.key);if(!file)throw Error('Thiếu clip Bộ cảnh.');const info=await photoReadClip(file,p.generationDuration||p.duration);photoFreezeParts(b);b.clips??=[];b.clips.push({...structuredClone(source),id:uid(),part:p.id,bankSourceId:source.id,version:photoNextOrder(b,p.id),generationOrder:photoNextOrder(b,p.id),signature:photoSceneSignature(b,p),frameId:null,continuityFrom:photoPreviousId(b,p),slotStart:p.start,slotEnd:p.end,reviewDecision:{status:'pending'},...info});draft.plan=[];await save();render();await photoSlotDialog(b.id,p.id);}catch(e){toast(e.message);}finally{photoMediaBusy--;}};}
  $('#photoSavePartText').onclick=async()=>{try{if(photoSlotJob(b,p))throw Error('Đợi đối soát lượt đang gửi trước khi đổi lời.');photoFreezeParts(b);b.partText??={};b.partText[p.id]=$('#photoPartDialogue').value.slice(0,5000);b.partPrompts??={};b.partPrompts[p.id]={visualPrompt:b.partPrompts[p.id]?.visualPrompt||b.visualPrompt||'',motionPrompt:$('#photoPartMotion').value.slice(0,10000)};draft.plan=[];await save();render();photoSlotDialog(b.id,p.id);}catch(e){toast(e.message);}};
 }
 photoClipDialog=async id=>photoSlotDialog(id,photoParts(draft.beats.find(b=>b.id===id))[0].id);
-clipFile.onchange=async()=>{const file=clipFile.files[0],target=photoTarget;clipFile.value='';if(!file||!target)return;photoMediaBusy++;try{const b=draft.beats.find(b=>b.id===target.beatId);if(room.id!==target.roomId||!b||target.signature!==photoSceneSignature(b))throw Error('Phòng hoặc nội dung đã đổi.');photoFreezeParts(b);const p=photoParts(b).find(p=>p.id===(target.part||'a'));if(!p||photoSlotJob(b,p))throw Error('Đối soát lượt đang gửi trước khi nhập clip khác.');const info=await photoReadClip(file,p.generationDuration||p.duration),key=room.id+':photo-clip:'+uid();await bridge.putFile(key,file);b.clips??=[];b.clips.push({id:uid(),key,name:file.name,version:1+Math.max(0,...b.clips.filter(c=>(c.part||'a')===p.id).map(c=>c.version||0)),part:p.id,signature:photoSceneSignature(b,p),slotStart:p.start,slotEnd:p.end,generationDuration:p.generationDuration,frameId:b.approvedFrame||null,continuityFrom:photoPreviousId(b,p),...info});draft.plan=[];await save();render();await photoSlotDialog(b.id,p.id);}catch(e){toast(e.message);}finally{photoMediaBusy--;}};
+clipFile.onchange=async()=>{const file=clipFile.files[0],target=photoTarget;clipFile.value='';if(!file||!target)return;photoMediaBusy++;try{const b=draft.beats.find(b=>b.id===target.beatId);if(room.id!==target.roomId||!b||target.signature!==photoSceneSignature(b))throw Error('Phòng hoặc nội dung đã đổi.');photoFreezeParts(b);const p=photoParts(b).find(p=>p.id===(target.part||'a'));if(!p||photoSlotJob(b,p))throw Error('Đối soát lượt đang gửi trước khi nhập clip khác.');const info=await photoReadClip(file,p.generationDuration||p.duration),key=room.id+':photo-clip:'+uid();await bridge.putFile(key,file);b.clips??=[];b.clips.push({id:uid(),key,name:file.name,version:photoNextOrder(b,p.id),generationOrder:photoNextOrder(b,p.id),part:p.id,signature:photoSceneSignature(b,p),slotStart:p.start,slotEnd:p.end,generationDuration:p.generationDuration,frameId:b.approvedFrame||null,continuityFrom:photoPreviousId(b,p),...info});draft.plan=[];await save();render();await photoSlotDialog(b.id,p.id);}catch(e){toast(e.message);}finally{photoMediaBusy--;}};
 function photoPreviousId(b,p){const parts=photoParts(b),i=parts.findIndex(x=>x.id===p.id);return b.clipPlanning?.continuity&&i>0?photoLatest(b,parts[i-1].id)?.id||null:null;}
 async function photoReadClip(file,stopTime=null){
  const info=await clipInfo(file),url=URL.createObjectURL(file),v=document.createElement('video');v.muted=true;v.preload='auto';
@@ -536,7 +585,7 @@ async function photoApproveSlots(slots,kind='clip'){
  const store=parent.SceneForgeStorage;if(!store?.managed||!store.state.active)throw Error('Kết nối kho máy để duyệt và tự dọn bản cũ.');
  const approvalRoom=room.id,approvalSignature=JSON.stringify(draft);
  const targets=[];
- for(const {b,p}of slots){const c=kind==='frame'?photoLatestFrame(b):photoLatest(b,p.id);if(!c)continue;if(kind==='clip'&&(b.clipPlan&&b.clipPlan.seconds!==b.seconds||photoSlotJob(b,p)||!photoChainReady(b,p,c)||c.signature&&c.signature!==photoSceneSignature(b,p)||c.frameId&&c.frameId!==b.approvedFrame||c.duration+.025<(p.generationDuration||p.duration)))continue;if(!await bridge.getFile(c.key))continue;targets.push({scope:'photo',sceneId:b.id,kind,part:kind==='clip'?p.id:null,keepId:c.id});}
+ for(const {b,p}of slots){const c=kind==='frame'?photoLatestFrame(b):photoLatest(b,p.id);if(!c)continue;if(kind==='clip'&&(!Number.isFinite(c.duration)||b.clipPlan&&b.clipPlan.seconds!==b.seconds||photoSlotJob(b,p)||!photoChainReady(b,p,c)||!photoContentMatches(b,p,c)||c.frameId&&c.frameId!==b.approvedFrame||c.duration+.025<(p.generationDuration||p.duration)))continue;if(!await bridge.getFile(c.key))continue;targets.push({scope:'photo',sceneId:b.id,kind,part:kind==='clip'?p.id:null,keepId:c.id});}
  if(!targets.length)throw Error('Chưa có bản mới nhất đủ điều kiện. Rà lời, thời lượng, ảnh đầu vào và clip trước.');
  if(room.id!==approvalRoom||JSON.stringify(draft)!==approvalSignature)throw Error('Dự án đã đổi; rà lại trước khi duyệt.');
  photoApprovalBusy=true;const id=approvalRoom;
@@ -566,7 +615,7 @@ photoRunClips=async function(target=null){
  if(!slots.length)throw Error('Không có phần đủ điều kiện. Kiểm tra kết quả đang gửi hoặc duyệt clip trước để nối khung.');
  if(slots.length>30)throw Error('Tối đa 30 clip một lượt; chọn từng phần hoặc hoàn tất các lượt đang chờ.');
  await save();const signature=JSON.stringify(draft),prepared=[];photoMediaBusy++;
- try{for(const {b,p}of slots)prepared.push({beatId:b.id,part:p.id,signature:photoSceneSignature(b,p),slotStart:p.start,slotEnd:p.end,generationDuration:p.generationDuration,frameId:b.approvedFrame||null,continuityFrom:photoPreviousId(b,p),prompt:photoPartPrompt(b,p),references:await photoPartReferences(b,p)});}finally{photoMediaBusy--;}
+ try{for(const {b,p}of slots)prepared.push({beatId:b.id,part:p.id,generationOrder:photoNextOrder(b,p.id),signature:photoSceneSignature(b,p),slotStart:p.start,slotEnd:p.end,generationDuration:p.generationDuration,frameId:b.approvedFrame||null,continuityFrom:photoPreviousId(b,p),prompt:photoPartPrompt(b,p),references:await photoPartReferences(b,p)});}finally{photoMediaBusy--;}
  if(id!==room.id||signature!==JSON.stringify(draft))throw Error('Dự án đã đổi; chưa gửi.');
  modal('Rà lượt tạo '+(provider==='muse'?'Muse · muse.ai':'Flow')+' · '+prepared.length+' clip','<p>Dùng chung tài khoản trong Cài đặt. Tối đa '+(status.per_account||1)+' clip/tài khoản, '+(status.max_concurrency||3)+' việc toàn bộ. Hạn mức và credit theo dịch vụ. Không gửi lại tự động khi chưa rõ kết quả.</p><p>Lời từng phần được chia ước lượng từ kịch bản; rà dưới đây trước khi gửi. Các phần nối khung chờ phần trước được duyệt. Muse hiện là muse.ai, chưa xác minh Meta AI.</p>'+prepared.map(row=>'<details open><summary>'+esc(draft.beats.find(b=>b.id===row.beatId).name)+' / '+row.part+' · '+row.references.length+' ảnh</summary><pre style="white-space:pre-wrap">'+esc(row.prompt)+'</pre></details>').join(''),'<button id="photoConfirmFlow" class="primary">Gửi '+prepared.length+' yêu cầu</button>');
  $('#photoConfirmFlow').onclick=async()=>{const button=$('#photoConfirmFlow');button.disabled=true;photoMediaBusy++;
@@ -596,11 +645,18 @@ photoRecoverFlows=async function(){
    const response=await fetch('/local-api/'+(job.provider||'flow')+'/files/'+encodeURIComponent(job.id));if(!response.ok)throw Error('Chưa tải được clip.');
    const file=new File([await response.blob()],job.id+(result.result.mime_type==='video/webm'?'.webm':'.mp4'),{type:result.result.mime_type}),info=await photoReadClip(file,job.generationDuration);
    if(room.id!==id)throw Error('Đã đổi phòng.');const key=id+':photo-clip:'+job.id;await bridge.putFile(key,file);b.clips??=[];
-   if(!b.clips.some(c=>c.requestId===job.id))b.clips.push({id:uid(),key,name:file.name,version:1+Math.max(0,...b.clips.filter(c=>(c.part||'a')===(job.part||'a')).map(c=>c.version||0)),part:job.part||'a',frameId:job.frameId||null,signature:job.signature,slotStart:job.slotStart,slotEnd:job.slotEnd,continuityFrom:job.continuityFrom||null,requestId:job.id,prompt:job.prompt,model:job.model,origin:job.provider||'flow',accountId:result.result.account_id||null,...info});
-   job.state='imported';draft.plan=[];imported++;
+   const part=photoParts(b).find(p=>p.id===(job.part||'a')),current=part&&photoLatest(b,part.id);
+   const staleReason=!part||b.clipPlan&&b.clipPlan.seconds!==b.seconds?'layout_changed':!photoContentMatches(b,part,job)?'content_changed':job.continuityFrom!==photoPreviousId(b,part)&&!!(job.continuityFrom||photoPreviousId(b,part))?'previous_clip_changed':current&&job.generationOrder&&photoOrder(current)>job.generationOrder?'older_request':current&&!job.generationOrder&&current.requestId!==job.id?'legacy_order_unknown':null;
+   const clip={id:uid(),key,name:file.name,version:job.generationOrder||photoNextOrder(b,job.part||'a'),generationOrder:job.generationOrder||null,part:job.part||'a',frameId:job.frameId||null,signature:job.signature,slotStart:job.slotStart,slotEnd:job.slotEnd,continuityFrom:job.continuityFrom||null,requestId:job.id,prompt:job.prompt,model:job.model,origin:job.provider||'flow',accountId:result.result.account_id||null,...info};
+   if(![...(b.clips||[]),...(b.staleClips||[])].some(c=>c.requestId===job.id)){
+    if(staleReason){b.staleClips??=[];b.staleClips.push({...clip,stale:true,staleReason});}
+    else{b.clips.push(clip);draft.plan=[];}
+   }
+   job.state='imported';job.stale=!!staleReason;job.staleReason=staleReason;imported++;
+
   }
   await save();
- }render();toast(imported?'Đã nhận '+imported+' clip mới nhất; rà rồi duyệt để dọn bản cũ.':'Đã đối soát. Chưa rõ kết quả thì không gửi lại.');}finally{photoMediaBusy--;}
+ }render();toast(imported?'Đã nhận '+imported+' kết quả. Bản lỗi thời giữ trong Các lượt đã gửi, không thay ô hiện tại.':'Đã đối soát. Chưa rõ kết quả thì không gửi lại.');}finally{photoMediaBusy--;}
 };
 const photoAssembleBeforeFlow=assemble;
 assemble=function(variant=0){
@@ -636,7 +692,7 @@ window.SceneForgeWorkflow.getReadiness=()=>({...photoReadinessBeforeFlow(),photo
 
 async function photoSentJobs(){
  const all=[...draft.flowJobs,...(draft.geminiJobs||[])];
- modal('Các lượt tạo clip đã gửi',all.map((j,i)=>'<section><b>'+esc(j.provider||'flow')+' · '+esc(j.part||'a')+' · '+esc(j.state)+'</b><p>'+esc(j.id)+'</p><p>'+esc(j.error||'')+'</p>'+(['prepared','unknown','missing','done','failed'].includes(j.state)?'<button data-photo-abandon="'+i+'">Đã đối soát · bỏ kết quả</button>':'')+'</section>').join('')||'<p>Chưa gửi clip.</p>','<button id="photoReconcileJobs">Kiểm tra kết quả</button>');
+ modal('Các lượt tạo clip đã gửi',all.map((j,i)=>'<section><b>'+esc(j.provider||'flow')+' · '+esc(j.part||'a')+' · '+esc(j.stale?'Lỗi thời · '+j.staleReason:j.state)+'</b><p>'+esc(j.id)+'</p><p>'+esc(j.error||'')+'</p>'+(j.stale?'<a target="_blank" rel="noopener" href="/local-api/'+esc(j.provider||'flow')+'/files/'+encodeURIComponent(j.id)+'">Tải kết quả lỗi thời đã lưu</a>':'')+(['prepared','unknown','missing','done','failed'].includes(j.state)?'<button data-photo-abandon="'+i+'">Đã đối soát · bỏ kết quả</button>':'')+'</section>').join('')||'<p>Chưa gửi clip.</p>','<button id="photoReconcileJobs">Kiểm tra kết quả</button>');
  $('#photoReconcileJobs').onclick=()=>photoRecoverFlows().then(()=>photoSentJobs()).catch(e=>toast(e.message));
  for(const button of $$('[data-photo-abandon]'))button.onclick=async()=>{const j=all[Number(button.dataset.photoAbandon)];if(!confirm('Đã kiểm tra lịch sử dịch vụ? Bỏ kết quả không hủy tác vụ, không hoàn credit và không tự tạo lại.'))return;try{await bridge.engine('requests/'+j.id+'/abandon',{confirm_history_checked:true,room_id:room.id,reason:'User checked service history'});j.previousState=j.state;j.state='abandoned';await save();render();photoSentJobs();}catch(e){toast(e.message);}};
 }

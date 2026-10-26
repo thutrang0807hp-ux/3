@@ -1,0 +1,34 @@
+{
+  "date_local": "2026-10-26",
+  "scope": "Independent Photo Studio review fixes",
+  "online_generation": false,
+  "windows_tested": false,
+  "models_installed": false,
+  "user_data_deleted": false,
+  "passed": [
+    "check_photo_review_fixes (actual Chromium/API/files; fake provider GET only; multilingual/Unicode + timing invariants; storyboard-only and legacy signatures; stale content/order retained separately; approval/reload; no gen POST)",
+    "check_photo_clip_flow (actual browser, files, editor handoff; provider transport fixture)",
+    "check_clip_planning_ui (reference flow shared-planner regression)",
+    "check_photo_version_approval",
+    "check_version_approval",
+    "check_storage_lifecycle",
+    "check_storage_jobs (retained latest/selected plus actual removable middle and another part)",
+    "check_approval_ui",
+    "check_library_ack_recovery_ui"
+  ],
+  "unchanged_policy": "approve latest then immediately retire eligible older versions; timeline/shared/pinned protected",
+  "limits": [
+    "Script timing remains estimated; listen/review before generation",
+    "No real account generation or Windows run",
+    "Provider fixed duration and cost differ from timeline targets",
+    "Muse remains muse.ai; Meta AI not verified",
+    "Existing generations preserve old split/actual speech; no automatic regeneration"
+  ],
+  "runtime_page_hashes": {
+    "index.html": "eca0bb30d8324f4bca0cd170c12b4ebc7ba86e6f660add34a199b3828d2750ce",
+    "studio.html": "eca0bb30d8324f4bca0cd170c12b4ebc7ba86e6f660add34a199b3828d2750ce",
+    "workflow.html": "f056f58e81ed12396c51c4e9de370fc79c1b8225da3b53f82e97d14fd69df869",
+    "photos.html": "dbc215bd26e591d0cc5b454d04f2475ec1c094aad8cc4d14b57f77f0e7f43085",
+    "native/index.html": "e0623b9652ec838edb66588e556dcd5db5a091fee1e6e43fad3e1aea671107f6"
+  }
+}

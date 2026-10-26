@@ -1,13 +1,13 @@
 # SceneForge — code tập trung luồng Từ ảnh & ý tưởng
 
 Mục đích: mang đi đánh giá code và cách nối từng bước, không phải gói cài app.
-Snapshot ứng dụng đã công bố: `b3fe48e` (26/10/2026). Đóng gói không sửa logic.
+Snapshot code sau sửa phản hồi: `photo-review-fixes-20261026`. Đóng gói không sửa logic.
 
 Đọc theo thứ tự:
 
 1. `review/LUONG_VA_BAN_DO.md`: luồng và file/hàm nối từng bước.
 2. `review/DE_BAI_DANH_GIA.md`: yêu cầu đánh giá, tình huống cần kiểm.
-3. `docs/photo-clip-flow.md`: cách dùng và giới hạn đã công bố.
+3. `docs/photo-review-fixes.md`: sửa sau đánh giá; `photo-clip-flow.md` là mô tả nền.
 4. `scripts/photo-studio/` theo thứ tự trong `scripts/demo-web/build.py`.
 5. Backend, shell, editor theo bảng liên kết; kiểm chứng ở các báo cáo trong `review/`.
 

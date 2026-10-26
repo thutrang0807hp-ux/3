@@ -72,23 +72,53 @@ function workflowJsonObject(text){if(typeof text!=='string'||text.length>500000)
 window.SFProviderReceipts={jobWireId,jobPostFailure,jobReadRecord,jobReadError,workflowJsonObject};
 })();
 
-// Shared duration planner. Inputs are explicit; this module never sends provider requests.
+// Pure shared planner: timeline targets are not provider billing durations.
 (function(){
 function partId(index){let value='';for(let n=index+1;n>0;n=Math.floor((n-1)/26))value=String.fromCharCode(97+(n-1)%26)+value;return value;}
+function textTimeline(text,seconds){
+ text=String(text||'');
+ const graphemes=typeof Intl.Segmenter==='function'?[...new Intl.Segmenter(undefined,{granularity:'grapheme'}).segment(text)].map(s=>({text:s.segment,offset:s.index+s.segment.length})):(()=>{let at=0;return Array.from(text,c=>({text:c,offset:at+=c.length}));})();
+ const wordEnds=new Set(typeof Intl.Segmenter==='function'?[...new Intl.Segmenter(undefined,{granularity:'word'}).segment(text)].filter(s=>s.isWordLike).map(s=>s.index+s.segment.length):[]);
+ const total=graphemes.reduce((n,g)=>n+(/\s/u.test(g.text)?0:1),0);let weight=0;
+ const breaks=[{offset:0,at:0,kind:'sentence'}],ends=[];
+ for(let i=0;i<graphemes.length;i++){
+  const g=graphemes[i],next=graphemes[i+1]?.text||'';if(!/\s/u.test(g.text))weight++;
+  const sentence=/[.!?。！？\n]/u.test(g.text)&&!/[.!?。！？\n]/u.test(next);
+  const kind=sentence?'sentence':/[,;:，、；：]/u.test(g.text)?'clause':wordEnds.has(g.offset)||/\s/u.test(g.text)||/[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u.test(g.text)?'word':null;
+  if(kind){const point={offset:g.offset,at:total?seconds*weight/total:0,kind};breaks.push(point);if(sentence)ends.push(point);}
+ }
+ if(breaks.at(-1).offset!==text.length)breaks.push({offset:text.length,at:seconds,kind:'sentence'});
+ else breaks.at(-1).at=seconds;
+ if(ends.at(-1)?.offset!==text.length)ends.push({offset:text.length,at:seconds,kind:'sentence'});
+ let from=0,start=0;const lines=ends.map(end=>{const row={start,end:end.at,text:text.slice(from,end.offset),from,to:end.offset};from=end.offset;start=end.at;return row;}).filter(l=>l.text.trim());
+ return {text,breaks,lines};
+}
+function assignText(text,seconds,parts){
+ const timeline=textTimeline(text,seconds);let from=0;
+ return parts.map((p,i)=>{
+  let to=timeline.text.length,splitSentence=false;
+  if(i<parts.length-1){const choices=timeline.breaks.filter(b=>b.offset>=from&&b.offset<timeline.text.length);
+   choices.sort((a,b)=>Math.abs(a.at-p.end)-Math.abs(b.at-p.end)||(a.kind==='sentence'?-1:1));
+   const cut=choices[0]||{offset:from,kind:'word'};to=cut.offset;splitSentence=cut.kind!=='sentence';
+  }
+  const value={id:p.id,text:timeline.text.slice(from,to).trim(),from,to,splitSentence};from=to;return value;
+ });
+}
 function plan(s,options={},lines=[]){
  const max=8,total=s.end-s.start;if(!Number.isFinite(total)||total<=0)return[];
  const cuts=(options.actionCuts||[]).filter(t=>Number.isFinite(t)&&t>s.start&&t<s.end);
  let count=Math.ceil((total-.001)/max),hold=0;
  const tail=total-(count-1)*max;
  if(options.holdTail&&count>1&&tail>0&&tail<=1.2&&!lines.some(l=>l.end>s.end-tail+.001&&l.start<s.end)){count--;hold=tail;}
- const parts=[];let at=s.start;
+ // A short scene is valid. Only multi-part scenes need a balanced minimum.
+ const minimum=Math.min(3,(total-hold)/count),parts=[];let at=s.start;
  for(let i=0;i<count;i++){
-  const remaining=count-i,last=remaining===1,ideal=at+(s.end-at-hold)/remaining;
-  let end=s.end;
+  const remaining=count-i,last=remaining===1,ideal=at+(s.end-at-hold)/remaining;let end=s.end;
   if(!last){
-   const lo=Math.max(at+.2,s.end-(remaining-1)*max-hold),hi=Math.min(at+max,s.end-(remaining-1)*.2);
-   const candidates=[Math.max(lo,Math.min(hi,ideal)),...lines.flatMap(l=>[l.start,l.end]),...cuts].filter(t=>t>=lo-.001&&t<=hi+.001);
-   const cost=t=>Math.abs(t-ideal)+ (lines.some(l=>l.start<t-.02&&l.end>t+.02)?1000:0) -(cuts.includes(t)?10:0);
+   const lo=Math.max(at+minimum,s.end-(remaining-1)*max-hold),hi=Math.min(at+max,s.end-(remaining-1)*minimum-hold);
+   const hints=(options.textBreaks||[]).filter(b=>b.at>=lo-.001&&b.at<=hi+.001);
+   const candidates=[...(hints.length?[]:[Math.max(lo,Math.min(hi,ideal))]),...lines.flatMap(l=>[l.start,l.end]),...cuts,...hints.map(b=>b.at)].filter(t=>t>=lo-.001&&t<=hi+.001);
+   const cost=t=>Math.abs(t-ideal)+(lines.some(l=>l.start<t-.02&&l.end>t+.02)?2:0)-(cuts.includes(t)?2:0)-(hints.some(b=>Math.abs(b.at-t)<.001&&b.kind==='clause')?.4:0)-(hints.some(b=>Math.abs(b.at-t)<.001&&b.kind==='word')?.25:0);
    end=candidates.sort((a,b)=>cost(a)-cost(b))[0];
   }
   end=Math.round(end*1000)/1000;const duration=end-at,extra=last?hold:0;
@@ -96,7 +126,7 @@ function plan(s,options={},lines=[]){
  }
  return parts;
 }
-window.SFClipPlanning={plan,partId};
+window.SFClipPlanning={plan,partId,textTimeline,assignText};
 })();
 
 // Text-only image direction. Never resizes, changes a file or calls an upscaler.

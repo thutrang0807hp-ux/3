@@ -1,14 +1,14 @@
 {
   "date_local": "2026-10-26",
-  "scope": "Packaging validation after Photo Studio shared clip flow",
-  "clean_extract": "/tmp/sceneforge-review-reliability-305lt82z/SceneForge-VideoMau-Code-Review",
+  "scope": "Packaging after independent Photo Studio review fixes",
+  "clean_extract": "/tmp/sceneforge-review-reliability-nfyp3452/SceneForge-VideoMau-Code-Review",
   "manifest_verified": true,
   "npm_ci_passed": true,
   "five_pages_rebuild_identical": {
-    "index.html": "66c1c08436d9d02bb571c90184def23fbb5e1098bed3bf70facc6764638d3238",
-    "studio.html": "66c1c08436d9d02bb571c90184def23fbb5e1098bed3bf70facc6764638d3238",
-    "workflow.html": "201193a12b08f468fca7b475799d487bc051b47c9e29cb8917dbf850b0b1f370",
-    "photos.html": "756eba442410994dc50b909b1adb06756889a776d3f3318ed529304ea1dfda1c",
+    "index.html": "eca0bb30d8324f4bca0cd170c12b4ebc7ba86e6f660add34a199b3828d2750ce",
+    "studio.html": "eca0bb30d8324f4bca0cd170c12b4ebc7ba86e6f660add34a199b3828d2750ce",
+    "workflow.html": "f056f58e81ed12396c51c4e9de370fc79c1b8225da3b53f82e97d14fd69df869",
+    "photos.html": "dbc215bd26e591d0cc5b454d04f2475ec1c094aad8cc4d14b57f77f0e7f43085",
     "native/index.html": "e0623b9652ec838edb66588e556dcd5db5a091fee1e6e43fad3e1aea671107f6"
   },
   "backend_empty_data_boot": true,
@@ -16,5 +16,5 @@
   "real_provider_requests": 0,
   "windows_tested": false,
   "functional_test_reports_are_prior_runs": false,
-  "functional_test_report": "PHOTO_CLIP_FLOW_CHECKS.json (reference reports retain their original run scope)"
+  "functional_test_report": "PHOTO_REVIEW_FIXES_CHECKS.json"
 }
