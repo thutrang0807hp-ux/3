@@ -1,0 +1,129 @@
+{
+  "date_local": "2026-10-26",
+  "timezone": "Asia/Bangkok",
+  "source_release": "two-workflow-audit-20261026",
+  "live_provider_verified": false,
+  "windows_verified": false,
+  "scope": "Two workflows, shared dispatch durability, bounded prompt reuse, current candidate validation, library/navigation; real browser/SQLite/files/editor with fixture provider transport.",
+  "checks": [
+    {
+      "name": "check_analysis_batches",
+      "command": "python -m local_engine.check_analysis_batches",
+      "result": "PASS",
+      "evidence": "PASS: 8-scene batch retains C09/L009 global IDs and timings, one bad scene blocks only that scene, 24 original 576x1024 evidence images fit six labelled sheets.",
+      "log": "artifacts/two-workflow-audit-tests/check_analysis_batches.log",
+      "log_sha256": "f82679b0de22bb1f08c0f6435039cee1791a2b9bba93f732bf2004edefbec149"
+    },
+    {
+      "name": "check_analysis_batches_ui",
+      "command": "python -m local_engine.check_analysis_batches_ui",
+      "result": "PASS",
+      "evidence": "PASS: 17 scenes -> 3 durable batches; unknown batch is read only on resume, valid 9 scenes apply independently, explicit released-batch continuation uses one fresh ID without resending good batches.",
+      "log": "artifacts/two-workflow-audit-tests/check_analysis_batches_ui.log",
+      "log_sha256": "3fc342ff216b7de7f2b94ecf4ef4b7b43f186244d3933dc2720b48271912b578"
+    },
+    {
+      "name": "check_direct_workflow",
+      "command": "python -m local_engine.check_direct_workflow",
+      "result": "PASS",
+      "evidence": "PASS: reference workflow reviewed image/Flow clip jobs, WebP receipt, exact scene/part/account, no auto-approve, repeated recovery no duplicate, stale account review rejected. Service fixtures only.",
+      "log": "artifacts/two-workflow-audit-tests/check_direct_workflow.log",
+      "log_sha256": "1c385bb3ccabce6a2f83298cad92984876d56394ce74a1a59e8634bde9a3ded9"
+    },
+    {
+      "name": "check_gemini_chat_routes",
+      "command": "python -m local_engine.check_gemini_chat_routes",
+      "result": "PASS",
+      "evidence": "PASS: actual local app routes -> Chat account -> script, translation/cache, evidence classification and frame analysis; original speech/timing preserved; explicit role models; paid API never called; cookie encrypted and never returned. Fixture SDK only.",
+      "log": "artifacts/two-workflow-audit-tests/check_gemini_chat_routes.log",
+      "log_sha256": "18f482c9f9461d3eb2b71b578f6e17b60aac3a27fe22df84478a7f2efc70fb52"
+    },
+    {
+      "name": "check_library_ack_recovery_ui",
+      "command": "python -m local_engine.check_library_ack_recovery_ui",
+      "result": "PASS",
+      "evidence": "PASS real browser/API: lost checkpoint ACK auto-reconciles by durable receipt and exact local digest; lost cleanup ACK hydrates deletion without resurrection; changed unsaved local data preserved and conflict shown. No provider calls.",
+      "log": "artifacts/two-workflow-audit-tests/check_library_ack_recovery_ui.log",
+      "log_sha256": "48c7596a164d8a5026262fc99679a2966dc276b4b64185c0c28c97040ab10fb4"
+    },
+    {
+      "name": "check_photo_clip_flow",
+      "command": "python -m local_engine.check_photo_clip_flow",
+      "result": "PASS",
+      "evidence": "PASS Photo Studio browser + actual SQLite/files: long beat split without duplicate dialogue; one storyboard, optional frames; latest 15th version; approval physically retires old 14, preserves other slot; exact-part regenerate; provider selection/concurrency fixture; unknown reconciles without resending; received clip needs approval; approved previous tail + original product refs. Gemini single-storyboard/original refs + part prompts, real editor video/still handoff. No online AI calls.",
+      "log": "artifacts/two-workflow-audit-tests/check_photo_clip_flow.log",
+      "log_sha256": "d737d02131aab65e329abf084d2a972704019e6388073270f7a87a1445e1f593"
+    },
+    {
+      "name": "check_photo_edit_safety",
+      "command": "python -m local_engine.check_photo_edit_safety",
+      "result": "PASS",
+      "evidence": "PASS photo edits: actual edit dialog 6->5.7 and 16s plan, local file reuse/no copies, legacy mismatch repair, native speech not truncated, unknown job binding retained; real unused/used role uploads preserve unaffected frames/clip; actual WAV replacement retains timeline, file/AI cues preserved, explicit realignment; mute native without gen; real formula fork with lost-reply retry and SQLite reload; original project/assets retained; retimed final cleanup retains the shared file and imports a real 5.7+4s editor timeline. Zero provider job POSTs.",
+      "log": "artifacts/two-workflow-audit-tests/check_photo_edit_safety.log",
+      "log_sha256": "e530c26093bf5144498d78ce7b3bd014f4ed3ed587645102e5b3e812d9b0c262"
+    },
+    {
+      "name": "check_photo_prompt_resume",
+      "command": "python -m local_engine.check_photo_prompt_resume",
+      "result": "PASS",
+      "evidence": "PASS photo prompt reuse: 9 beats -> 8+1; all current sends zero; editing or retry sends only missing group; unrelated input change preserves valid batch without marking whole project current; checkpoint failure sends zero. Actual Chromium/SQLite, fixture provider only.",
+      "log": "artifacts/two-workflow-audit-tests/check_photo_prompt_resume.log",
+      "log_sha256": "c2d9b23ecc838d68d1c08ebdcc4dcb41fdcfa0ad43a3445fc2be31ede9fd6fa6"
+    },
+    {
+      "name": "check_photo_review_fixes",
+      "command": "python -m local_engine.check_photo_review_fixes",
+      "result": "PASS",
+      "evidence": "PASS review repros: balanced 9s, legitimate short scene, multilingual/Unicode dialogue coverage; storyboard-only edits and legacy approval survive; actual prompt edits invalidate; stale content/older requests retained separately without replacing approved clip/plan; no generation POST; stale files preserved through approval + reload; generation-count UI.",
+      "log": "artifacts/two-workflow-audit-tests/check_photo_review_fixes.log",
+      "log_sha256": "4be1f7b50eac2ad1fb81ec034c53112652abbc6a222db5105c397488452de8df"
+    },
+    {
+      "name": "check_photo_story_production",
+      "command": "python -m local_engine.check_photo_story_production",
+      "result": "PASS",
+      "evidence": "PASS storyboard production: 8+1 prompt batches; original refs + one full storyboard; zero sends before confirmation; restart/repeated read no replay; automatic validated prompt application; 9 clip receipts; unified project board; no per-clip approval for sequential draft playback; exact-slot regeneration retains prior version; skips ready unapproved clips; missing gap, stale captions, stale prompt results, changed preview and ambiguous send; final confirmation cleans alternatives and imports real 36s editor timeline. Actual Chromium/SQLite/storage, provider fixtures only.",
+      "log": "artifacts/two-workflow-audit-tests/check_photo_story_production.log",
+      "log_sha256": "14015fc570e43f1641cbc0b036aabde0dd73c97309593450abdb69ce5c972296"
+    },
+    {
+      "name": "check_photo_toolbar",
+      "command": "python -m local_engine.check_photo_toolbar",
+      "result": "PASS",
+      "evidence": "PASS compact toolbar: guided storyboard/prompt/clip confirmation, zero AI job POSTs; unified read-only recovery; whole-draft preview route; sources preserve content; contextual connection, focus and geometry stable; advanced dialogs accessible and no overflow at wide/narrow widths. Real browser/storage, service status fixtures.",
+      "log": "artifacts/two-workflow-audit-tests/check_photo_toolbar.log",
+      "log_sha256": "446bc31cd1ca3c3e28ffd3d2c4f1571f560ab43327d7cf881aea302830eaa4ea"
+    },
+    {
+      "name": "check_reference_voice_ui",
+      "command": "python -m local_engine.check_reference_voice_ui",
+      "result": "PASS",
+      "evidence": "PASS: browser local voice, reviewed heard captions preserving source, frame prompt -> approval -> video prompt, reference attachments, and voice/mute handoff. Service fixtures, real media only.",
+      "log": "artifacts/two-workflow-audit-tests/check_reference_voice_ui.log",
+      "log_sha256": "4cff5419f9cad25af17096e014f857c0db95fe552a4d7c4cbaa04f0ff61c15ff"
+    },
+    {
+      "name": "check_workflow_audit",
+      "command": "python scripts/app-shell/check_workflow_audit.py",
+      "result": "PASS",
+      "evidence": "PASS shell: one local recipe definition; existing lowercase Gemini recipe reused after local cut-only version; no cloud extraction/API gate; user edits retained; failed room save leaves no phantom room. Chromium/IndexedDB, provider network intercepted.",
+      "log": "artifacts/two-workflow-audit-tests/check_workflow_audit.log",
+      "log_sha256": "f84241a0ec6a8ef83b363f6e81985843e2d33bfcfc7dd0efa35612236a10683f"
+    },
+    {
+      "name": "check_workflow_navigation",
+      "command": "python scripts/app-shell/check_workflow_navigation.py",
+      "result": "PASS",
+      "evidence": "PASS: enabled two-way workflow tabs, separate remembered rooms, reference edits survive switch, eight nodes including Storyboard without overlap, arrange undo, measured headers at desktop/mobile; legacy script/approved frame/clip Blob preserved across opening both old/new photo workspaces. No APIs called.",
+      "log": "artifacts/two-workflow-audit-tests/check_workflow_navigation.log",
+      "log_sha256": "80258ddad07dcd886f70e7ae8bf1f7d1dca7757801297019fb6f1bacd3aa44d9"
+    }
+  ],
+  "packaging": {
+    "clean_source_rebuild": "PASS",
+    "generated_pages_equal_workspace": 5,
+    "fresh_local_app_routes": 135,
+    "log": "artifacts/two-workflow-audit-tests/clean-package.log",
+    "log_sha256": "125edf416183a18a522e2a6e222b46a48886e170fab18c24713ec03ec03fa3c8"
+  }
+}
