@@ -1,0 +1,45 @@
+{
+  "snapshot": "activity-panels-20261027",
+  "checks": [
+    {
+      "name": "ui",
+      "exit_code": 0,
+      "seconds": 3.8
+    },
+    {
+      "name": "batch",
+      "exit_code": 0,
+      "seconds": 3.6
+    },
+    {
+      "name": "sources",
+      "exit_code": 0,
+      "seconds": 11.7
+    },
+    {
+      "name": "settings",
+      "exit_code": 0,
+      "seconds": 1.9,
+      "rerun": true,
+      "initial_failure": "Fixture accessed DB before appBootReady; waits for actual app readiness now"
+    },
+    {
+      "name": "storage",
+      "exit_code": 0,
+      "seconds": 3.4
+    },
+    {
+      "name": "navigation",
+      "exit_code": 0,
+      "seconds": 4.8
+    },
+    {
+      "name": "actual SQLite journal into queue",
+      "exit_code": 0
+    }
+  ],
+  "live_provider_generation_tested": false,
+  "windows_tested": false,
+  "read_on_panel_open_or_close": false,
+  "fake_progress_or_eta": false
+}
