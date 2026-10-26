@@ -1,0 +1,26 @@
+{
+  "date_local": "2026-10-26",
+  "scope": "Compact Photo Studio toolbar and guided primary action",
+  "online_generation": false,
+  "windows_tested": false,
+  "backend_generation_logic_changed": false,
+  "models_installed": false,
+  "user_data_deleted": false,
+  "passed": [
+    "check_photo_toolbar: real Chromium/app/storage; GET status fixtures; storyboard/prompt/clip confirmation routes, no AI job POSTs; read-only recovery; editor action; source persistence; contextual connection; focus/geometry/node placement; wide/narrow/no overflow",
+    "check_photo_clip_flow: actual files and native editor handoff; provider transport fixture",
+    "check_photo_review_fixes: multilingual split, storyboard-only change, stale result preservation and approval/reload"
+  ],
+  "runtime_page_hashes": {
+    "index.html": "374185862ebe0e606ed8a6c67693434648352f23fe9db701fb38964a04f36ff7",
+    "studio.html": "374185862ebe0e606ed8a6c67693434648352f23fe9db701fb38964a04f36ff7",
+    "workflow.html": "f056f58e81ed12396c51c4e9de370fc79c1b8225da3b53f82e97d14fd69df869",
+    "photos.html": "a586e20b4914f2470067a81a6ab728f5d3950caf1b620135d67de4dc6aa31655",
+    "native/index.html": "e0623b9652ec838edb66588e556dcd5db5a091fee1e6e43fad3e1aea671107f6"
+  },
+  "limits": [
+    "No actual online provider generation or Windows verification",
+    "Muse remains muse.ai; Muse storyboard manual; Meta AI not verified",
+    "Cached connection status is UI guidance only; provider/token checks still run before sending"
+  ]
+}
