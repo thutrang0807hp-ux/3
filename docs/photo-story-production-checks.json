@@ -1,0 +1,31 @@
+{
+  "date_local": "2026-10-26",
+  "scope": "One overall storyboard to batched prompts, unified project clip board, whole-draft review and final approval",
+  "online_generation": false,
+  "windows_tested": false,
+  "models_installed": false,
+  "user_data_deleted": false,
+  "backend_generation_logic_changed": false,
+  "passed": [
+    "check_photo_story_production: actual Chromium/SQLite/editor; 8+1 batches, source refs+one full image, exact schema/source, confirmation before POST, durable restart no replay, 9 clip receipts and 36s draft/editor timeline; one-slot manual correction/regeneration; old versions retained until final; gap, stale caption and changed preview blocked; stale writing result isolated; ambiguous send no replay",
+    "check_photo_toolbar: stable toolbar/node placement/zoom, focus and wide/narrow geometry; no generation POST; new step and whole-draft routes",
+    "check_photo_clip_flow: 15 versions, actual storage retirement/internal API; shared planner, legacy dialogue, provider fixture, exact-slot regeneration, Gemini original image and part prompts, real editor tail handoff",
+    "check_photo_review_fixes: Unicode/multilingual planning, stale generation ordering, storyboard-only legacy compatibility, actual reload",
+    "check_photo_version_approval: actual file retirement and shared/pinned/timeline protection",
+    "check_storage_lifecycle: actual compact/quarantine/restore/tombstone/leases",
+    "check_library_ack_recovery_ui: actual browser/checkpoint/cleanup ACK recovery and local conflict preservation"
+  ],
+  "runtime_page_hashes": {
+    "index.html": "0c7927cb258e9b7facc817d8c7558dace099c5f78ca9e871e3a1690a95f0f74e",
+    "studio.html": "0c7927cb258e9b7facc817d8c7558dace099c5f78ca9e871e3a1690a95f0f74e",
+    "workflow.html": "f056f58e81ed12396c51c4e9de370fc79c1b8225da3b53f82e97d14fd69df869",
+    "photos.html": "b5bb61b022720333f7cef8d8082305f35651474f345e9c0b99ca86e1f3dccd20",
+    "native/index.html": "e0623b9652ec838edb66588e556dcd5db5a091fee1e6e43fad3e1aea671107f6"
+  },
+  "limits": [
+    "Provider transports are fixtures, no online gen and no Windows test",
+    "Muse adapter remains muse.ai, not verified Meta AI; automatic scene writing uses Gemini Chat",
+    "Preview is sequential timeline playback, not an MP4 render; export still runs through editor",
+    "Native-speech subtitles remain script based until actual audio is transcribed; advanced typography preview is approximate"
+  ]
+}
