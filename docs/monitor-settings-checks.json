@@ -1,0 +1,90 @@
+{
+  "snapshot": "monitor-settings-20261027",
+  "checks": [
+    {
+      "name": "monitor backend",
+      "result": "PASS",
+      "log": "monitor-settings-tests/backend.log"
+    },
+    {
+      "name": "atomic verify/save",
+      "result": "PASS",
+      "log": "monitor-settings-tests/verify_save.log"
+    },
+    {
+      "name": "demo desktop/mobile",
+      "result": "PASS",
+      "log": "monitor-settings-tests/ui.log"
+    },
+    {
+      "name": "local settings UI",
+      "result": "PASS",
+      "log": "monitor-settings-tests/live_ui.log"
+    },
+    {
+      "name": "visual layout",
+      "result": "PASS",
+      "log": "monitor-settings-tests/visual.log"
+    },
+    {
+      "name": "home",
+      "exit_code": 0,
+      "seconds": 9.0,
+      "result": "PASS"
+    },
+    {
+      "name": "home_local",
+      "exit_code": 0,
+      "seconds": 4.3,
+      "result": "PASS"
+    },
+    {
+      "name": "home_archive",
+      "exit_code": 0,
+      "seconds": 5.8,
+      "result": "PASS"
+    },
+    {
+      "name": "accounts",
+      "exit_code": 0,
+      "seconds": 5.3,
+      "result": "PASS"
+    },
+    {
+      "name": "navigation",
+      "exit_code": 0,
+      "seconds": 5.9,
+      "result": "PASS"
+    },
+    {
+      "name": "batch_groups",
+      "exit_code": 0,
+      "seconds": 5.1,
+      "result": "PASS"
+    },
+    {
+      "name": "settings_backend",
+      "exit_code": 0,
+      "seconds": 1.1,
+      "result": "PASS"
+    },
+    {
+      "name": "account_settings",
+      "exit_code": 0,
+      "seconds": 0.7,
+      "result": "PASS"
+    },
+    {
+      "name": "storage",
+      "exit_code": 0,
+      "seconds": 0.4,
+      "result": "PASS"
+    }
+  ],
+  "real_online_generation_tested": false,
+  "windows_tested": false,
+  "model_discovery_fixture": true,
+  "generation_requests": 0,
+  "bank_data_preserved": true,
+  "automatic_batch_ttl_added": false
+}
