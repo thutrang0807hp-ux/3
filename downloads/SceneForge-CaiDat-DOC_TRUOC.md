@@ -1,6 +1,7 @@
 # Code Cài đặt — SceneForge
 
-Snapshot code ngày 26/10/2026, sau bản đa nguồn `1604948`.
+Snapshot code 27/10/2026: chat-reliability-20261027, sau bản đa nguồn `1604948`.
+Đọc docs/chat-source-reliability.md và review/CHAT_RELIABILITY_CHECKS.json trước.
 Đây là gói ĐỌC/ĐÁNH GIÁ CODE, không phải bộ cài hay mô phỏng độc lập.
 Không sửa runtime khi đóng gói. Mọi file nguồn giữ nguyên byte, có manifest hash.
 Không chứa model, ảnh/video dự án, database, cookie, mật khẩu, API key thật,

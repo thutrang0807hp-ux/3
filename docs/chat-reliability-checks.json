@@ -1,0 +1,85 @@
+{
+  "release": "chat-reliability-20261027",
+  "baseline": "260cc7c",
+  "runtime_modified": true,
+  "online_generation_tested": false,
+  "windows_tested": false,
+  "checks": [
+    {
+      "name": "reliability",
+      "exit_code": 0,
+      "seconds": 17.0
+    },
+    {
+      "name": "multisource_ui",
+      "exit_code": 0,
+      "seconds": 14.4
+    },
+    {
+      "name": "dashboard",
+      "exit_code": 0,
+      "seconds": 6.2
+    },
+    {
+      "name": "settings",
+      "exit_code": 0,
+      "seconds": 0.8
+    },
+    {
+      "name": "machine",
+      "exit_code": 0,
+      "seconds": 1.1
+    },
+    {
+      "name": "storage_jobs",
+      "exit_code": 0,
+      "seconds": 0.5
+    },
+    {
+      "name": "gemini_routes",
+      "exit_code": 0,
+      "seconds": 0.7
+    },
+    {
+      "name": "batch_chat",
+      "exit_code": 0,
+      "seconds": 6.9
+    },
+    {
+      "name": "batch_provider",
+      "exit_code": 0,
+      "seconds": 7.0
+    },
+    {
+      "name": "image_groups_ui",
+      "exit_code": 0,
+      "log": "image_groups_ui.log"
+    },
+    {
+      "name": "web_images",
+      "exit_code": 0,
+      "seconds": 25.5
+    },
+    {
+      "name": "web_api",
+      "exit_code": 0,
+      "seconds": 0.6
+    },
+    {
+      "name": "account_failover",
+      "exit_code": 0,
+      "seconds": 0.9
+    },
+    {
+      "name": "flow",
+      "exit_code": 0,
+      "seconds": 0.8
+    }
+  ],
+  "notes": [
+    "Actual Chromium, HTTP, SQLite and filesystem; provider pages/transports are intercepted fixtures, no online AI sends.",
+    "Initial multisource UI test asserted obsolete Meta AI (Muse) text; test updated to Meta AI and rerun passed.",
+    "Legacy settings/machine tests now select intended API fixture path rather than requiring Gemini Chat SDK.",
+    "No batch lot TTL or storage policy unification in this release."
+  ]
+}

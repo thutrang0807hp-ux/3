@@ -1,5 +1,7 @@
 # Tạo hàng loạt — gói code để đánh giá
 
+Cập nhật 27/10/2026: đọc `chat-source-reliability.md` về nhóm nhiều ảnh, trạng thái tài khoản, URL hội thoại và phiên theo miền. Các giới hạn/tài liệu bản cũ dưới đây phải đối chiếu cập nhật này.
+
 Phạm vi: giữ nguyên source của tab Tạo hàng loạt và các phần nối tới tài khoản, kho dữ liệu, Gemini, Video mẫu. Nguồn đã cập nhật đa nguồn (xem `batch-multisource.md`); bước đóng gói không đổi giao diện/logic; chỉ loại build, media, model, SDK, dữ liệu người dùng và các luồng ngoài phạm vi khỏi gói đọc code.
 
 ## Chạy được đến đâu?
