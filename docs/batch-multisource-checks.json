@@ -1,0 +1,88 @@
+{
+  "release": "batch-multisource-20261026",
+  "date": "2026-10-26",
+  "baseline_runtime": "c7ea29a",
+  "live_provider_verified": false,
+  "windows_verified": false,
+  "phoma_installer_sha256": "d5d58d77edac8ddb2318d27b79cd7272827a2ae19fcfa9be9850307ddf67d60d",
+  "third_party_app_code_bundled": false,
+  "checks": [
+    {
+      "name": "check_batch_images",
+      "result": "PASS",
+      "kind": "intercepted AI / actual app browser or SQLite; no online AI sends"
+    },
+    {
+      "name": "check_batch_chat",
+      "result": "PASS",
+      "kind": "intercepted AI / actual app browser or SQLite; no online AI sends"
+    },
+    {
+      "name": "check_batch_provider",
+      "result": "PASS",
+      "kind": "intercepted AI / actual app browser or SQLite; no online AI sends"
+    },
+    {
+      "name": "check_batch_gallery",
+      "result": "PASS",
+      "kind": "intercepted AI / actual app browser or SQLite; no online AI sends"
+    },
+    {
+      "name": "check_batch_studio",
+      "result": "PASS",
+      "kind": "intercepted AI / actual app browser or SQLite; no online AI sends"
+    },
+    {
+      "name": "check_batch_workflow",
+      "result": "PASS",
+      "kind": "intercepted AI / actual app browser or SQLite; no online AI sends"
+    },
+    {
+      "name": "check_batch_local",
+      "result": "PASS",
+      "kind": "intercepted AI / actual app browser or SQLite; no online AI sends"
+    },
+    {
+      "name": "check_batch_multisource",
+      "result": "PASS",
+      "kind": "intercepted AI / actual app browser or SQLite; no online AI sends"
+    },
+    {
+      "name": "check_account_settings",
+      "result": "PASS",
+      "kind": "intercepted AI / actual app browser or SQLite; no online AI sends"
+    },
+    {
+      "name": "check_web_images",
+      "result": "PASS",
+      "kind": "intercepted AI / actual app browser or SQLite; no online AI sends"
+    },
+    {
+      "name": "check_web_images_api",
+      "result": "PASS",
+      "kind": "intercepted AI / actual app browser or SQLite; no online AI sends"
+    },
+    {
+      "name": "check_flow_provider",
+      "result": "PASS",
+      "kind": "intercepted AI / actual app browser or SQLite; no online AI sends"
+    },
+    {
+      "name": "check_flow_account_engine",
+      "result": "PASS",
+      "kind": "intercepted AI / actual app browser or SQLite; no online AI sends"
+    },
+    {
+      "name": "check_accounts_dashboard",
+      "result": "PASS",
+      "kind": "Actual Chromium dashboard demo/live fixtures, responsive and account actions"
+    }
+  ],
+  "environment_note": "Flow engine middleware test requires its own installed engine venv; initial default Python run lacked tomli, rerun passed in proper engine venv. One UI test initially had test wait syntax/race issues; corrected test and rerun passed. Legacy dashboard test referenced removed rotateAccounts toggle; updated test to current accountDispatchMode and reran successfully. Gallery source label corrected after visual inspection; new source test asserts it.",
+  "limits": [
+    "No live provider selector/generation certification",
+    "No new video batch route",
+    "No new batch-lot TTL/quota/close-clean controls",
+    "Unknown web-chat results require manual service-history inspection and file import; no automatic retry"
+  ]
+}
