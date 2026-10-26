@@ -3,7 +3,7 @@
 Luồng cần đánh giá: **Ảnh + kịch bản → một storyboard tổng → prompt từng clip →
 Bộ cảnh video → xem/chốt cả bản ghép → Dựng.**
 
-Đây là code nguyên bản của bản đã đẩy `two-workflow-audit-20261026`, kèm diff thật so với `170a49b`.
+Đây là code nguyên bản của bản đã đẩy `prompt-music-repair-20261026`, kèm diff thật so với `18d0e4e`.
 Chỉ đóng gói để đọc; không sửa hoặc rút ngắn logic app.
 
 Đọc 3 file trước:
@@ -30,4 +30,4 @@ chưa xác minh Meta AI. Không coi preview timeline là MP4 đã xuất.
 
 Kiểm tính toàn vẹn sau giải nén: `python review/verify_package.py`.
 Nếu cần truy vết phần đã lược bỏ, dùng gói đầy đủ đã công bố:
-https://raw.githubusercontent.com/thutrang0807hp-ux/3/two-workflow-audit-20261026/downloads/SceneForge-TuAnh-DanhGia-Luong.zip
+https://raw.githubusercontent.com/thutrang0807hp-ux/3/prompt-music-repair-20261026/downloads/SceneForge-TuAnh-DanhGia-Luong.zip

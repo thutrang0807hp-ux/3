@@ -1,6 +1,6 @@
 # Rà hai luồng SceneForge — code gọn
 
-Đọc `docs/two-workflow-audit.md` trước: luồng thực, việc giữ/bỏ/gom, lỗi đã sửa và giới hạn.
+Đọc `docs/prompt-music-repair.md` trước, sau đó `docs/two-workflow-audit.md`: luồng thực, việc giữ/bỏ/gom, lỗi đã sửa và giới hạn.
 Sau đó đọc `review/CHECKS.json`, `review/CHANGED_FILES.json`, `review/THAY_DOI.patch`.
 Patch đã áp thử trên mã nguồn gói phát hành trước và so byte với từng file hiện tại.
 

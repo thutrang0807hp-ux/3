@@ -1,0 +1,71 @@
+{
+  "release": "prompt-music-repair-20261026",
+  "live_provider_verified": false,
+  "windows_verified": false,
+  "checks": [
+    {
+      "name": "check_photo_clip_flow",
+      "command": "python -m local_engine.check_photo_clip_flow",
+      "result": "PASS",
+      "evidence": "PASS Photo Studio browser + actual SQLite/files: long beat split without duplicate dialogue; one storyboard, optional frames; latest 15th version; approval physically retires old 14, preserves other slot; exact-part regenerate; provider selection/concurrency fixture; unknown reconciles without resending; received clip needs approval; approved previous tail + original product refs. Gemini single-storyboard/original refs + part prompts, real editor video/still handoff. No online AI calls.",
+      "log": "artifacts/prompt-music-fix-tests/check_photo_clip_flow.log",
+      "log_sha256": "d737d02131aab65e329abf084d2a972704019e6388073270f7a87a1445e1f593"
+    },
+    {
+      "name": "check_photo_edit_safety",
+      "command": "python -m local_engine.check_photo_edit_safety",
+      "result": "PASS",
+      "evidence": "PASS photo edits: actual edit dialog 6->5.7 and 16s plan, local file reuse/no copies, legacy mismatch repair, native speech not truncated, unknown job binding retained; real unused/used role uploads preserve unaffected frames/clip; actual WAV replacement retains timeline, file/AI cues preserved, explicit realignment; mute native without gen; real formula fork with lost-reply retry and SQLite reload; original project/assets retained; retimed final cleanup retains the shared file and imports a real 5.7+4s editor timeline. Zero provider job POSTs.",
+      "log": "artifacts/prompt-music-fix-tests/check_photo_edit_safety.log",
+      "log_sha256": "e530c26093bf5144498d78ce7b3bd014f4ed3ed587645102e5b3e812d9b0c262"
+    },
+    {
+      "name": "check_photo_prompt_resume",
+      "command": "python -m local_engine.check_photo_prompt_resume",
+      "result": "PASS",
+      "evidence": "PASS photo prompt reuse: 9 beats -> 8+1; all current sends zero; editing or retry sends only missing group; unrelated input change preserves valid batch without marking whole project current; checkpoint failure sends zero. Actual Chromium/SQLite, fixture provider only.",
+      "log": "artifacts/prompt-music-fix-tests/check_photo_prompt_resume.log",
+      "log_sha256": "c2d9b23ecc838d68d1c08ebdcc4dcb41fdcfa0ad43a3445fc2be31ede9fd6fa6"
+    },
+    {
+      "name": "check_photo_review_fixes",
+      "command": "python -m local_engine.check_photo_review_fixes",
+      "result": "PASS",
+      "evidence": "PASS review repros: balanced 9s, legitimate short scene, multilingual/Unicode dialogue coverage; storyboard-only edits and legacy approval survive; actual prompt edits invalidate; stale content/older requests retained separately without replacing approved clip/plan; no generation POST; stale files preserved through approval + reload; generation-count UI.",
+      "log": "artifacts/prompt-music-fix-tests/check_photo_review_fixes.log",
+      "log_sha256": "4be1f7b50eac2ad1fb81ec034c53112652abbc6a222db5105c397488452de8df"
+    },
+    {
+      "name": "check_photo_story_production",
+      "command": "python -m local_engine.check_photo_story_production",
+      "result": "PASS",
+      "evidence": "PASS storyboard production: 8+1 prompt batches; original refs + one full storyboard; zero sends before confirmation; restart/repeated read no replay; automatic validated prompt application; 9 clip receipts; unified project board; no per-clip approval for sequential draft playback; exact-slot regeneration retains prior version; skips ready unapproved clips; missing gap, stale captions, stale prompt results, changed preview and ambiguous send; final confirmation cleans alternatives and imports real 36s editor timeline. Actual Chromium/SQLite/storage, provider fixtures only.",
+      "log": "artifacts/prompt-music-fix-tests/check_photo_story_production.log",
+      "log_sha256": "14015fc570e43f1641cbc0b036aabde0dd73c97309593450abdb69ce5c972296"
+    },
+    {
+      "name": "check_photo_toolbar",
+      "command": "python -m local_engine.check_photo_toolbar",
+      "result": "PASS",
+      "evidence": "PASS compact toolbar: guided storyboard/prompt/clip confirmation, zero AI job POSTs; unified read-only recovery; whole-draft preview route; sources preserve content; contextual connection, focus and geometry stable; advanced dialogs accessible and no overflow at wide/narrow widths. Real browser/storage, service status fixtures.",
+      "log": "artifacts/prompt-music-fix-tests/check_photo_toolbar.log",
+      "log_sha256": "446bc31cd1ca3c3e28ffd3d2c4f1571f560ab43327d7cf881aea302830eaa4ea"
+    },
+    {
+      "name": "check_prompt_repair_music",
+      "command": "python -m local_engine.check_prompt_repair_music",
+      "result": "PASS",
+      "evidence": "PASS prompt repair/music: legacy numeric/whitespace echo accepted without changing script; invalid stops polling; actual JSON edit UI repairs schema-only reply without another job; changed group preserves manual sibling and real ready clip/file signature; random music shared by listen/preview/handoff and SQLite restart. Provider transport fixtures only.",
+      "log": "artifacts/prompt-music-fix-tests/check_prompt_repair_music.log",
+      "log_sha256": "94e077fa98248195c5d5374a3dd30baf7ee08864b76976976e6c904b709a7240"
+    },
+    {
+      "name": "check_reference_voice_ui",
+      "command": "python -m local_engine.check_reference_voice_ui",
+      "result": "PASS",
+      "evidence": "PASS: browser local voice, reviewed heard captions preserving source, frame prompt -> approval -> video prompt, reference attachments, and voice/mute handoff. Service fixtures, real media only.",
+      "log": "artifacts/prompt-music-fix-tests/check_reference_voice_ui.log",
+      "log_sha256": "4cff5419f9cad25af17096e014f857c0db95fe552a4d7c4cbaa04f0ff61c15ff"
+    }
+  ]
+}
