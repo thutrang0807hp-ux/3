@@ -1,0 +1,50 @@
+{
+  "snapshot": "storage-hub-20261027",
+  "checks": [
+    {
+      "name": "ui",
+      "exit_code": 0,
+      "seconds": 3.8
+    },
+    {
+      "name": "local",
+      "exit_code": 0,
+      "seconds": 3.9
+    },
+    {
+      "name": "monitor_ui",
+      "exit_code": 0,
+      "seconds": 4.7
+    },
+    {
+      "name": "settings_live",
+      "exit_code": 0,
+      "seconds": 3.8
+    },
+    {
+      "name": "lifecycle",
+      "exit_code": 0,
+      "seconds": 0.5
+    },
+    {
+      "name": "storage_jobs",
+      "exit_code": 0,
+      "seconds": 0.4
+    },
+    {
+      "name": "navigation",
+      "exit_code": 0,
+      "seconds": 5.5
+    },
+    {
+      "name": "accounts",
+      "exit_code": 0,
+      "seconds": 4.8
+    }
+  ],
+  "online_generation_tested": false,
+  "windows_tested": false,
+  "real_sqlite_and_quarantine_restore_tested": true,
+  "generation_requests": 0,
+  "new_automatic_soft_trash_deletion": false
+}
