@@ -1,0 +1,69 @@
+{
+  "date_local": "2026-10-26",
+  "timezone": "Asia/Bangkok",
+  "scope": "Photo workflow edits: retiming and local file reuse, protected formula forks, role-scoped references and voice replacement retaining timeline",
+  "online_generation": false,
+  "windows_tested": false,
+  "models_installed": false,
+  "user_data_deleted": false,
+  "provider_requests_from_edit_check": 0,
+  "passed": [
+    {
+      "check": "check_photo_edit_safety",
+      "status": "passed",
+      "summary": "PASS photo edits: actual edit dialog 6->5.7 and 16s plan, local file reuse/no copies, legacy mismatch repair, native speech not truncated, unknown job binding retained; real unused/used role uploads preserve unaffected frames/clip; actual WAV replacement retains timeline, file/AI cues preserved, explicit realignment; mute native without gen; real formula fork with lost-reply retry and SQLite reload; original project/assets retained; retimed final cleanup retains the shared file and imports a real 5.7+4s editor timeline. Zero provider job POSTs.",
+      "log_sha256": "e530c26093bf5144498d78ce7b3bd014f4ed3ed587645102e5b3e812d9b0c262"
+    },
+    {
+      "check": "check_photo_story_production",
+      "status": "passed",
+      "summary": "PASS storyboard production: 8+1 prompt batches; original refs + one full storyboard; zero sends before confirmation; restart/repeated read no replay; automatic validated prompt application; 9 clip receipts; unified project board; no per-clip approval for sequential draft playback; exact-slot regeneration retains prior version; skips ready unapproved clips; missing gap, stale captions, stale prompt results, changed preview and ambiguous send; final confirmation cleans alternatives and imports real 36s editor timeline. Actual Chromium/SQLite/storage, provider fixtures only.",
+      "log_sha256": "14015fc570e43f1641cbc0b036aabde0dd73c97309593450abdb69ce5c972296"
+    },
+    {
+      "check": "check_photo_clip_flow",
+      "status": "passed",
+      "summary": "PASS Photo Studio browser + actual SQLite/files: long beat split without duplicate dialogue; one storyboard, optional frames; latest 15th version; approval physically retires old 14, preserves other slot; exact-part regenerate; provider selection/concurrency fixture; unknown reconciles without resending; received clip needs approval; approved previous tail + original product refs. Gemini single-storyboard/original refs + part prompts, real editor video/still handoff. No online AI calls.",
+      "log_sha256": "d737d02131aab65e329abf084d2a972704019e6388073270f7a87a1445e1f593"
+    },
+    {
+      "check": "check_photo_review_fixes",
+      "status": "passed",
+      "summary": "PASS review repros: balanced 9s, legitimate short scene, multilingual/Unicode dialogue coverage; storyboard-only edits and legacy approval survive; actual prompt edits invalidate; stale content/older requests retained separately without replacing approved clip/plan; no generation POST; stale files preserved through approval + reload; generation-count UI.",
+      "log_sha256": "4be1f7b50eac2ad1fb81ec034c53112652abbc6a222db5105c397488452de8df"
+    },
+    {
+      "check": "check_photo_toolbar",
+      "status": "passed",
+      "summary": "PASS compact toolbar: guided storyboard/prompt/clip confirmation, zero AI job POSTs; unified read-only recovery; whole-draft preview route; sources preserve content; contextual connection, focus and geometry stable; advanced dialogs accessible and no overflow at wide/narrow widths. Real browser/storage, service status fixtures.",
+      "log_sha256": "446bc31cd1ca3c3e28ffd3d2c4f1571f560ab43327d7cf881aea302830eaa4ea"
+    },
+    {
+      "check": "check_library_ack_recovery_ui",
+      "status": "passed",
+      "summary": "PASS real browser/API: lost checkpoint ACK auto-reconciles by durable receipt and exact local digest; lost cleanup ACK hydrates deletion without resurrection; changed unsaved local data preserved and conflict shown. No provider calls.",
+      "log_sha256": "48c7596a164d8a5026262fc99679a2966dc276b4b64185c0c28c97040ab10fb4"
+    },
+    {
+      "check": "check_photo_version_approval",
+      "status": "passed",
+      "summary": "PASS Photo approval: real 15-version retirement, timeline/shared/pinned and other part protected; selected-frame dependency kept; stale/mixed targets rejected; generic unused cleanup preserves every part latest/selected. No provider calls.",
+      "log_sha256": "6bbba90e3a1f08dc8d86a5c48bf7b29ddd8ae1be366ca52836faab8d35e6d28a"
+    }
+  ],
+  "runtime_page_hashes": {
+    "index.html": "3f5ea06614f64efe0d051af3b676e36da3977e1efdfd5bd4f810c961ac0e3674",
+    "studio.html": "3f5ea06614f64efe0d051af3b676e36da3977e1efdfd5bd4f810c961ac0e3674",
+    "workflow.html": "f056f58e81ed12396c51c4e9de370fc79c1b8225da3b53f82e97d14fd69df869",
+    "photos.html": "03c68068ee54ac3c83d599de68cf8c7822746d5e075a5063b4069849b9236dd8",
+    "native/index.html": "e0623b9652ec838edb66588e556dcd5db5a091fee1e6e43fad3e1aea671107f6"
+  },
+  "limits": [
+    "No Windows/real-account generation verification",
+    "Muse adapter remains muse.ai; Meta AI not verified",
+    "Native speech is not silently shortened; changed speech slots need suitable clips",
+    "Reuse keeps existing visual direction/file; it does not synthesize new camera action",
+    "Imported audio alignment is estimated; TTS segment metadata routing tested with fixture timings, no new TTS model run",
+    "Manual captions require review after timing/text changes"
+  ]
+}

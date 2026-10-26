@@ -3,6 +3,8 @@
 Bản cập nhật `photo-story-production-20261026` thay luồng duyệt từng clip của tab
 Từ ảnh & ý tưởng. Không thay luồng duyệt ảnh/clip bên Video mẫu.
 
+Bổ sung mới: xem [photo-edit-safety.md](photo-edit-safety.md) về đổi mốc có rà tác động, tận dụng clip, đổi công thức sang dự án mới và thay giọng giữ nhịp.
+
 ## Cách dùng
 
 1. Thêm ảnh sản phẩm (thêm người/bối cảnh nếu muốn), dán hoặc lấy kịch bản từ Kho.
@@ -44,7 +46,7 @@ Bản gen trước còn giữ đến khi chốt bản ghép; kết quả cũ/l�
 
 ## Nối dữ liệu và phục hồi
 
-File cuối trong thứ tự JS: `story-production.js`; CSS: `story-production.css`.
+Luồng sản xuất nằm ở `story-production.js`; `edit-safety.js` nạp sau để xử lý chỉnh sửa. CSS: `story-production.css`.
 Đọc build.py để xem thứ tự thực tế. Các override mới dùng tiếp clip planner,
 provider adapter, account selection/token, checkpoint, request ledger, thư viện
 SQLite và giao dịch approveVersions đang có; không tạo một backend giả mới.
