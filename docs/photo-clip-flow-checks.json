@@ -1,0 +1,31 @@
+{
+  "date_local": "2026-10-26",
+  "scope": "Photo Studio inherits shared video clip planning, provider receipts and latest-version approval",
+  "online_generation": false,
+  "windows_tested": false,
+  "new_models_installed": false,
+  "user_data_deleted": false,
+  "tests_passed": [
+    "check_photo_clip_flow: real Chromium + backend/SQLite/files, 15 versions and physical deletion; exact-part dispatch fixture; unknown reconcile without resend; continuity gate; original refs + one overall storyboard in Gemini fixture; part prompts validation; actual native editor video/still handoff; native-speech captions follow edited part dialogue",
+    "check_photo_version_approval: actual files, timeline/shared/pinned protection, other slots preserved, frame dependency, stale/mixed targets rejected, generic cleanup keeps each slot latest/selected",
+    "check_clip_planning_ui: shared planner regression for reference videos",
+    "check_version_approval: reference approval regression",
+    "check_storage_lifecycle: file/SQLite lifecycle regression",
+    "check_approval_ui: reference browser approval and lost response recovery",
+    "check_library_ack_recovery_ui: lost checkpoint/cleanup response with real browser/API/SQLite"
+  ],
+  "limits": [
+    "Muse remains muse.ai; Meta AI not verified",
+    "No real Gemini/Flow/Muse account generation or Windows test",
+    "Sentence timing and part dialogue split estimated from script, needs review",
+    "Provider fixed generation duration/credit differs from timeline targets; not guaranteed identity/continuity",
+    "No model downloads or concurrency-limit changes"
+  ],
+  "runtime_page_hashes": {
+    "index.html": "66c1c08436d9d02bb571c90184def23fbb5e1098bed3bf70facc6764638d3238",
+    "studio.html": "66c1c08436d9d02bb571c90184def23fbb5e1098bed3bf70facc6764638d3238",
+    "workflow.html": "201193a12b08f468fca7b475799d487bc051b47c9e29cb8917dbf850b0b1f370",
+    "photos.html": "756eba442410994dc50b909b1adb06756889a776d3f3318ed529304ea1dfda1c",
+    "native/index.html": "e0623b9652ec838edb66588e556dcd5db5a091fee1e6e43fad3e1aea671107f6"
+  }
+}
