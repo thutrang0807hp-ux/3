@@ -1,0 +1,53 @@
+{
+  "release": "home-dashboard-20261027",
+  "baseline": "f1e4fbb",
+  "scope": "Home Video layouts and reversible metadata actions; no AI engine changes",
+  "checks": [
+    {
+      "name": "home_dashboard",
+      "result": "PASS",
+      "log": "home_dashboard.log"
+    },
+    {
+      "name": "managed_library",
+      "result": "PASS",
+      "log": "home_dashboard_local.log"
+    },
+    {
+      "name": "home_archive",
+      "result": "PASS",
+      "log": "home_archive.log"
+    },
+    {
+      "name": "batch",
+      "result": "PASS",
+      "log": "batch.log"
+    },
+    {
+      "name": "accounts",
+      "result": "PASS",
+      "log": "accounts.log"
+    },
+    {
+      "name": "navigation",
+      "result": "PASS",
+      "log": "navigation.log"
+    }
+  ],
+  "online_ai_calls": 0,
+  "windows_tested": false,
+  "notes": [
+    "Actual Chromium/IndexedDB/SQLite and files; demo data and isolated local library.",
+    "Archive mobile navigation test updated to new product/library menu and rerun passed.",
+    "Bulk cleanup opens per-project plan review, not automatic deletion.",
+    "Source/references/exports are preserved by home soft-trash; existing cleanup policies unchanged.",
+    "Error action opens existing detail/copy-error dialog; no new provider request."
+  ],
+  "source_sha256": {
+    "scripts/app-shell/home-dashboard.js": "f9974b52897ddd5a533ce0a04486fbe05a0e7c7f750d5eabf88f16f34fdd7c5b",
+    "scripts/app-shell/home-dashboard.css": "9d7d99d4c417e01eaa1d7519de19391fd4b55e0aa27d64f01d30e6596cf72e0c",
+    "scripts/app-shell/package4.js": "3ae5ee56b4bb26627a810370c510a95a79a364213cc78b131a80c4dbf5b86fea",
+    "scripts/app-shell/package6.js": "68e434e11df710edf56da6d5e194c6ade59fc805e72da1200b820bd4f6aea159",
+    "scripts/demo-web/build.py": "24d4fb50573f9cd569b2c02bdcdc022f9980651cb5e153d981a4e8499de609fc"
+  }
+}
