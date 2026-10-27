@@ -1,0 +1,13 @@
+# Một node Ghép & xuất · 28/10/2026
+
+Thay Bản ghép xem thử + Sang Dựng bằng duy nhất node handoff tên Ghép & xuất ở luồng Ảnh tĩnh. Node tối đa hai hàng, bốn ô mỗi hàng; hơn tám clip hiển thị bảy clip + ô +N Mở rộng. Bấm tiêu đề / ô mở rộng hiện dialog, không thêm node. Video, vị trí phát, cấu hình xuất và thứ tự dùng chung; đóng bằng ×/Esc/bấm ngoài về node và giữ thay đổi. Khi đang xuất cần hủy hoặc đợi hoàn tất.
+
+Kéo clip giữa các hàng; bấm clip nhảy đến đoạn; menu … chọn bản còn lưu và hợp nội dung hiện tại, hoặc ẩn khỏi bản ghép. Ẩn là lựa chọn xuất, không xóa file/beat. Có nút Hiện lại. Thứ tự/ẩn/bản chọn lưu trong photoDraft.mergeView; không thay thứ tự hay lời kịch bản gốc. Mốc giọng và phụ đề được cắt/gán theo khoảng gốc của từng clip và xếp lại đúng vị trí mới. Nhạc đã duck cũng gắn cùng phần để giữ envelope khớp tiếng; nhạc thường lặp theo tổng mới. Editor import nhận sourceIn/duration cho các đoạn audio.
+
+Trình phát cục bộ dùng blob file thật, cùng payload âm lượng/clip sound và lớp ảnh phụ đề PNG với bản xuất. Mỗi frame có một video đang phát; nhạc/giọng dùng các đoạn âm thanh đang có hiệu lực. Di chuyển giữa node/dialog không tạo hai player. Thay đầu vào làm mất hiệu lực snapshot và giải phóng URL/player cũ. Không tự gọi dịch vụ tạo ảnh/video.
+
+Chốt & xuất chỉ khi mọi clip đang hiện đã sẵn sàng và không có lượt chưa rõ/đang chờ. Dùng /local-api/export/timeline hiện có, FFmpeg H264 1080×1920, 30fps, không normalize để giữ mức nghe thử. Có tiến độ thật, hủy và tải lại file thành công. Nguồn, nhạc và caption PNG được upload vào job; backend xác minh file và lưu trong kho trước khi công bố thành công, sau đó app lưu thành phẩm/phòng exported. Sau thành công mới hỏi dọn các phiên bản cũ; từ chối giữ nguyên. Khi lỗi/hủy không dọn file cũ. Không thay timeline người dùng đã chỉnh; Chỉnh ở Dựng qua đường bàn giao hiện có, giữ bảo vệ append/replace.
+
+Giới hạn theo bộ xuất: 120 lớp và 10 phút/512MB; bản web offline không xuất MP4 giả. Lỗi thiếu giọng/phụ đề cũ được báo để sửa nguồn hoặc tắt mang theo. Clip thiếu vẫn xem được ở vị trí khoảng trống; chỉ xuất sau khi bổ sung hoặc chủ động ẩn. Chưa có clip vẫn mở được bảng để xem danh sách và cấu hình.
+
+Kiểm: scripts/app-shell/check_photo_merge_export.py dùng Chromium, kho máy và FFmpeg thật; 12 clip → hai hàng +5; player chung, reorder/hide/restore, giữ beats gốc; xuất MP4 H264 1080×1920 dài 2 giây, giải mã xác minh âm 300Hz rồi 250Hz theo đúng đoạn giọng sau reorder; cue theo đúng mốc; import editor giữ các sourceIn/duration. check_photo_post_design.py kiểm hồi quy bàn giao khoảng trống/replace giữ chỉnh sửa/library không xóa. Không gen bằng tài khoản online.
