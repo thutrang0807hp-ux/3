@@ -1,0 +1,48 @@
+{
+  "snapshot": "notification-center-20261027",
+  "recovered_published_base": "538cf9d30d204cf3fa413dd27b39731926951775",
+  "checks": [
+    {
+      "name": "compact_ui",
+      "exit_code": 0,
+      "seconds": 4.0
+    },
+    {
+      "name": "activity",
+      "exit_code": 0,
+      "seconds": 4.2
+    },
+    {
+      "name": "journal",
+      "exit_code": 0,
+      "seconds": 2.5
+    },
+    {
+      "name": "batch",
+      "exit_code": 0,
+      "seconds": 3.8
+    },
+    {
+      "name": "settings",
+      "exit_code": 0,
+      "seconds": 4.8
+    },
+    {
+      "name": "storage",
+      "exit_code": 0,
+      "seconds": 4.2
+    },
+    {
+      "name": "actual SQLite notification read/delete across profiles",
+      "exit_code": 0
+    },
+    {
+      "name": "standalone HTML preview zero network",
+      "exit_code": 0
+    }
+  ],
+  "provider_generation_tested": false,
+  "windows_tested": false,
+  "read_is_not_resolved": true,
+  "old_jobs_and_source_files_preserved": true
+}
