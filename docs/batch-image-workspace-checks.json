@@ -1,0 +1,19 @@
+{
+  "snapshot": "batch-image-workspace-20261027",
+  "baseline": "d8399ea",
+  "checks": {
+    "ui": "PASS image-only + 4:5, six outcome cards, mixed selection safe retry subset, refusal requires edit, unknown request never retries/deletes, trash/restore in common hub, no slot fallback, real Blob private delete/shared protection, quiet success clearing banner and no notification, reload/mobile; provider outcomes fixtures, no generation POST.\n",
+    "local": "PASS real SQLite batch metadata + PNG asset checkpoint; fresh browser profiles restore jobs/files plus batch trash and restore; no automatic restart/provider submission.\n",
+    "routing": "PASS batch multisource: Flow/Grok/ChatGPT/Meta correct source/account/token, original 1400px references, confirmation and changed-token blocks, original downloads, recovery/reload never replay, shared settings tabs; AI intercepted, not live provider certification.\n",
+    "storage": "PASS unified storage hub: actual SQLite across fresh browser profile, soft-trash/restore, actual lifecycle delete preview/execute with 7-day quarantine, pending operation shown after reload, restore from quarantine with exported bytes intact; no provider submissions.\n",
+    "notifications": "PASS compact geometry, date groups/error counts, double bell toggle, open/close leaves unread, row action persists read and routes room/Flow, read != resolved, explicit newer frame state removes pending item, seen delete only removes notice, per-room dedup, floating on/off, logo closes without job mutation, queue exclusion/Esc/mobile; real IndexedDB, navigation spied, no provider/API calls.\n",
+    "workspaces": "PASS shared 56px shell, five actual-state steps, reference/photo separate rooms, zoom/minimap/arrange undo, source popup and per-room photo provider save preserving beats/jobs, CPU scope gate, mobile 96px shell/no overflow, no generation POST.\n",
+    "preview": "PASS standalone image workspace: opens six prompts, concurrent simulation completes six actual PNGs, no extra HTTP/API requests or JS errors.\n"
+  },
+  "provider_responses": "fixtures/intercepted; no live generation",
+  "windows_tested": false,
+  "quiet_success": true,
+  "trash_days": 30,
+  "auto_expiry": "on batch/library open, idle only; shared/pinned protected",
+  "physical_space": "not promised from logical deletion"
+}
