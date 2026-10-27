@@ -1,0 +1,18 @@
+{
+  "snapshot": "workspace-shell-20261027",
+  "baseline": "487496c",
+  "checks": {
+    "ui.log": "PASS shared 56px shell, five actual-state steps, reference/photo separate rooms, zoom/minimap/arrange undo, source popup and per-room photo provider save preserving beats/jobs, CPU scope gate, mobile 96px shell/no overflow, no generation POST.\n",
+    "storage.log": "PASS unified storage hub: actual SQLite across fresh browser profile, soft-trash/restore, actual lifecycle delete preview/execute with 7-day quarantine, pending operation shown after reload, restore from quarantine with exported bytes intact; no provider submissions.\n",
+    "notifications.log": "PASS compact geometry, date groups/error counts, double bell toggle, open/close leaves unread, row action persists read and routes room/Flow, read != resolved, explicit newer frame state removes pending item, seen delete only removes notice, per-room dedup, floating on/off, logo closes without job mutation, queue exclusion/Esc/mobile; real IndexedDB, navigation spied, no provider/API calls.\n"
+  },
+  "browser": "Chromium / Linux",
+  "provider_generation_tested": false,
+  "windows_tested": false,
+  "backend_changed": false,
+  "sources": {
+    "photos": "per-room creative/video; account routing from settings",
+    "reference": "global existing AI source; Flow video"
+  },
+  "automation": "CPU-only reference gate / single guarded photo step; no full unattended run"
+}
