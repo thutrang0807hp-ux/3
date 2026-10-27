@@ -11,3 +11,5 @@ Chỉ nhớ điểm dừng theo roomId trong localStorage; lần sau vẫn mở 
 Bản đồ của hai canvas cùng tô xanh chanh node đang chọn, bỏ màu node cũ, cập nhật bằng observer class/style. Sửa specificity CSS để màu selected và kéo khung vùng nhìn có tác dụng trên cả #minimap và #wsMinimap.
 
 Kiểm Chromium: scripts/app-shell/check_workspace_automation.py và check_workspace_shell.py. Endpoint orchestration dùng fixture CPU/preflight (không gen thật), kiểm chặn stale plan/khung chưa duyệt/lượt unknown, đúng scene+part, nhớ scope không bỏ review, chi phí cách ly phòng, click node thật đổi màu map, mobile, không generation POST. Backend tạo nội dung vẫn là các adapter trước đó; chưa kiểm bằng tài khoản online.
+
+Phân tích đã được chấp nhận được giữ nguyên: nút chạy không tự dò/chia lại video chỉ vì thiếu bản đo CPU cục bộ. Muốn phân tích lại dùng hành động riêng trong node Phân tích.
