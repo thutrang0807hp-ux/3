@@ -1,5 +1,7 @@
 # Khôi phục cài đặt tạo ảnh song song — 27/10/2026
 
+Cập nhật sau bản này: khóa cứng mỗi tài khoản đã thay bằng mức ảnh 1–4. Xem [image-account-concurrency.md](image-account-concurrency.md); phần mô tả backend=1 dưới đây là trạng thái trước lần cập nhật đó.
+
 Hai lỗi được sửa:
 1. CSS `.batchImageWorkspace .batchFields { display:none }` ẩn cả lưới cài đặt Ảnh/prompt, Song song, Prompt/nhóm, Nghỉ giữa nhóm. Chỉ ẩn hàng chọn loại đầu ra ở phần chính; lưới cài đặt nâng cao hiện lại.
 2. Khi đổi nguồn thật, batchWireReal tự đặt concurrency=1. Bỏ việc tự đặt lại; giữ số người dùng chọn và đã lưu. Không sửa giới hạn engine/provider.

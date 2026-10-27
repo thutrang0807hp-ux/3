@@ -1,0 +1,22 @@
+{
+  "checks": {
+    "adapters": "PASS gemini_chat : single account, peak 3 of 7 images, bounded slots, 7 isolated correct PNG results, persistence, idle-only setting, no cookie clobber/replay; fixtures only\nPASS grok : single account, peak 3 of 7 images, bounded slots, 7 isolated correct PNG results, persistence, idle-only setting, no cookie clobber/replay; fixtures only\nPASS chatgpt : single account, peak 3 of 7 images, bounded slots, 7 isolated correct PNG results, persistence, idle-only setting, no cookie clobber/replay; fixtures only\nPASS meta : single account, peak 3 of 7 images, bounded slots, 7 isolated correct PNG results, persistence, idle-only setting, no cookie clobber/replay; fixtures only\nPASS flow : single account, peak 3 of 7 images, bounded slots, 7 isolated correct PNG results, persistence, idle-only setting, no cookie clobber/replay; fixtures only\nPASS cancellation releases image permit; maintenance is exclusive\n",
+    "HTTP/Flow-extension": "PASS real app setting routes, strict 1..4, busy blocks, status reads persisted values; no generation submitted\nPASS owned Flow image negotiation, preserves video limit, unchanged setting never resets live semaphore, changed setting blocks in-flight, strict bounds/auth; fixture SDK managers only\n",
+    "UI/vault": "PASS real UI saves image cap for Gemini Chat/Flow/Grok/ChatGPT/Meta via local API/vault, app limit unchanged, source switch + new profile restore, Flow video cap preserved, no generation requests.\n",
+    "browser": "PASS three actual Chromium workers overlap on one fixture account, isolated prompt/result PNG per request, cookie unchanged, exactly one send each; all provider pages intercepted, no online generation.\n",
+    "Gemini-text": "PASS: actual local app routes -> Chat account -> script, translation/cache, evidence classification and frame analysis; original speech/timing preserved; explicit role models; paid API never called; cookie encrypted and never returned. Fixture SDK only.\n",
+    "video": "PASS: muse one account: 7 overlapping jobs, 2 queued, 9 distinct results, engine limit acknowledged, no resend, settings idle-only; supports >7. Fixtures only.\nPASS: flow one account: 7 overlapping jobs, 2 queued, 9 distinct results, engine limit acknowledged, no resend, settings idle-only; supports >7. Fixtures only.\n",
+    "web-worker": "PASS web images: actual Playwright login/guest rejection, encrypted isolated sessions, upload/send/new-image binding/download for ChatGPT/Grok/Meta intercepted pages, original PNG, selected account tokens, duplicate/unknown no replay; no online provider generation.\n",
+    "gallery": "PASS image-only + 4:5, six outcome cards, mixed selection safe retry subset, refusal requires edit, unknown request never retries/deletes, trash/restore in common hub, no slot fallback, real Blob private delete/shared protection, quiet success clearing banner and no notification, reload/mobile; provider outcomes fixtures, no generation POST.\n",
+    "routing": "PASS batch multisource: Flow/Grok/ChatGPT/Meta correct source/account/token, original 1400px references, confirmation and changed-token blocks, original downloads, recovery/reload never replay, shared settings tabs; AI intercepted, not live provider certification.\n"
+  },
+  "local_image_setting": {
+    "default": 1,
+    "max_per_account": 4,
+    "max_image_lane": 4
+  },
+  "live_online_accounts_tested": false,
+  "windows_tested": false,
+  "upstream_Flow_checkout_tested": false,
+  "no_automatic_retry": true
+}
