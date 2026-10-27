@@ -50,3 +50,7 @@ File MANIFEST-SHA256.json ghi danh sách/kích thước/hash để kiểm toàn 
 
 ## Cập nhật bốn node Video mẫu
 Đã triển khai Phân tích, Các cảnh, Ảnh tham chiếu, Sang Dựng theo thiết kế v2. Đọc docs/reference-node-design.md. Có test giữ cảnh không đổi, ảnh đúng người, ghép thiếu cảnh đủ thời lượng, thay nguồn clip giữ chỉnh sửa timeline. Không tự gen hoặc xóa media. Ollama chỉ mô tả cảnh; nguồn Gemini phải khớp cấu hình hiện tại.
+
+
+## Hậu kỳ tab Từ ảnh & ý tưởng
+Đã đồng bộ node Giọng/Nhạc/Phụ đề và Sang Dựng. Có Ghép sẵn/Tự ghép, 3 công tắc bàn giao không đổi nguồn, ghép thiếu vẫn giữ thời lượng; bản mới thay đúng slot giữ timeline. Đọc docs/photo-post-design.md và kiểm trong docs/checks/photo-post-*.log.
