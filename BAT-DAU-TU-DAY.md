@@ -46,3 +46,7 @@ File MANIFEST-SHA256.json ghi danh sách/kích thước/hash để kiểm toàn 
 
 ## Cập nhật node âm thanh và phụ đề
 Đã triển khai Giọng đọc, Nhạc nền, Phụ đề cho cả Video mẫu và Từ ảnh & ý tưởng. Đọc docs/audio-nodes.md để biết thiết kế, cách chạy và giới hạn. Có kiểm tra Chromium và FFmpeg thật; TTS dùng fixture, chưa xác minh model VieNeu/Whisper thật hay Windows. Không tự gen ảnh/video khi thay âm thanh hoặc phụ đề.
+
+
+## Cập nhật bốn node Video mẫu
+Đã triển khai Phân tích, Các cảnh, Ảnh tham chiếu, Sang Dựng theo thiết kế v2. Đọc docs/reference-node-design.md. Có test giữ cảnh không đổi, ảnh đúng người, ghép thiếu cảnh đủ thời lượng, thay nguồn clip giữ chỉnh sửa timeline. Không tự gen hoặc xóa media. Ollama chỉ mô tả cảnh; nguồn Gemini phải khớp cấu hình hiện tại.
