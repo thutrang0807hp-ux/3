@@ -42,3 +42,7 @@ Chưa kiểm tài khoản Gemini/Flow/Muse online thật hoặc Windows trong đ
 Người dùng muốn một gói sao lưu tạm để tránh mất việc nếu chat đóng. Bản v4 đã triển khai; không có một hạng mục sửa mới nào khác được chốt sau đó.
 
 File MANIFEST-SHA256.json ghi danh sách/kích thước/hash để kiểm toàn vẹn. Đây là snapshot cố định, không phụ thuộc lịch sử chat.
+
+
+## Cập nhật node âm thanh và phụ đề
+Đã triển khai Giọng đọc, Nhạc nền, Phụ đề cho cả Video mẫu và Từ ảnh & ý tưởng. Đọc docs/audio-nodes.md để biết thiết kế, cách chạy và giới hạn. Có kiểm tra Chromium và FFmpeg thật; TTS dùng fixture, chưa xác minh model VieNeu/Whisper thật hay Windows. Không tự gen ảnh/video khi thay âm thanh hoặc phụ đề.
