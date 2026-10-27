@@ -1,0 +1,9 @@
+{
+  "checks": {
+    "concurrency": "PASS advanced controls visible, direct settings link, concurrency 3 survives source switch/reload, six real local PNG tasks overlap in groups of three, explicit image chaining stays sequential; zero AI/API posts. Does not certify same-account online concurrency.\n",
+    "gallery": "PASS image-only + 4:5, six outcome cards, mixed selection safe retry subset, refusal requires edit, unknown request never retries/deletes, trash/restore in common hub, no slot fallback, real Blob private delete/shared protection, quiet success clearing banner and no notification, reload/mobile; provider outcomes fixtures, no generation POST.\n",
+    "routing": "PASS batch multisource: Flow/Grok/ChatGPT/Meta correct source/account/token, original 1400px references, confirmation and changed-token blocks, original downloads, recovery/reload never replay, shared settings tabs; AI intercepted, not live provider certification.\n"
+  },
+  "backend_changed": false,
+  "online_same_account_parallelism_tested": false
+}
