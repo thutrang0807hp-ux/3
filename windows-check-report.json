@@ -1,0 +1,15 @@
+﻿{
+    "checks":  [
+                   "native installer: extract, hash verify, Unicode/spaces in paths",
+                   "bundled Python and pip dependency consistency",
+                   "native launcher -\u003e bundled Python -\u003e real Windows loopback health"
+               ],
+    "error_line":  50,
+    "version":  "2026.10.28.42599ab",
+    "passed":  false,
+    "error_stack":  "at \u003cScriptBlock\u003e, D:\\a\\3\\3\\scripts\\windows-installer\\check_windows.ps1: line 50\r\nat \u003cScriptBlock\u003e, D:\\a\\_temp\\e3de9fbc-daf9-4768-b016-dc15f8c3d0bd.ps1: line 2\r\nat \u003cScriptBlock\u003e, \u003cNo file\u003e: line 1",
+    "os":  "Microsoft Windows NT 10.0.26100.0",
+    "installer_sha256":  "a68cb20b90ea09e3b31bf9f73c09f349a1b2d48b9ef086209ebd5a28faa9814f",
+    "error":  "{\"detail\":\"Phiên ứng dụng đã đổi. Tải lại trang SceneForge trên máy.\"}",
+    "installer_exit_code":  0
+}
