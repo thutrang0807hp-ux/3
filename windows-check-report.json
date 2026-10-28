@@ -1,0 +1,11 @@
+﻿{
+    "checks":  [
+
+               ],
+    "version":  "2026.10.28.42599ab",
+    "passed":  false,
+    "os":  "Microsoft Windows NT 10.0.26100.0",
+    "installer_sha256":  "a68cb20b90ea09e3b31bf9f73c09f349a1b2d48b9ef086209ebd5a28faa9814f",
+    "error":  "Cannot overwrite variable HOME because it is read-only or constant.",
+    "installer_exit_code":  0
+}
