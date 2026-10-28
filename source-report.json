@@ -1,0 +1,15 @@
+{
+  "file": "SceneForge-Code-DayDu-SceneLogin-20261029.zip",
+  "bytes": 36363380,
+  "sha256": "eef6c0dbf914ff634e67551e7c07f03cd977024c96da686702d10d9f7319ffd9",
+  "files": 686,
+  "verification": [
+    "ZIP CRC",
+    "every member length and SHA-256",
+    "clean extracted rebuild of seven production pages",
+    "Python source compilation"
+  ],
+  "windows_installer_sha256": "858fae3ee43bc08811e28339f4a84d0cd33ec645c206b1f62ff586d3f76eb6da",
+  "windows_runtime_check_passed": true,
+  "pending_v5_preserved": true
+}
