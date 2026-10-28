@@ -1,0 +1,6 @@
+﻿{
+    "phase":  "PowerShell parsing",
+    "error":  "\r\nExtent ErrorId                           Message                                                    IncompleteInput\r\n------ -------                           -------                                                    ---------------\r\náº·t   UnexpectedToken                   Unexpected token \u0027áº·t\u0027 in expression or statement.                  False\r\n       MissingEndParenthesisInExpression Missing closing \u0027)\u0027 in expression.                                   False\r\n{      MissingEndCurlyBrace              Missing closing \u0027}\u0027 in statement block or type definition.           False\r\n{      MissingEndCurlyBrace              Missing closing \u0027}\u0027 in statement block or type definition.           False\r\n       MissingCatchOrFinally             The Try statement is missing its Catch or Finally block.             False\r\n)      UnexpectedToken                   Unexpected token \u0027)\u0027 in expression or statement.                     False\r\n}      UnexpectedToken                   Unexpected token \u0027}\u0027 in expression or statement.                     False\r\n\r\n\r\n",
+    "file":  "D:\\a\\3\\3\\work\\source\\scripts\\windows-installer\\check_full_windows.ps1",
+    "passed":  false
+}
