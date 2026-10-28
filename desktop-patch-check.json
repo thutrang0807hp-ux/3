@@ -1,5 +1,5 @@
 {
-  "install": "D:\\SF-desktop-049de15d-ệ\\Ứng dụng\\releases\\2026.10.28.2",
+  "install": "D:\\SF-desktop-04028d19-ệ\\Ứng dụng\\releases\\2026.10.28.2",
   "checks": [
     "update closes the running v2 app safely before replacing application files",
     "small native updater applies to v2 without reinstalling Python/models; project sentinel and model hash preserved",
@@ -10,11 +10,11 @@
     "closing native window stops owned backend and worker processes",
     "uninstall after small patch keeps projects, exported MP4 and models"
   ],
-  "data": "D:\\SF-desktop-049de15d-ệ\\Dự án",
+  "data": "D:\\SF-desktop-04028d19-ệ\\Dự án",
   "ui": {
     "native_window": true,
     "browser_container": "WebView2",
-    "app_version": "2026.10.29.5",
+    "app_version": "2026.10.29.6",
     "requests": [
       "http://127.0.0.1:8840/local-api/analysis/local/upload?duration=6.123583&threshold=27&min_scene=0.35&ocr=true&transcribe=true&room_id=desktop-reference",
       "http://127.0.0.1:8840/local-api/analysis/local/upload?duration=6.123583&threshold=27&min_scene=0.35&ocr=true&transcribe=true&room_id=desktop-reference",
@@ -38,14 +38,14 @@
       "protocol": "sceneforge-account-pin-v1"
     },
     "transcript": [
-      "This is a scene forage test. We are checking speech recognition and video export."
+      "This is a scene forge test. We are checking speech recognition and video export."
     ],
     "online_generation_requests": [],
     "page_errors": []
   },
   "passed": true,
   "project_chat": "PASS project image chats: queued same-project turns, cursor restart persistence, project/account isolation, stateless writing, encrypted metadata, uncertain/interrupted turns block new sends. Synthetic SDK, zero generation calls to Google.\r\n",
-  "sdk_chat_worker": "PASS: actual SDK types, one-send generator, private-cookie session, guest denied, typed quota vs partial/block/auth distinctions, generated-image save. Fake init/transport only; no Google requests.\r\n",
+  "sdk_chat_worker": "PASS: actual SDK types, one-send generator, private-cookie session, guest denied, typed quota vs partial/block/auth distinctions, original-size generated-image save (RPC and large-URL fallback), exact downloaded bytes. Fake init/transport only; no Google requests.\r\n",
   "baseline": "2026.10.28.2",
   "extension": "PASS real unpacked Chromium extension cookie permission, exact extension-origin loopback transport, actual app pairing/cancel UI, encrypted Gemini session, Flow scoping, one-use/expiry/replay/origin/body-size guards. Synthetic account; one SDK check, zero generation.\r\n"
 }
