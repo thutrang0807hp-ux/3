@@ -1,0 +1,74 @@
+﻿{
+    "data_root":  "D:\\SF-check-0359b1d8-ệ\\Dự án của tôi",
+    "passed":  true,
+    "old_data":  "C:\\Users\\runneradmin\\AppData\\Local\\sceneforge-old-check-2788ac0ac24546bfbf5f323a59fdb587",
+    "flow_browser":  "Microsoft Edge",
+    "installer_sha256":  "858fae3ee43bc08811e28339f4a84d0cd33ec645c206b1f62ff586d3f76eb6da",
+    "progress_phase":  "native uninstall; preserve existing data",
+    "version":  "2026.10.28.2",
+    "folder_control_method":  "native Windows text fields and button",
+    "install_root":  "D:\\SF-check-0359b1d8-ệ\\Ứng dụng SceneForge",
+    "cache_root":  "D:\\SF-check-0359b1d8-ệ\\Cache riêng",
+    "checks":  [
+                   "cancel closes before extraction",
+                   "visible folder dialog; actual UI choices on another drive, Unicode/spaces; data/cache persisted; local tools and SDKs prepared; Windows uninstall entry",
+                   "real Windows browser opens both canvases; Whisper transcribes real speech with words/timestamps; installed backend exports and saves H264/AAC; no online generation",
+                   "second launch reuses current instance",
+                   "reinstall preserves selected project data and exported video",
+                   "native uninstall removes app and Windows registration, preserves project/export/model data and old installation data"
+               ],
+    "application":  {
+                        "native_vc_runtime":  {
+                                                  "msvcp140.dll":  "app-local",
+                                                  "msvcp140_1.dll":  "app-local",
+                                                  "vcruntime140.dll":  "app-local",
+                                                  "vcruntime140_1.dll":  "app-local"
+                                              },
+                        "data_directory":  "D:\\SF-check-0359b1d8-á»‡\\Dá»± Ã¡n cá»§a tÃ´i",
+                        "cache_directory":  "D:\\SF-check-0359b1d8-á»‡\\Cache riÃªng",
+                        "environment":  {
+                                            "TEMP":  "D:\\SF-check-0359b1d8-á»‡\\Cache riÃªng\\Temp",
+                                            "PIP_CACHE_DIR":  "D:\\SF-check-0359b1d8-á»‡\\Cache riÃªng\\pip",
+                                            "HF_HOME":  "D:\\SF-check-0359b1d8-á»‡\\Cache riÃªng\\huggingface",
+                                            "PLAYWRIGHT_BROWSERS_PATH":  "D:\\SF-check-0359b1d8-á»‡\\Cache riÃªng\\browsers"
+                                        },
+                        "capabilities":  {
+                                             "available":  true,
+                                             "ffmpeg":  true,
+                                             "opencv":  true,
+                                             "scenedetect":  true,
+                                             "ocr":  true,
+                                             "whisper":  true,
+                                             "whisper_model":  true,
+                                             "max_bytes":  524288000,
+                                             "max_seconds":  600,
+                                             "binary_upload":  true,
+                                             "note":  "CPU, khÃ´ng PyTorch. ChÃ©p lá»i cáº§n model cÃ³ sáºµn trong models/faster-whisper; khÃ´ng tá»± táº£i. OCR láº¥y máº«u Ä‘áº§u/giá»¯a/cuá»‘i cáº£nh, khÃ´ng quÃ©t má»i khung."
+                                         },
+                        "gemini_sdk":  true,
+                        "flow_engine":  {
+                                            "started":  true,
+                                            "protocol":  "sceneforge-account-pin-v1",
+                                            "single_attempt":  true
+                                        },
+                        "transcription":  [
+                                              {
+                                                  "start":  0,
+                                                  "end":  5.12,
+                                                  "text":  "This is a scene forge test. We are checking speech recognition and video export."
+                                              }
+                                          ],
+                        "export":  {
+                                       "bytes":  76984,
+                                       "duration":  "6.123583",
+                                       "codec":  "H264/AAC",
+                                       "saved_to_selected_data_directory":  true
+                                   },
+                        "page_errors":  [
+
+                                        ],
+                        "online_generation_requests":  [
+
+                                                       ]
+                    }
+}
