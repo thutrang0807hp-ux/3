@@ -1,0 +1,36 @@
+name: SceneForge Windows installer check
+on:
+  push:
+    branches: [sceneforge-windows-test-20261028]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install and run bundled Windows application
+        shell: powershell
+        run: >-
+          & ./scripts/windows-installer/check_windows.ps1
+          -InstallerUrl 'https://raw.githubusercontent.com/thutrang0807hp-ux/3/ef8f071f87774587180c3627620ea0c6a2e67ea2/SceneForge-Setup-Windows-x64.exe'
+          -InstallerSha 'a68cb20b90ea09e3b31bf9f73c09f349a1b2d48b9ef086209ebd5a28faa9814f'
+          -Version '2026.10.28.42599ab'
+      - name: Save non-secret check report
+        if: always()
+        shell: python
+        run: |
+          from pathlib import Path
+          import subprocess,json
+          def git(*args,data=None):
+              return subprocess.run(['git',*args],input=data,capture_output=True,check=True).stdout.decode().strip()
+          path=Path('windows-check-report.json')
+          if not path.exists():path.write_text(json.dumps({'passed':False,'error':'Windows check did not produce a report'}))
+          blob=git('hash-object','-w','--stdin',data=path.read_bytes())
+          tree=git('mktree',data=('100644 blob '+blob+'\twindows-check-report.json\n').encode())
+          git('config','user.name','SceneForge Windows checks')
+          git('config','user.email','windows-checks@users.noreply.github.com')
+          commit=git('commit-tree',tree,data=b'Windows installer runtime verification\n')
+          git('push','origin',commit+':refs/heads/sceneforge-windows-check-ef8f071f8777')
