@@ -1,0 +1,38 @@
+﻿{
+    "checks":  [
+                   "native installer: extract, hash verify, Unicode/spaces in paths",
+                   "bundled Python and pip dependency consistency",
+                   "native launcher -\u003e bundled Python -\u003e real Windows loopback health",
+                   "real frontend routes served from installed package",
+                   "actual Windows Edge/Chrome boots shell, reference and photo canvases; no generation requests",
+                   "second launcher reuses the OS-owned instance lock",
+                   "same installer runs again without replacing existing release/user data"
+               ],
+    "ui":  {
+               "capabilities":  {
+                                    "available":  false,
+                                    "ffmpeg":  false,
+                                    "opencv":  false,
+                                    "scenedetect":  false,
+                                    "ocr":  false,
+                                    "whisper":  false,
+                                    "whisper_model":  false,
+                                    "max_bytes":  524288000,
+                                    "max_seconds":  600,
+                                    "binary_upload":  true,
+                                    "note":  "CPU, không PyTorch. Chép lời cần model có sẵn trong models/faster-whisper; không tự tải. OCR lấy mẫu đầu/giữa/cuối cảnh, không quét mọi khung."
+                                },
+               "browser":  "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+               "page_errors":  [
+
+                               ],
+               "generation_requests":  [
+
+                                       ]
+           },
+    "version":  "2026.10.28.42599ab",
+    "passed":  true,
+    "os":  "Microsoft Windows NT 10.0.26100.0",
+    "installer_sha256":  "a68cb20b90ea09e3b31bf9f73c09f349a1b2d48b9ef086209ebd5a28faa9814f",
+    "installer_exit_code":  0
+}
