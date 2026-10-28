@@ -1,0 +1,14 @@
+﻿{
+    "data_root":  "S:\\Dự án của tôi",
+    "passed":  false,
+    "old_data":  "C:\\Users\\runneradmin\\AppData\\Local\\sceneforge-old-check-b9c484f8b994437f9ebeafa63009f1df",
+    "error_line":  25,
+    "installer_sha256":  "f9573d1ca220fb31e8ba1f391bc2a337585e41d5362cc07c8050c7143990d83c",
+    "version":  "2026.10.28.2",
+    "error":  "Expected three folder fields, got 0",
+    "install_root":  "S:\\Ứng dụng SceneForge",
+    "cache_root":  "S:\\Cache riêng",
+    "checks":  [
+                   "cancel closes before extraction"
+               ]
+}
