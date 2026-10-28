@@ -1,0 +1,13 @@
+﻿{
+    "install":  "D:\\SF-desktop-1ddabc46-ệ\\Ứng dụng\\releases\\2026.10.28.2",
+    "checks":  [
+                   "update closes the running v2 app safely before replacing application files",
+                   "small native updater applies to v2 without reinstalling Python/models; project sentinel and model hash preserved",
+                   "native WinForms/WebView2 window starts the backend without external browser/console"
+               ],
+    "data":  "D:\\SF-desktop-1ddabc46-ệ\\Dự án",
+    "passed":  false,
+    "error":  "Native UI check failed: python.exe : Traceback (most recent call last):\r\nAt D:\\a\\3\\3\\work\\source\\scripts\\windows-installer\\check_desktop_patch.ps1:35 char:80\r\n+ ... inue\u0027;$text=\u0026 $python -E -s -X utf8 \"$PSScriptRoot\\check_desktop_ui.p ...\r\n+                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n    + CategoryInfo          : NotSpecified: (Traceback (most recent call last)::String) [], RemoteException\r\n    + FullyQualifiedErrorId : NativeCommandError\r\n \r\n  File \"D:\\a\\3\\3\\work\\source\\scripts\\windows-installer\\check_desktop_ui.py\", line 105, in \u003cmodule\u003e\r\n    frame.wait_for_function(\u0027!g6PipelineActive\u0026\u0026(!!project.analysis.local||project.analysis.pipeline6?.paused||!!projec\r\nt.analysis.pipeline6?.error)\u0027,timeout=300000)\r\n  File \"D:\\SF-desktop-1ddabc46-ệ\\Ứng \r\ndụng\\releases\\2026.10.28.2\\runtime\\Lib\\site-packages\\playwright\\sync_api\\_generated.py\", line 9574, in \r\nwait_for_function\r\n    self._sync(\r\n  File \"D:\\SF-desktop-1ddabc46-ệ\\Ứng \r\ndụng\\releases\\2026.10.28.2\\runtime\\Lib\\site-packages\\playwright\\_impl\\_sync_base.py\", line 111, in _sync\r\n    return task.result()\r\n           ^^^^^^^^^^^^^\r\n  File \"D:\\SF-desktop-1ddabc46-ệ\\Ứng dụng\\releases\\2026.10.28.2\\runtime\\Lib\\site-packages\\playwright\\_impl\\_frame.py\", \r\nline 945, in wait_for_function\r\n    await self._channel.send(\"waitForFunction\", self._timeout, params)\r\n  File \"D:\\SF-desktop-1ddabc46-ệ\\Ứng \r\ndụng\\releases\\2026.10.28.2\\runtime\\Lib\\site-packages\\playwright\\_impl\\_connection.py\", line 78, in send\r\n    return await self._connection.wrap_api_call(\r\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\r\n  File \"D:\\SF-desktop-1ddabc46-ệ\\Ứng \r\ndụng\\releases\\2026.10.28.2\\runtime\\Lib\\site-packages\\playwright\\_impl\\_connection.py\", line 636, in wrap_api_call\r\n    raise rewrite_error(error, f\"{parsed_st[\u0027apiName\u0027]}: {error}\") from None\r\nplaywright._impl._errors.TimeoutError: Frame.wait_for_function: Timeout 300000ms exceeded.\r\n",
+    "line":  36,
+    "baseline":  "2026.10.28.2"
+}

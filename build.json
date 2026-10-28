@@ -1,0 +1,9 @@
+{
+  "version": "2026.10.29.3",
+  "file": "SceneForge-Update-20261029-v3.exe",
+  "bytes": 3917312,
+  "sha256": "2f62875d7bc319bd08c77aa6dbb529c3fb6ab1fea9521717faac72452f788f26",
+  "files": 25,
+  "models_included": false,
+  "baseline_payload_sha256": "8178af48a4db6180eb0fb3ef042b04ea21617c7380ca2e106d8e967990eb0c35"
+}
