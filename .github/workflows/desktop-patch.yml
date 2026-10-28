@@ -1,0 +1,89 @@
+name: SceneForge native desktop patch
+on:
+  push:
+    branches: [sceneforge-desktop-patch]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: sceneforge-desktop-patch
+  cancel-in-progress: true
+jobs:
+  patch:
+    runs-on: windows-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Extract source and parse patch scripts
+        shell: powershell
+        run: |
+          Expand-Archive build-source.zip work
+          Get-ChildItem work/source/scripts/windows-installer/*.ps1|ForEach-Object {$t=$null;$e=$null;[void][Management.Automation.Language.Parser]::ParseFile($_.FullName,[ref]$t,[ref]$e);if($e){@{passed=$false;phase='PowerShell parse';error=($e|Out-String)}|ConvertTo-Json|Set-Content work/source/desktop-patch-check.json -Encoding UTF8;throw ($e|Out-String)}}
+      - name: Compile native desktop host and small updater
+        shell: powershell
+        run: |
+          Set-Location work/source
+          $ErrorActionPreference='Continue'
+          python scripts/windows-installer/build_desktop.py --output desktop *> desktop-build.log
+          $code=$LASTEXITCODE
+          if($code -eq 0){python scripts/windows-installer/build_patch.py --desktop desktop --output patch *> patch-build.log;$code=$LASTEXITCODE}
+          $ErrorActionPreference='Stop'
+          if($code -ne 0){$text=(Get-Content desktop-build.log -Tail 60|Out-String)+(Get-Content patch-build.log -Tail 60 -ErrorAction SilentlyContinue|Out-String);@{passed=$false;phase='desktop compile';error=$text}|ConvertTo-Json|Set-Content desktop-patch-check.json -Encoding UTF8;throw $text}
+      - uses: actions/cache/restore@v4
+        id: baseline
+        with:
+          path: baseline/SceneForge-Setup-Windows-x64-v2.exe
+          key: sceneforge-baseline-v2-858fae3e
+      - name: Fetch verified v2 baseline once
+        if: steps.baseline.outputs.cache-hit != 'true'
+        shell: python
+        run: |
+          import urllib.request,hashlib
+          from pathlib import Path
+          p=Path('baseline/SceneForge-Setup-Windows-x64-v2.exe');p.parent.mkdir(exist_ok=True)
+          urllib.request.urlretrieve('https://github.com/thutrang0807hp-ux/3/releases/download/sceneforge-windows-full-20261028/'+p.name,p)
+          assert hashlib.sha256(p.read_bytes()).hexdigest()=='858fae3ee43bc08811e28339f4a84d0cd33ec645c206b1f62ff586d3f76eb6da'
+      - uses: actions/cache/save@v4
+        if: steps.baseline.outputs.cache-hit != 'true'
+        with:
+          path: baseline/SceneForge-Setup-Windows-x64-v2.exe
+          key: sceneforge-baseline-v2-858fae3e
+      - name: Test real native window, source button, speech, update and close lifecycle
+        shell: powershell
+        run: |
+          $installer=(Resolve-Path baseline/SceneForge-Setup-Windows-x64-v2.exe).Path
+          Set-Location work/source
+          & scripts/windows-installer/check_desktop_patch.ps1 -Installer $installer -Patch (Resolve-Path patch/SceneForge-Update-20261029.exe)
+      - name: Publish small patch only after Windows GUI tests pass
+        shell: powershell
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          Set-Location work/source
+          $test=Get-Content desktop-patch-check.json -Raw -Encoding UTF8|ConvertFrom-Json
+          if(!$test.passed){throw 'Native window test not passed'}
+          $build=Get-Content patch/patch-build.json -Raw -Encoding UTF8|ConvertFrom-Json
+          $tag='sceneforge-desktop-patch-20261029';$ErrorActionPreference='Continue'
+          gh release view $tag --repo $env:GITHUB_REPOSITORY
+          if($LASTEXITCODE -ne 0){gh release create $tag --repo $env:GITHUB_REPOSITORY --title 'SceneForge desktop window and analysis fix' --notes 'Small update for installed v2. Native WebView2 window, hidden backend/workers, actual source-button CPU pipeline; models and projects preserved. Online generation not tested with real accounts.'}
+          if($LASTEXITCODE -ne 0){throw 'Release creation failed'}
+          gh release upload $tag ('patch/'+$build.file) ('patch/'+$build.file+'.sha256') patch/patch-build.json desktop-patch-check.json --repo $env:GITHUB_REPOSITORY --clobber
+          if($LASTEXITCODE -ne 0){throw 'Patch upload failed'}
+          @{url=('https://github.com/'+$env:GITHUB_REPOSITORY+'/releases/download/'+$tag+'/'+$build.file);sha256=$build.sha256;bytes=$build.bytes;version=$build.version;run_id=$env:GITHUB_RUN_ID}|ConvertTo-Json|Set-Content desktop-release.json -Encoding UTF8
+      - name: Save verification report
+        if: always()
+        shell: python
+        run: |
+          from pathlib import Path
+          import subprocess,json,os
+          def git(*a,data=None):return subprocess.run(['git',*a],input=data,capture_output=True,check=True).stdout.decode().strip()
+          git('config','user.name','SceneForge desktop checks');git('config','user.email','desktop-checks@users.noreply.github.com')
+          root=Path('work/source');report=root/'desktop-patch-check.json'
+          if not report.exists():report.write_text(json.dumps({'passed':False,'phase':'preparation failed; no native GUI verification'}))
+          wanted={'check.json':report,'release.json':root/'desktop-release.json','build.json':root/'patch/patch-build.json'};lines=[]
+          for name,path in wanted.items():
+              if path.exists():lines.append('100644 blob '+git('hash-object','-w','--stdin',data=path.read_bytes())+'\t'+name+'\n')
+          tree=git('mktree',data=''.join(lines).encode());commit=git('commit-tree',tree,data=b'Native desktop patch verification\n');git('push','origin',commit+':refs/heads/sceneforge-desktop-report-'+os.environ['GITHUB_RUN_ID'])
