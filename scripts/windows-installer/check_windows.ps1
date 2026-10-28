@@ -51,6 +51,36 @@ try {
     if ($caps.whisper_model) {throw 'Unexpected model bundled or user data was reused'}
     $report.capabilities=$caps
     $report.checks+='real frontend routes, session cookie, SQLite/vault startup, honest missing model capability'
+    $uiProbe=Join-Path $root 'windows-ui-check.py'
+    @'
+import os,sys,json
+from pathlib import Path
+from playwright.sync_api import sync_playwright
+candidates=[Path(os.environ.get(k,''))/r for k in ['PROGRAMFILES','PROGRAMFILES(X86)','LOCALAPPDATA'] for r in ['Microsoft/Edge/Application/msedge.exe','Google/Chrome/Application/chrome.exe']]
+exe=next((p for p in candidates if p.is_file()),None)
+if not exe:raise RuntimeError('No installed browser for Windows UI verification')
+with sync_playwright()as pw:
+ b=pw.chromium.launch(executable_path=str(exe),headless=True)
+ p=b.new_page(viewport={'width':1600,'height':1050});errors=[];posts=[]
+ p.on('pageerror',lambda e:errors.append(str(e)))
+ p.on('request',lambda r:posts.append(r.url)if r.method=='POST'and any(s in r.url for s in ['/flow/jobs','/muse/jobs','/gemini-chat/jobs','/web-images/jobs'])else None)
+ p.goto(sys.argv[1]);p.wait_for_function('appBootReady&&SceneForgeStorage.state.active',timeout=60000)
+ p.evaluate("async()=>{prefs.package5WelcomeDone=true;await savePrefs();document.querySelector('#shellDialog').close();}")
+ for mode in ['reference','photos']:
+  p.evaluate("async mode=>{const r={id:'windows-check-'+mode,name:'Windows check',mode,stage:'review',productId:products[0].id};rooms.push(r);await persistRoom(r);await openRoom(r.id,'analysis');}",mode)
+  f=p.locator('#workflowFrame').element_handle().content_frame()
+  f.wait_for_function('!!window.SFPromptPipeline'if mode=='reference'else'loaded&&!!window.SFPhotoPromptPipeline',timeout=60000)
+  f.wait_for_function('!!window.SceneForgeWorkflow?.workspaceAutoPlan?.()',timeout=30000)
+  assert len(f.evaluate('SceneForgeWorkflow.workspaceAutoPlan().scopes'))==3
+  assert p.locator('#workspaceAuto').count()==1
+ assert not errors,errors
+ assert not posts,posts
+ b.close()
+print('PASS real Windows browser boots app, reference canvas and photo canvas; no generation requests')
+'@ | Set-Content -LiteralPath $uiProbe -Encoding UTF8
+    & $python -E -s -X utf8 $uiProbe $base
+    if($LASTEXITCODE -ne 0){throw 'Windows browser UI check failed'}
+    $report.checks+='actual Windows Edge/Chrome boots shell, reference and photo canvases; no generation requests'
     $again=Start-Process -FilePath $exe -WorkingDirectory $home -PassThru
     $null=$again.Handle
     if (!$again.WaitForExit(15000) -or ($null -ne $again.ExitCode -and $again.ExitCode -ne 0)) {throw 'Second launch should reuse current instance'}
