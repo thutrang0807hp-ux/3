@@ -1,0 +1,47 @@
+﻿{
+    "install":  "D:\\SF-desktop-bc1a6c14-ệ\\Ứng dụng\\releases\\2026.10.28.2",
+    "checks":  [
+                   "update closes the running v2 app safely before replacing application files",
+                   "small native updater applies to v2 without reinstalling Python/models; project sentinel and model hash preserved",
+                   "native WinForms/WebView2 window starts the backend without external browser/console"
+               ],
+    "data":  "D:\\SF-desktop-bc1a6c14-ệ\\Dự án",
+    "ui":  {
+               "native_window":  true,
+               "browser_container":  "WebView2",
+               "app_version":  "2026.10.29.4",
+               "requests":  [
+                                "http://127.0.0.1:8840/local-api/analysis/local/upload?duration=6.123583\u0026threshold=27\u0026min_scene=0.35\u0026ocr=true\u0026transcribe=true\u0026room_id=desktop-reference",
+                                "http://127.0.0.1:8840/local-api/analysis/local/upload?duration=6.123583\u0026threshold=27\u0026min_scene=0.35\u0026ocr=true\u0026transcribe=true\u0026room_id=desktop-reference",
+                                "http://127.0.0.1:8840/local-api/analysis/local/upload?duration=6.123583\u0026threshold=27\u0026min_scene=0.35\u0026ocr=true\u0026transcribe=true\u0026room_id=desktop-reference",
+                                "http://127.0.0.1:8840/local-api/analysis/local/upload?duration=6.083991\u0026threshold=27\u0026min_scene=0.35\u0026ocr=true\u0026transcribe=true\u0026room_id=desktop-cuts"
+                            ],
+               "checks":  [
+                              "installed Chrome/Edge login starts without automation; save reads only synthetic cookie; cancel cleans up",
+                              "fresh video: source button runs real Whisper, OCR, camera and quality measurements",
+                              "unapproved source frames labelled honestly; Veo waiting slots have no fake video thumbnails",
+                              "existing cut-only project: same source button completes missing local measurements",
+                              "partial older CPU result: missing speech is filled instead of skipped",
+                              "repeat click reuses complete measurements; no duplicate CPU job or paid generation",
+                              "native source button detects six actual shots and completes final-frame sampling when audio outlasts picture",
+                              "real MP4 export remains working after small update",
+                              "photo workflow opens in the same native app"
+                          ],
+               "real_google_login_verified":  false,
+               "flow_engine":  {
+                                   "ready":  true,
+                                   "protocol":  "sceneforge-account-pin-v1"
+                               },
+               "transcript":  [
+                                  "This is a scene forage test. We are checking speech recognition and video export."
+                              ],
+               "online_generation_requests":  [
+
+                                              ],
+               "page_errors":  [
+
+                               ]
+           },
+    "passed":  false,
+    "baseline":  "2026.10.28.2"
+}
