@@ -23,6 +23,11 @@ jobs:
             [void][Management.Automation.Language.Parser]::ParseFile($_.FullName,[ref]$tokens,[ref]$errors)
             if($errors){@{passed=$false;phase='PowerShell parsing';file=$_.FullName;error=($errors|Out-String)}|ConvertTo-Json|Set-Content work/source/full-windows-check-report.json -Encoding UTF8;throw ($errors | Out-String)}
           }
+      - name: Probe native Windows shortcut and registration steps
+        shell: powershell
+        run: |
+          Set-Location work/source
+          & scripts/windows-installer/check_registration.ps1
       - uses: actions/cache/restore@v4
         id: resource-cache
         with:
