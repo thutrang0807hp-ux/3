@@ -1,0 +1,12 @@
+﻿{
+    "install":  "D:\\SF-desktop-acd96b90-ệ\\Ứng dụng\\releases\\2026.10.28.2",
+    "checks":  [
+                   "small native updater applies to v2 without reinstalling Python/models; project sentinel and model hash preserved",
+                   "native WinForms/WebView2 window starts the backend without external browser/console"
+               ],
+    "data":  "D:\\SF-desktop-acd96b90-ệ\\Dự án",
+    "passed":  false,
+    "error":  "Native UI check failed: python.exe : Traceback (most recent call last):\r\nAt D:\\a\\3\\3\\work\\source\\scripts\\windows-installer\\check_desktop_patch.ps1:30 char:80\r\n+ ... inue\u0027;$text=\u0026 $python -E -s -X utf8 \"$PSScriptRoot\\check_desktop_ui.p ...\r\n+                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n    + CategoryInfo          : NotSpecified: (Traceback (most recent call last)::String) [], RemoteException\r\n    + FullyQualifiedErrorId : NativeCommandError\r\n \r\n  File \"D:\\a\\3\\3\\work\\source\\scripts\\windows-installer\\check_desktop_ui.py\", line 59, in \u003cmodule\u003e\r\n    response=api.post(state[\u0027url\u0027]+\u0027local-api/export/mp4?fps=30\u0026normalize=false\u0026room_id=desktop-reference\u0027,data=video.r\r\nead_bytes(),headers=headers,timeout=60000);assert \r\nresponse.ok,response.text();rid=response.json()[\u0027id\u0027];deadline=time.monotonic()+120\r\n                                                                                                                       \r\n                                                  ^^^^^^^^^^^\r\nAssertionError: {\"detail\":\"Chỉ hỗ trợ 30/60 fps và bản dựng tối đa 2 phút.\"}\r\n",
+    "line":  31,
+    "baseline":  "2026.10.28.2"
+}
