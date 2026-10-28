@@ -1,5 +1,7 @@
 # Khung giao diện · menu & điểm dừng · 28/10/2026
 
+Cập nhật: runner tự động mới đã thay đường dừng ở từng gate được mô tả dưới đây. Đọc [prompt-pipeline.md](prompt-pipeline.md) cho hành vi hiện tại: lần Chạy ban đầu cho phép tiến tới điểm dừng, chỉ dừng ở lỗi/thiếu dữ liệu/sửa tay, vẫn xem bản ghép trước khi xuất. Đường gate cũ còn là fallback khi module tự động không có; kiểm shell cũ chủ động tắt module mới để kiểm riêng đường đó.
+
 Thuộc thanh khung dùng chung của Video mẫu và Ảnh tĩnh, không thêm node. Menu … có đúng ba mục: tiến độ/các lượt đã gửi (số clip xong, đang xử lý, lỗi/chưa rõ và thanh nhỏ), chi phí phòng này, hướng dẫn tab này. Nút ? cũ chuyển vào mục hướng dẫn. Tiến độ gọi bảng lịch sử thật của workflow; chi phí truyền roomId và lọc cả dòng chi phí lẫn xuất video. Số phí không có trong nhật ký không được tính là 0, không lấy số demo để báo chi phí thật trên menu.
 
 Bảng Chạy tự động nằm dưới nút, có bốn bước theo từng chế độ. Video mẫu: đọc máy → hiểu/viết → ảnh khung → clip. Ảnh tĩnh: kịch bản → storyboard tổng → prompt → clip. Các phạm vi: chỉ phân tích/kịch bản; dừng trước clip; chạy đến clip. Dấu số là bước dự kiến, chỉ dùng ✓ nếu state thực tế đã hoàn tất. Không ghi mặc định Lite miễn phí hoặc giá 10/20/100.
