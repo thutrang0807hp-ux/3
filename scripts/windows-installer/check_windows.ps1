@@ -15,9 +15,13 @@ try {
     Invoke-WebRequest -Uri $InstallerUrl -OutFile $file
     if ((Get-FileHash $file -Algorithm SHA256).Hash.ToLowerInvariant() -ne $InstallerSha) {throw 'Downloaded installer hash mismatch'}
     $installer=Start-Process -FilePath $file -PassThru -RedirectStandardOutput (Join-Path $root 'install.log') -RedirectStandardError (Join-Path $root 'install-error.log')
+    $null=$installer.Handle
     if (!$installer.WaitForExit(180000)) {throw 'Installer timeout'}
-    if ($installer.ExitCode -ne 0) {throw ('Installer failed: '+(Get-Content (Join-Path $root 'install.log') -Raw))}
+    $report.installer_exit_code=$installer.ExitCode
+    if ($null -ne $installer.ExitCode -and $installer.ExitCode -ne 0) {throw ('Installer failed: '+(Get-Content (Join-Path $root 'install.log') -Raw))}
     $home=Join-Path $env:LOCALAPPDATA "SceneForge\releases\$Version"
+    $marker=Get-Content (Join-Path $home 'installation.json') -Raw | ConvertFrom-Json
+    if($marker.version -ne $Version){throw 'Installer marker missing/wrong'}
     $exe=Join-Path $home 'SceneForge.exe'
     $python=Join-Path $home 'runtime\python.exe'
     $report.checks+='native installer: extract, hash verify, Unicode/spaces in paths'
@@ -48,10 +52,12 @@ try {
     $report.capabilities=$caps
     $report.checks+='real frontend routes, session cookie, SQLite/vault startup, honest missing model capability'
     $again=Start-Process -FilePath $exe -WorkingDirectory $home -PassThru
-    if (!$again.WaitForExit(15000) -or $again.ExitCode -ne 0) {throw 'Second launch should reuse current instance'}
+    $null=$again.Handle
+    if (!$again.WaitForExit(15000) -or ($null -ne $again.ExitCode -and $again.ExitCode -ne 0)) {throw 'Second launch should reuse current instance'}
     $report.checks+='second launcher reuses the OS-owned instance lock'
     $installer=Start-Process -FilePath $file -PassThru
-    if (!$installer.WaitForExit(180000) -or $installer.ExitCode -ne 0) {throw 'Idempotent reinstall failed'}
+    $null=$installer.Handle
+    if (!$installer.WaitForExit(180000) -or ($null -ne $installer.ExitCode -and $installer.ExitCode -ne 0)) {throw 'Idempotent reinstall failed'}
     if (!(Test-Path (Join-Path $env:SCENEFORGE_LOCAL_DATA 'instance.json'))) {throw 'Reinstall removed data'}
     $report.checks+='same installer runs again without replacing existing release/user data'
     $report.passed=$true
