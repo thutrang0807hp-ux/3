@@ -1,0 +1,10 @@
+﻿{
+    "checks":  [
+
+               ],
+    "version":  "2026.10.28.42599ab",
+    "passed":  false,
+    "os":  "Microsoft Windows NT 10.0.26100.0",
+    "installer_sha256":  "a68cb20b90ea09e3b31bf9f73c09f349a1b2d48b9ef086209ebd5a28faa9814f",
+    "error":  "Installer failed: Checking and extracting the bundled application...\nShortcut was not created: Value does not fall within the expected range.. Open D:\\a\\_temp\\SceneForge thu nghiem ?\\Local AppData\\SceneForge\\releases\\2026.10.28.42599ab\\SceneForge.exe directly.\nInstalled: D:\\a\\_temp\\SceneForge thu nghiem ?\\Local AppData\\SceneForge\\releases\\2026.10.28.42599ab\nStarting SceneForge. Close its console window when finished.\nInstalling SceneForge for this Windows user...\r\nNo administrator access or separate Python installation needed.\r\n"
+}
