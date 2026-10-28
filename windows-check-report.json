@@ -1,0 +1,15 @@
+﻿{
+    "data_root":  "S:\\Dự án của tôi",
+    "passed":  false,
+    "old_data":  "C:\\Users\\runneradmin\\AppData\\Local\\sceneforge-old-check-9ee0f20de56c4c2a928c4a0b97b2b6aa",
+    "error_line":  61,
+    "installer_sha256":  "ad4e0a354883b74cd35bc4f1871d58b408eab6f0c39da0d85c84b2568b8e7016",
+    "version":  "2026.10.28.2",
+    "error":  "Installer preparation timeout",
+    "folder_control_method":  "native Windows text fields and button",
+    "install_root":  "S:\\Ứng dụng SceneForge",
+    "cache_root":  "S:\\Cache riêng",
+    "checks":  [
+                   "cancel closes before extraction"
+               ]
+}
