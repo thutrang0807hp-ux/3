@@ -9,3 +9,7 @@ Các công cụ Tiến độ, Chi phí, phạm vi Chạy tự động, Hướng 
 Hai canvas dùng chung renderer bản đồ: nền tối, ô node theo vị trí/kích thước DOM thật và khung vùng nhìn. Bấm để định tâm, kéo khung giữ điểm bám, bàn phím mũi tên di chuyển vùng nhìn. Theo dõi resize viewport/node và bỏ theo dõi node đã bị thay để không giữ DOM cũ. Không đổi layout, prompt, clip hoặc luồng duyệt bản ghép của ảnh tĩnh.
 
 Kiểm: `python scripts/app-shell/check_workspace_shell.py`. Chromium kiểm hủy/lưu nguồn, giữ beats/jobs, đóng/mở bảng/menu, lưới bản đồ và kéo/resize, hai phòng riêng, mobile không tràn, không có generation POST. Không đăng nhập hoặc tạo nội dung bằng tài khoản thật.
+
+## Meta image source update
+
+The photo flow now offers Meta AI through the existing browser image adapter, with its own account connection action/status and shared account selection. It can generate whole storyboards or per-part frame images; Gemini Chat still writes production prompts, explicitly disclosed in the panel. Old Muse manual image selection remains separate from the Muse video adapter and is not automatically converted to Meta. Read `meta-storyboard-source.md` for dispatch, multi-version receiving and verification limits.
