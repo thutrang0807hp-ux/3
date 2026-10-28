@@ -85,6 +85,7 @@ jobs:
         run: |
           Set-Location work/source
           $report=Get-Content artifacts/windows/build-report.json -Raw | ConvertFrom-Json
+          $env:SCENEFORGE_DIAGNOSTIC='1'
           & scripts/windows-installer/check_full_windows.ps1 -InstallerPath (Resolve-Path ('artifacts/windows/'+$report.file)) -Version $report.version
       - name: Publish verified installer as Release asset
         env:
