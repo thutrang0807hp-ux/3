@@ -1,0 +1,14 @@
+﻿{
+    "data_root":  "S:\\Dự án của tôi",
+    "passed":  false,
+    "old_data":  "C:\\Users\\runneradmin\\AppData\\Local\\sceneforge-old-check-c64c10a1ddf74b2186c036e805f9fdf9",
+    "error_line":  29,
+    "installer_sha256":  "ab9fa3d1a4058f1071646669505fd5cf963d21f05c0d4d88831c12a98ee11d6d",
+    "version":  "2026.10.28.2",
+    "error":  "Folder dialog controls not ready: ControlType.Pane: Chọn nơi cài và nơi lưu dữ liệu | ControlType.Pane: Python, công cụ video và Whisper đi kèm. Không cần quyền quản trị. | ControlType.Pane: Thư mục phần mềm | ControlType.Pane: D:\\SceneForge | ControlType.Pane: Chọn… | ControlType.Pane: Thư mục dự án, tài khoản và model | ControlType.Pane: C:\\Users\\runneradmin\\AppData\\Local\\sceneforge-old-check-c64c10a1ddf74b2186c036e805f9fdf9 | ControlType.Pane: Chọn… | ControlType.Pane: Thư mục cache và tệp tạm (có thể chọn ổ khác) | ControlType.Pane: C:\\Users\\runneradmin\\AppData\\Local\\sceneforge-old-check-c64c10a1ddf74b2186c036e805f9fdf9\\Cache | ControlType.Pane: Chọn… | ControlType.Pane: Có dữ liệu cũ: C:\\Users\\runneradmin\\AppData\\Local\\sceneforge-old-check-c64c10a1ddf74b2186c036e805f9fdf9. Chọn thư mục mới sẽ dùng thư viện riêng; không tự di chuyển hoặc xóa thư viện cũ. | ControlType.Pane: Chuẩn bị Gemini Chat (chỉ còn đăng nhập tài khoản) | ControlType.Pane: Chuẩn bị Flow để tạo ảnh / video | ControlType.Pane: Giọng AI VieNeu — tùy chọn, cần mạng và tải thêm model | ControlType.Pane:  | ControlType.Pane: Chưa giải nén. Chọn thư mục rồi bấm Cài đặt. | ControlType.Pane: Cài đặt | ControlType.Pane: Hủy",
+    "install_root":  "S:\\Ứng dụng SceneForge",
+    "cache_root":  "S:\\Cache riêng",
+    "checks":  [
+                   "cancel closes before extraction"
+               ]
+}
