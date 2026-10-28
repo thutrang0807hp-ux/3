@@ -43,6 +43,8 @@ jobs:
           $ErrorActionPreference='Stop'
           if($result -ne 0){$tail=(Get-Content fetch-resources.log -Tail 100|Out-String);@{passed=$false;phase='resources';error=$tail}|ConvertTo-Json|Set-Content full-windows-check-report.json -Encoding UTF8;throw $tail}
           }
+          python scripts/windows-installer/fetch_resources.py --output build-resources --crt-only
+          if($LASTEXITCODE -ne 0){throw 'App-local VC runtime preparation failed'}
           Invoke-WebRequest -UseBasicParsing -Uri 'https://github.com/astral-sh/python-build-standalone/releases/download/20261026/cpython-3.12.16+20261026-x86_64-pc-windows-msvc-install_only_stripped.tar.gz' -OutFile python.tar.gz
       - uses: actions/cache/save@v4
         if: steps.resource-cache.outputs.cache-hit != 'true'
