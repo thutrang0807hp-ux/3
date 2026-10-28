@@ -12,7 +12,7 @@ $report=@{version=$Version;os=[Environment]::OSVersion.VersionString;passed=$fal
 $launcher=$null;$installer=$null
 try {
     $file=Join-Path $root 'SceneForge Setup.exe'
-    Invoke-WebRequest -Uri $InstallerUrl -OutFile $file
+    Invoke-WebRequest -UseBasicParsing -Uri $InstallerUrl -OutFile $file
     if ((Get-FileHash $file -Algorithm SHA256).Hash.ToLowerInvariant() -ne $InstallerSha) {throw 'Downloaded installer hash mismatch'}
     $installer=Start-Process -FilePath $file -PassThru -RedirectStandardOutput (Join-Path $root 'install.log') -RedirectStandardError (Join-Path $root 'install-error.log')
     $null=$installer.Handle
@@ -42,9 +42,9 @@ try {
     }
     if (!$ready) {throw ('App not ready: '+(Get-Content (Join-Path $root 'app-error.log') -Raw))}
     $report.checks+='native launcher -> bundled Python -> real Windows loopback health'
-    $null=Invoke-WebRequest $base -SessionVariable session
+    $null=Invoke-WebRequest -UseBasicParsing $base -SessionVariable session
     foreach($page in @('/photos.html','/workflow.html','/native/index.html')) {
-        $response=Invoke-WebRequest ($base+$page) -WebSession $session
+        $response=Invoke-WebRequest -UseBasicParsing ($base+$page) -WebSession $session
         if ($response.StatusCode -ne 200 -or $response.Content.Length -lt 10000) {throw "Page missing: $page"}
     }
     $caps=Invoke-RestMethod "$base/local-api/analysis/local/capabilities" -WebSession $session
@@ -93,6 +93,8 @@ print('PASS real Windows browser boots app, reference canvas and photo canvas; n
     $report.passed=$true
 } catch {
     $report.error="$_"
+    $report.error_line=$_.InvocationInfo.ScriptLineNumber
+    $report.error_stack=$_.ScriptStackTrace
     throw
 } finally {
     if($launcher -and !$launcher.HasExited){taskkill /PID $launcher.Id /T /F | Out-Null}
