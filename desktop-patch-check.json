@@ -1,18 +1,19 @@
 {
-  "install": "D:\\SF-desktop-9d60369f-ệ\\Ứng dụng\\releases\\2026.10.28.2",
+  "install": "D:\\SF-desktop-a4457de5-ệ\\Ứng dụng\\releases\\2026.10.28.2",
   "checks": [
     "update closes the running v2 app safely before replacing application files",
     "small native updater applies to v2 without reinstalling Python/models; project sentinel and model hash preserved",
     "native WinForms/WebView2 window starts the backend without external browser/console",
+    "real unpacked extension transfers synthetic browser session to installed app; encrypted vault and origin/expiry/replay guards; no real account or generation",
     "second launch focuses the existing app",
     "closing native window stops owned backend and worker processes",
     "uninstall after small patch keeps projects, exported MP4 and models"
   ],
-  "data": "D:\\SF-desktop-9d60369f-ệ\\Dự án",
+  "data": "D:\\SF-desktop-a4457de5-ệ\\Dự án",
   "ui": {
     "native_window": true,
     "browser_container": "WebView2",
-    "app_version": "2026.10.29.3",
+    "app_version": "2026.10.29.4",
     "requests": [
       "http://127.0.0.1:8840/local-api/analysis/local/upload?duration=6.123583&threshold=27&min_scene=0.35&ocr=true&transcribe=true&room_id=desktop-reference",
       "http://127.0.0.1:8840/local-api/analysis/local/upload?duration=6.123583&threshold=27&min_scene=0.35&ocr=true&transcribe=true&room_id=desktop-reference",
@@ -42,5 +43,6 @@
     "page_errors": []
   },
   "passed": true,
-  "baseline": "2026.10.28.2"
+  "baseline": "2026.10.28.2",
+  "extension": "PASS real unpacked Chromium extension cookie permission, exact extension-origin loopback transport, actual app pairing/cancel UI, encrypted Gemini session, Flow scoping, one-use/expiry/replay/origin/body-size guards. Synthetic account; one SDK check, zero generation.\r\n"
 }

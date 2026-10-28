@@ -1,7 +1,7 @@
 {
-  "run_id": "40775486835",
-  "url": "https://github.com/thutrang0807hp-ux/3/releases/download/sceneforge-proxy-reader-patch-20261029/SceneForge-Update-20261029-v3.exe",
-  "sha256": "5a78369d1b591dfc25a04a6c78362d9a8db7e036b95ebc84b551a82451922247",
-  "bytes": 3917312,
-  "version": "2026.10.29.3"
+  "run_id": "40782215048",
+  "url": "https://github.com/thutrang0807hp-ux/3/releases/download/sceneforge-browser-bridge-patch-20261029/SceneForge-Update-20261029-v4.exe",
+  "sha256": "be4e47a452b98200e77729d1fede6cbcac5657fbda8f8ad935e76dbb49c08bef",
+  "bytes": 3932672,
+  "version": "2026.10.29.4"
 }
