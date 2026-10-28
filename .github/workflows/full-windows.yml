@@ -96,6 +96,7 @@ jobs:
           if(!$test.passed){throw 'Windows runtime test not passed'}
           $build=Get-Content artifacts/windows/build-report.json -Raw | ConvertFrom-Json
           $tag='sceneforge-windows-full-20261028'
+          $ErrorActionPreference='Continue'
           gh release view $tag --repo $env:GITHUB_REPOSITORY
           if($LASTEXITCODE -ne 0){gh release create $tag --repo $env:GITHUB_REPOSITORY --title 'SceneForge Windows - full local tools and folder selection' --notes 'Verified Windows installer: chosen folders, offline CPU video tools/Whisper, SDK preparation, native uninstall preserving projects. Accounts remain user-owned. VieNeu voice is optional.'}
           if($LASTEXITCODE -ne 0){throw 'Could not create release'}
