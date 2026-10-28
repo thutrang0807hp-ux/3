@@ -33,4 +33,4 @@ jobs:
           git('config','user.name','SceneForge Windows checks')
           git('config','user.email','windows-checks@users.noreply.github.com')
           commit=git('commit-tree',tree,data=b'Windows installer runtime verification\n')
-          git('push','origin',commit+':refs/heads/sceneforge-windows-check-ef8f071f8777-3')
+          git('push','origin',commit+':refs/heads/sceneforge-windows-check-ef8f071f8777-4')

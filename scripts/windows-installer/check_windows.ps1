@@ -19,16 +19,16 @@ try {
     if (!$installer.WaitForExit(180000)) {throw 'Installer timeout'}
     $report.installer_exit_code=$installer.ExitCode
     if ($null -ne $installer.ExitCode -and $installer.ExitCode -ne 0) {throw ('Installer failed: '+(Get-Content (Join-Path $root 'install.log') -Raw))}
-    $home=Join-Path $env:LOCALAPPDATA "SceneForge\releases\$Version"
-    $marker=Get-Content (Join-Path $home 'installation.json') -Raw | ConvertFrom-Json
+    $appDirectory=Join-Path $env:LOCALAPPDATA "SceneForge\releases\$Version"
+    $marker=Get-Content (Join-Path $appDirectory 'installation.json') -Raw | ConvertFrom-Json
     if($marker.version -ne $Version){throw 'Installer marker missing/wrong'}
-    $exe=Join-Path $home 'SceneForge.exe'
-    $python=Join-Path $home 'runtime\python.exe'
+    $exe=Join-Path $appDirectory 'SceneForge.exe'
+    $python=Join-Path $appDirectory 'runtime\python.exe'
     $report.checks+='native installer: extract, hash verify, Unicode/spaces in paths'
     & $python -E -s -X utf8 -m pip check
     if ($LASTEXITCODE -ne 0) {throw 'Windows bundled dependency check failed'}
     $report.checks+='bundled Python and pip dependency consistency'
-    $launcher=Start-Process -FilePath $exe -WorkingDirectory $home -PassThru -RedirectStandardOutput (Join-Path $root 'app.log') -RedirectStandardError (Join-Path $root 'app-error.log')
+    $launcher=Start-Process -FilePath $exe -WorkingDirectory $appDirectory -PassThru -RedirectStandardOutput (Join-Path $root 'app.log') -RedirectStandardError (Join-Path $root 'app-error.log')
     $ready=$false
     for ($i=0;$i -lt 90;$i++) {
         Start-Sleep -Seconds 1
@@ -81,7 +81,7 @@ print('PASS real Windows browser boots app, reference canvas and photo canvas; n
     & $python -E -s -X utf8 $uiProbe $base
     if($LASTEXITCODE -ne 0){throw 'Windows browser UI check failed'}
     $report.checks+='actual Windows Edge/Chrome boots shell, reference and photo canvases; no generation requests'
-    $again=Start-Process -FilePath $exe -WorkingDirectory $home -PassThru
+    $again=Start-Process -FilePath $exe -WorkingDirectory $appDirectory -PassThru
     $null=$again.Handle
     if (!$again.WaitForExit(15000) -or ($null -ne $again.ExitCode -and $again.ExitCode -ne 0)) {throw 'Second launch should reuse current instance'}
     $report.checks+='second launcher reuses the OS-owned instance lock'
