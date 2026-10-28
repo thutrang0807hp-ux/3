@@ -51,7 +51,16 @@ jobs:
             work/source/build-resources
             work/source/build-wheels
           key: sf-win-full-resources-20261028-flow1bcb-gemini1ad0-v1
+      - uses: actions/cache/restore@v4
+        id: installer-cache
+        with:
+          path: |
+            work/source/artifacts/windows/SceneForge-Setup-Windows-x64-v2.exe
+            work/source/artifacts/windows/SceneForge-Setup-Windows-x64-v2.exe.sha256
+            work/source/artifacts/windows/build-report.json
+          key: sf-full-exe-v2-${{ hashFiles('work/source/scripts/windows-installer/*.c', 'work/source/scripts/windows-installer/build.py', 'work/source/scripts/windows-installer/install.ps1', 'work/source/scripts/windows-installer/uninstall.ps1', 'work/source/scripts/windows-installer/components.ps1', 'work/source/scripts/windows-installer/paths.py', 'work/source/scripts/windows-installer/provision.py', 'work/source/scripts/windows-installer/windows_bootstrap.py', 'work/source/local_engine/**', 'work/source/dist/**') }}
       - name: Build native full installer
+        if: steps.installer-cache.outputs.cache-hit != 'true'
         shell: powershell
         run: |
           Set-Location work/source
@@ -61,6 +70,14 @@ jobs:
           $result=$LASTEXITCODE
           $ErrorActionPreference='Stop'
           if($result -ne 0){$tail=(Get-Content build-installer.log -Tail 100|Out-String);@{passed=$false;phase='build';error=$tail}|ConvertTo-Json|Set-Content full-windows-check-report.json -Encoding UTF8;throw $tail}
+      - uses: actions/cache/save@v4
+        if: steps.installer-cache.outputs.cache-hit != 'true'
+        with:
+          path: |
+            work/source/artifacts/windows/SceneForge-Setup-Windows-x64-v2.exe
+            work/source/artifacts/windows/SceneForge-Setup-Windows-x64-v2.exe.sha256
+            work/source/artifacts/windows/build-report.json
+          key: sf-full-exe-v2-${{ hashFiles('work/source/scripts/windows-installer/*.c', 'work/source/scripts/windows-installer/build.py', 'work/source/scripts/windows-installer/install.ps1', 'work/source/scripts/windows-installer/uninstall.ps1', 'work/source/scripts/windows-installer/components.ps1', 'work/source/scripts/windows-installer/paths.py', 'work/source/scripts/windows-installer/provision.py', 'work/source/scripts/windows-installer/windows_bootstrap.py', 'work/source/local_engine/**', 'work/source/dist/**') }}
       - name: Test folder GUI, real transcription/export, reinstall and uninstall
         shell: powershell
         run: |
