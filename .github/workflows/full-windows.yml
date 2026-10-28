@@ -21,7 +21,7 @@ jobs:
           Get-ChildItem work/source/scripts/windows-installer/*.ps1 | ForEach-Object {
             $tokens=$null; $errors=$null
             [void][Management.Automation.Language.Parser]::ParseFile($_.FullName,[ref]$tokens,[ref]$errors)
-            if($errors){throw ($errors | Out-String)}
+            if($errors){@{passed=$false;phase='PowerShell parsing';file=$_.FullName;error=($errors|Out-String)}|ConvertTo-Json|Set-Content work/source/full-windows-check-report.json -Encoding UTF8;throw ($errors | Out-String)}
           }
       - name: Prepare build tools and real offline components
         shell: powershell
@@ -30,7 +30,7 @@ jobs:
           python -m pip install -r local_engine/requirements.txt -r local_engine/requirements-cpu.txt ziglang packaging
           if($LASTEXITCODE -ne 0){throw 'Build dependencies failed'}
           python scripts/windows-installer/fetch_resources.py --output build-resources --core-wheels build-wheels
-          if($LASTEXITCODE -ne 0){throw 'Resource preparation failed'}
+          if($LASTEXITCODE -ne 0){@{passed=$false;phase='resources';error='Resource preparation failed; see fetch-resources.log'}|ConvertTo-Json|Set-Content full-windows-check-report.json -Encoding UTF8;throw 'Resource preparation failed'}
           Invoke-WebRequest -UseBasicParsing -Uri 'https://github.com/astral-sh/python-build-standalone/releases/download/20261026/cpython-3.12.16+20261026-x86_64-pc-windows-msvc-install_only_stripped.tar.gz' -OutFile python.tar.gz
       - name: Build native full installer
         shell: powershell
