@@ -1,0 +1,112 @@
+﻿{
+    "processes":  [
+                      {
+                          "ProcessName":  "SceneForge-Setup-Windows-x64-v2",
+                          "Id":  2256,
+                          "CPU":  0
+                      }
+                  ],
+    "data_root":  "S:\\Dự án của tôi",
+    "passed":  false,
+    "old_data":  "C:\\Users\\runneradmin\\AppData\\Local\\sceneforge-old-check-592a05a4ac3248fa9d7b8d1d78a2ad9b",
+    "progress_time":  "2026-10-28T14:19:09.7516535Z",
+    "error":  "Diagnostic snapshot after two minutes of installer wait",
+    "installer_sha256":  "98579b01fd78738ab91c5f0adc6f235b9bfded2a60ed49cb3b0a060117fd2f34",
+    "error_line":  86,
+    "progress_phase":  "preparing: ready",
+    "version":  "2026.10.28.2",
+    "window_controls":  [
+                            {
+                                "ClassName":  "WindowsForms10.STATIC.app.0.32d4b9c_r8_ad1",
+                                "Name":  "Chọn nơi cài và nơi lưu dữ liệu"
+                            },
+                            {
+                                "ClassName":  "WindowsForms10.STATIC.app.0.32d4b9c_r8_ad1",
+                                "Name":  "Python, công cụ video và Whisper đi kèm. Không cần quyền quản trị."
+                            },
+                            {
+                                "ClassName":  "WindowsForms10.STATIC.app.0.32d4b9c_r8_ad1",
+                                "Name":  "Thư mục phần mềm"
+                            },
+                            {
+                                "ClassName":  "WindowsForms10.EDIT.app.0.32d4b9c_r8_ad1",
+                                "Name":  "D:\\SceneForge"
+                            },
+                            {
+                                "ClassName":  "WindowsForms10.BUTTON.app.0.32d4b9c_r8_ad1",
+                                "Name":  "Chọn…"
+                            },
+                            {
+                                "ClassName":  "WindowsForms10.STATIC.app.0.32d4b9c_r8_ad1",
+                                "Name":  "Thư mục dự án, tài khoản và model"
+                            },
+                            {
+                                "ClassName":  "WindowsForms10.EDIT.app.0.32d4b9c_r8_ad1",
+                                "Name":  "C:\\Users\\runneradmin\\AppData\\Local\\sceneforge-old-check-592a05a4ac3248fa9d7b8d1d78a2ad9b"
+                            },
+                            {
+                                "ClassName":  "WindowsForms10.BUTTON.app.0.32d4b9c_r8_ad1",
+                                "Name":  "Chọn…"
+                            },
+                            {
+                                "ClassName":  "WindowsForms10.STATIC.app.0.32d4b9c_r8_ad1",
+                                "Name":  "Thư mục cache và tệp tạm (có thể chọn ổ khác)"
+                            },
+                            {
+                                "ClassName":  "WindowsForms10.EDIT.app.0.32d4b9c_r8_ad1",
+                                "Name":  "C:\\Users\\runneradmin\\AppData\\Local\\sceneforge-old-check-592a05a4ac3248fa9d7b8d1d78a2ad9b\\Cache"
+                            },
+                            {
+                                "ClassName":  "WindowsForms10.BUTTON.app.0.32d4b9c_r8_ad1",
+                                "Name":  "Chọn…"
+                            },
+                            {
+                                "ClassName":  "WindowsForms10.STATIC.app.0.32d4b9c_r8_ad1",
+                                "Name":  "Có dữ liệu cũ: C:\\Users\\runneradmin\\AppData\\Local\\sceneforge-old-check-592a05a4ac3248fa9d7b8d1d78a2ad9b. Chọn thư mục mới sẽ dùng thư viện riêng; không tự di chuyển hoặc xóa thư viện cũ."
+                            },
+                            {
+                                "ClassName":  "WindowsForms10.BUTTON.app.0.32d4b9c_r8_ad1",
+                                "Name":  "Chuẩn bị Gemini Chat (chỉ còn đăng nhập tài khoản)"
+                            },
+                            {
+                                "ClassName":  "WindowsForms10.BUTTON.app.0.32d4b9c_r8_ad1",
+                                "Name":  "Chuẩn bị Flow để tạo ảnh / video"
+                            },
+                            {
+                                "ClassName":  "WindowsForms10.BUTTON.app.0.32d4b9c_r8_ad1",
+                                "Name":  "Giọng AI VieNeu — tùy chọn, cần mạng và tải thêm model"
+                            },
+                            {
+                                "ClassName":  "WindowsForms10.msctls_progress32.app.0.32d4b9c_r8_ad1",
+                                "Name":  ""
+                            },
+                            {
+                                "ClassName":  "WindowsForms10.STATIC.app.0.32d4b9c_r8_ad1",
+                                "Name":  "Value does not fall within the expected range."
+                            },
+                            {
+                                "ClassName":  "WindowsForms10.BUTTON.app.0.32d4b9c_r8_ad1",
+                                "Name":  "Cài đặt"
+                            },
+                            {
+                                "ClassName":  "WindowsForms10.BUTTON.app.0.32d4b9c_r8_ad1",
+                                "Name":  "Đóng"
+                            }
+                        ],
+    "setup_state":  {
+                        "phase":  "ready",
+                        "results":  {
+                                        "core":  "ready",
+                                        "gemini":  "ready",
+                                        "flow":  "ready"
+                                    },
+                        "error":  null,
+                        "updated_at":  1793197149.5048544
+                    },
+    "folder_control_method":  "native Windows text fields and button",
+    "install_root":  "S:\\Ứng dụng SceneForge",
+    "cache_root":  "S:\\Cache riêng",
+    "checks":  [
+                   "cancel closes before extraction"
+               ]
+}
