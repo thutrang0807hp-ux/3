@@ -47,10 +47,7 @@ try {
         $response=Invoke-WebRequest -UseBasicParsing ($base+$page) -WebSession $session
         if ($response.StatusCode -ne 200 -or $response.Content.Length -lt 10000) {throw "Page missing: $page"}
     }
-    $caps=Invoke-RestMethod "$base/local-api/analysis/local/capabilities" -WebSession $session
-    if ($caps.whisper_model) {throw 'Unexpected model bundled or user data was reused'}
-    $report.capabilities=$caps
-    $report.checks+='real frontend routes, session cookie, SQLite/vault startup, honest missing model capability'
+    $report.checks+='real frontend routes served from installed package'
     $uiProbe=Join-Path $root 'windows-ui-check.py'
     @'
 import os,sys,json
@@ -73,13 +70,20 @@ with sync_playwright()as pw:
   f.wait_for_function('!!window.SceneForgeWorkflow?.workspaceAutoPlan?.()',timeout=30000)
   assert len(f.evaluate('SceneForgeWorkflow.workspaceAutoPlan().scopes'))==3
   assert p.locator('#workspaceAuto').count()==1
+ caps=p.evaluate("async()=>{const r=await fetch('/local-api/analysis/local/capabilities');if(!r.ok)throw Error('Capabilities '+r.status);return r.json()}")
+ assert not caps['whisper_model']
+ Path('windows-ui-report.json').write_text(json.dumps({'capabilities':caps,'browser':str(exe),'page_errors':errors,'generation_requests':posts}))
  assert not errors,errors
  assert not posts,posts
  b.close()
 print('PASS real Windows browser boots app, reference canvas and photo canvas; no generation requests')
 '@ | Set-Content -LiteralPath $uiProbe -Encoding UTF8
-    & $python -E -s -X utf8 $uiProbe $base
-    if($LASTEXITCODE -ne 0){throw 'Windows browser UI check failed'}
+    $ErrorActionPreference='Continue'
+    $uiOutput=& $python -E -s -X utf8 $uiProbe $base 2>&1 | Out-String
+    $uiCode=$LASTEXITCODE
+    $ErrorActionPreference='Stop'
+    if($uiCode -ne 0){throw ('Windows browser UI check failed: '+$uiOutput)}
+    $report.ui=Get-Content 'windows-ui-report.json' -Raw | ConvertFrom-Json
     $report.checks+='actual Windows Edge/Chrome boots shell, reference and photo canvases; no generation requests'
     $again=Start-Process -FilePath $exe -WorkingDirectory $appDirectory -PassThru
     $null=$again.Handle
