@@ -1,0 +1,8 @@
+﻿{
+    "source_line":  "        foreach($item in @(@(\u0027SceneForge\u0027,$exe),@(\u0027Công cụ và kiểm tra\u0027,$tools),@(\u0027Gỡ SceneForge\u0027,$uninstaller))){$link=$ws.CreateShortcut((Join-Path $menu ($item[0]+\u0027.lnk\u0027)));$link.TargetPath=[string]$item[1];$link.WorkingDirectory=$destination;$link.Save()}\n",
+    "passed":  false,
+    "error":  "System.IO.FileNotFoundException: Unable to save shortcut \"C:\\Users\\runneradmin\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\SceneForge\\Công c? và ki?m tra.lnk\".\r\n   at System.Management.Automation.ComInterop.ComRuntimeHelpers.CheckThrowException(Int32 hresult, ExcepInfo\u0026 excepInfo, ComMethodDesc method, Object[] args, UInt32 argErr)\r\n   at CallSite.Target(Closure , CallSite , ComObject )\r\n   at System.Management.Automation.Interpreter.DynamicInstruction`2.Run(InterpretedFrame frame)\r\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)",
+    "phase":  "Windows registration probe",
+    "stack":  "at \u003cScriptBlock\u003e, \u003cNo file\u003e: line 4\r\nat \u003cScriptBlock\u003e, D:\\a\\3\\3\\work\\source\\scripts\\windows-installer\\check_registration.ps1: line 11\r\nat \u003cScriptBlock\u003e, D:\\a\\_temp\\0a539a8d-fbfb-4e59-a968-24efd451f538.ps1: line 3\r\nat \u003cScriptBlock\u003e, \u003cNo file\u003e: line 1",
+    "stage":  "Start Menu shortcuts"
+}
