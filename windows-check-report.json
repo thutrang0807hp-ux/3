@@ -1,0 +1,16 @@
+﻿{
+    "data_root":  "S:\\Dự án của tôi",
+    "passed":  false,
+    "old_data":  "C:\\Users\\runneradmin\\AppData\\Local\\sceneforge-old-check-a2f6c0fec50b4a46b3544e5305b2d42c",
+    "error_line":  80,
+    "installer_sha256":  "b9070718e4e4a44ad577eecf551a233eba664a4c0687981cc2ec2f51147b9bf0",
+    "progress_phase":  "preparing: ready",
+    "version":  "2026.10.28.2",
+    "error":  "{\r\n    \"stack\":  \"at Install, \\u003cNo file\\u003e: line 105\\r\\nat \\u003cScriptBlock\\u003e, \\u003cNo file\\u003e: line 127\\r\\nat \\u003cScriptBlock\\u003e, \\u003cNo file\\u003e: line 134\\r\\nat \\u003cScriptBlock\\u003e, \\u003cNo file\\u003e: line 1\",\r\n    \"error\":  \"System.ArgumentException: Value does not fall within the expected range.\\r\\n   at System.Management.Automation.ComInterop.ComRuntimeHelpers.CheckThrowException(Int32 hresult, ExcepInfo\\u0026 excepInfo, ComMethodDesc method, Object[] args, UInt32 argErr)\\r\\n   at CallSite.Target(Closure , CallSite , ComObject , String )\\r\\n   at System.Dynamic.UpdateDelegates.UpdateAndExecute2[T0,T1,TRet](CallSite site, T0 arg0, T1 arg1)\\r\\n   at System.Dynamic.UpdateDelegates.UpdateAndExecute2[T0,T1,TRet](CallSite site, T0 arg0, T1 arg1)\\r\\n   at System.Management.Automation.Interpreter.DynamicInstruction`3.Run(InterpretedFrame frame)\\r\\n   at System.Management.Automation.Interpreter.EnterTryCatchFinallyInstruction.Run(InterpretedFrame frame)\",\r\n    \"source_line\":  \"        foreach($item in @(@(\\u0027SceneForge\\u0027,$exe),@(\\u0027Công cụ và kiểm tra\\u0027,$tools),@(\\u0027Gỡ SceneForge\\u0027,$uninstaller))){$link=$ws.CreateShortcut((Join-Path $menu ($item[0]+\\u0027.lnk\\u0027)));$link.TargetPath=[string]$item[1];$link.WorkingDirectory=$destination;$link.Save()}\\n\",\r\n    \"script_line\":  105,\r\n    \"stage\":  \"Start Menu shortcuts\"\r\n}\r\n",
+    "folder_control_method":  "native Windows text fields and button",
+    "install_root":  "S:\\Ứng dụng SceneForge",
+    "cache_root":  "S:\\Cache riêng",
+    "checks":  [
+                   "cancel closes before extraction"
+               ]
+}
