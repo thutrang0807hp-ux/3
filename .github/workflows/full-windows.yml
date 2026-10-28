@@ -1,0 +1,81 @@
+name: SceneForge complete Windows installer
+on:
+  push:
+    branches: [sceneforge-win-full-build]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build-test:
+    runs-on: windows-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Extract editable source and parse installer scripts
+        shell: powershell
+        run: |
+          Expand-Archive -LiteralPath build-source.zip -DestinationPath work
+          Get-ChildItem work/source/scripts/windows-installer/*.ps1 | ForEach-Object {
+            $tokens=$null; $errors=$null
+            [void][Management.Automation.Language.Parser]::ParseFile($_.FullName,[ref]$tokens,[ref]$errors)
+            if($errors){throw ($errors | Out-String)}
+          }
+      - name: Prepare build tools and real offline components
+        shell: powershell
+        run: |
+          Set-Location work/source
+          python -m pip install -r local_engine/requirements.txt -r local_engine/requirements-cpu.txt ziglang packaging
+          if($LASTEXITCODE -ne 0){throw 'Build dependencies failed'}
+          python scripts/windows-installer/fetch_resources.py --output build-resources --core-wheels build-wheels
+          if($LASTEXITCODE -ne 0){throw 'Resource preparation failed'}
+          Invoke-WebRequest -UseBasicParsing -Uri 'https://github.com/astral-sh/python-build-standalone/releases/download/20261026/cpython-3.12.16+20261026-x86_64-pc-windows-msvc-install_only_stripped.tar.gz' -OutFile python.tar.gz
+      - name: Build native full installer
+        shell: powershell
+        run: |
+          Set-Location work/source
+          $python=(Get-Command python).Source
+          python scripts/windows-installer/build.py --python-tar python.tar.gz --wheels build-wheels --resources build-resources --zig-python $python
+          if($LASTEXITCODE -ne 0){throw 'Installer build failed'}
+      - name: Test folder GUI, real transcription/export, reinstall and uninstall
+        shell: powershell
+        run: |
+          Set-Location work/source
+          $report=Get-Content artifacts/windows/build-report.json -Raw | ConvertFrom-Json
+          & scripts/windows-installer/check_full_windows.ps1 -InstallerPath (Resolve-Path ('artifacts/windows/'+$report.file)) -Version $report.version
+      - name: Publish verified installer as Release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: powershell
+        run: |
+          Set-Location work/source
+          $test=Get-Content full-windows-check-report.json -Raw | ConvertFrom-Json
+          if(!$test.passed){throw 'Windows runtime test not passed'}
+          $build=Get-Content artifacts/windows/build-report.json -Raw | ConvertFrom-Json
+          $tag='sceneforge-windows-full-20261028'
+          gh release view $tag --repo $env:GITHUB_REPOSITORY
+          if($LASTEXITCODE -ne 0){gh release create $tag --repo $env:GITHUB_REPOSITORY --title 'SceneForge Windows - full local tools and folder selection' --notes 'Verified Windows installer: chosen folders, offline CPU video tools/Whisper, SDK preparation, native uninstall preserving projects. Accounts remain user-owned. VieNeu voice is optional.'}
+          if($LASTEXITCODE -ne 0){throw 'Could not create release'}
+          gh release upload $tag ('artifacts/windows/'+$build.file) ('artifacts/windows/'+$build.file+'.sha256') artifacts/windows/build-report.json full-windows-check-report.json --repo $env:GITHUB_REPOSITORY --clobber
+          if($LASTEXITCODE -ne 0){throw 'Release upload failed'}
+          $release=@{url=('https://github.com/'+$env:GITHUB_REPOSITORY+'/releases/download/'+$tag+'/'+$build.file);sha256=$build.sha256;bytes=$build.bytes;version=$build.version;file=$build.file;windows_verified=$true;run_id=$env:GITHUB_RUN_ID}
+          $release|ConvertTo-Json|Set-Content full-release.json -Encoding UTF8
+      - name: Save build and verification report
+        if: always()
+        shell: python
+        run: |
+          from pathlib import Path
+          import subprocess,json,os
+          def git(*args,data=None,check=True):
+              return subprocess.run(['git',*args],input=data,capture_output=True,check=check).stdout.decode().strip()
+          git('config','user.name','SceneForge Windows checks');git('config','user.email','windows-checks@users.noreply.github.com')
+          root=Path('work/source');wanted={'windows-check-report.json':root/'full-windows-check-report.json','release.json':root/'full-release.json','build-report.json':root/'artifacts/windows/build-report.json'}
+          if not wanted['windows-check-report.json'].exists():
+              wanted['windows-check-report.json'].parent.mkdir(parents=True,exist_ok=True);wanted['windows-check-report.json'].write_text(json.dumps({'passed':False,'error':'Build/preparation failed before runtime check','run_id':os.environ['GITHUB_RUN_ID']}))
+          lines=[]
+          for name,path in wanted.items():
+              if path.exists():lines.append('100644 blob '+git('hash-object','-w','--stdin',data=path.read_bytes())+'\t'+name+'\n')
+          tree=git('mktree',data=''.join(lines).encode());commit=git('commit-tree',tree,data=b'Complete Windows installer build/runtime report\n')
+          git('push','origin',commit+':refs/heads/sceneforge-full-report-'+os.environ['GITHUB_RUN_ID'])
