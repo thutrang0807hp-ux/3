@@ -1,0 +1,5 @@
+﻿{
+    "phase":  "resources",
+    "error":  "Resource preparation failed; see fetch-resources.log",
+    "passed":  false
+}
