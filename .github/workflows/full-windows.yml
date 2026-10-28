@@ -65,7 +65,7 @@ jobs:
             work/source/artifacts/windows/SceneForge-Setup-Windows-x64-v2.exe
             work/source/artifacts/windows/SceneForge-Setup-Windows-x64-v2.exe.sha256
             work/source/artifacts/windows/build-report.json
-          key: sf-full-exe-v2-${{ hashFiles('work/source/scripts/windows-installer/*.c', 'work/source/scripts/windows-installer/build.py', 'work/source/scripts/windows-installer/install.ps1', 'work/source/scripts/windows-installer/uninstall.ps1', 'work/source/scripts/windows-installer/components.ps1', 'work/source/scripts/windows-installer/paths.py', 'work/source/scripts/windows-installer/provision.py', 'work/source/scripts/windows-installer/windows_bootstrap.py', 'work/source/local_engine/**', 'work/source/dist/**') }}
+          key: sf-full-exe-v2-${{ hashFiles('work/source/scripts/windows-installer/*.c', 'work/source/scripts/windows-installer/*.cs', 'work/source/scripts/windows-installer/build.py', 'work/source/scripts/windows-installer/install.ps1', 'work/source/scripts/windows-installer/uninstall.ps1', 'work/source/scripts/windows-installer/components.ps1', 'work/source/scripts/windows-installer/paths.py', 'work/source/scripts/windows-installer/provision.py', 'work/source/scripts/windows-installer/windows_bootstrap.py', 'work/source/local_engine/**', 'work/source/dist/**') }}
       - name: Build native full installer
         if: steps.installer-cache.outputs.cache-hit != 'true'
         shell: powershell
@@ -84,7 +84,7 @@ jobs:
             work/source/artifacts/windows/SceneForge-Setup-Windows-x64-v2.exe
             work/source/artifacts/windows/SceneForge-Setup-Windows-x64-v2.exe.sha256
             work/source/artifacts/windows/build-report.json
-          key: sf-full-exe-v2-${{ hashFiles('work/source/scripts/windows-installer/*.c', 'work/source/scripts/windows-installer/build.py', 'work/source/scripts/windows-installer/install.ps1', 'work/source/scripts/windows-installer/uninstall.ps1', 'work/source/scripts/windows-installer/components.ps1', 'work/source/scripts/windows-installer/paths.py', 'work/source/scripts/windows-installer/provision.py', 'work/source/scripts/windows-installer/windows_bootstrap.py', 'work/source/local_engine/**', 'work/source/dist/**') }}
+          key: sf-full-exe-v2-${{ hashFiles('work/source/scripts/windows-installer/*.c', 'work/source/scripts/windows-installer/*.cs', 'work/source/scripts/windows-installer/build.py', 'work/source/scripts/windows-installer/install.ps1', 'work/source/scripts/windows-installer/uninstall.ps1', 'work/source/scripts/windows-installer/components.ps1', 'work/source/scripts/windows-installer/paths.py', 'work/source/scripts/windows-installer/provision.py', 'work/source/scripts/windows-installer/windows_bootstrap.py', 'work/source/local_engine/**', 'work/source/dist/**') }}
       - name: Test folder GUI, real transcription/export, reinstall and uninstall
         shell: powershell
         run: |
