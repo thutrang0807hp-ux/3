@@ -1,0 +1,17 @@
+{
+  "file": "SceneForge-Code-DayDu-20261028.zip",
+  "bytes": 36286456,
+  "sha256": "6eaac5e3a6263a2d0c69e5a017222c9c6114653e830cbc443fd65259430c153e",
+  "files": 651,
+  "verification": [
+    "ZIP CRC",
+    "every member length and SHA-256",
+    "clean extracted rebuild of seven production pages",
+    "Python source compilation"
+  ],
+  "windows_installer_sha256": "a68cb20b90ea09e3b31bf9f73c09f349a1b2d48b9ef086209ebd5a28faa9814f",
+  "windows_runtime_check_passed": true,
+  "pending_v5_preserved": true,
+  "commit": "9efb8686aaf3cb38fddcb48cb7c020afdf29b98e",
+  "url": "https://raw.githubusercontent.com/thutrang0807hp-ux/3/9efb8686aaf3cb38fddcb48cb7c020afdf29b98e/SceneForge-Code-DayDu-20261028.zip"
+}
