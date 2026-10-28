@@ -51,9 +51,27 @@ jobs:
         with:
           path: baseline/SceneForge-Setup-Windows-x64-v2.exe
           key: sceneforge-baseline-v2-858fae3e
+      - uses: actions/cache@v4
+        id: extension-browser
+        with:
+          path: test-browser
+          key: sceneforge-extension-test-browser-20261029
+      - name: Prepare isolated test-only Chrome for Testing
+        if: steps.extension-browser.outputs.cache-hit != 'true'
+        shell: python
+        run: |
+          import urllib.request,json,zipfile,hashlib
+          from pathlib import Path
+          manifest=json.load(urllib.request.urlopen('https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json'))
+          channel=manifest['channels']['Stable'];url=next(x['url']for x in channel['downloads']['chrome']if x['platform']=='win64')
+          raw=urllib.request.urlopen(url).read();Path('test-browser').mkdir(exist_ok=True)
+          import io
+          with zipfile.ZipFile(io.BytesIO(raw))as z:z.extractall('test-browser')
+          Path('test-browser/browser.json').write_text(json.dumps({'version':channel['version'],'url':url,'sha256':hashlib.sha256(raw).hexdigest()}))
       - name: Test real native window, source button, speech, update and close lifecycle
         shell: powershell
         run: |
+          $env:SCENEFORGE_BRIDGE_TEST_BROWSER=(Resolve-Path test-browser/chrome-win64/chrome.exe).Path
           $installer=(Resolve-Path baseline/SceneForge-Setup-Windows-x64-v2.exe).Path
           Set-Location work/source
           & scripts/windows-installer/check_desktop_patch.ps1 -Installer $installer -Patch (Resolve-Path patch/SceneForge-Update-20261029-v4.exe)
