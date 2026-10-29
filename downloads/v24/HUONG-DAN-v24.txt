@@ -1,0 +1,7 @@
+SceneForge v24
+Đóng SceneForge và cập nhật vào D:\4. Mở lại, trên node Video Veo chọn Xem lỗi / các lượt đã gửi.
+Với lượt flow-45327f4b-1c07-4517-b1c4-7965ddebba98, bấm Đối soát engine · chỉ tra/tải rồi Đóng.
+Lượt đã được engine xác nhận failed sẽ cập nhật thành lỗi, không giữ unknown; nguyên nhân hoạt động bất thường sẽ hiện nếu có trace của đúng lượt.
+Không bấm Chạy 7 clip. Không cần bấm bỏ lượt. Đối soát không gửi tạo mới.
+Các lượt khác chưa đối soát vẫn giữ nguyên trạng thái.
+Đã kiểm tra fixture backend và Chromium; chưa kiểm thử updater trên Windows hoặc tạo video Flow thật.
