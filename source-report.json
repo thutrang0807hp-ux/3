@@ -1,0 +1,15 @@
+{
+  "file": "SceneForge-Code-DayDu-FlowImport-20261029.zip",
+  "bytes": 36498715,
+  "sha256": "54b388b7cf54282b4ab4b531572ebf7065e39c51bf6de0c1f3e8622c5bf843c3",
+  "files": 779,
+  "verification": [
+    "ZIP CRC",
+    "every member length and SHA-256",
+    "clean extracted rebuild of seven production pages",
+    "Python source compilation"
+  ],
+  "windows_installer_sha256": "858fae3ee43bc08811e28339f4a84d0cd33ec645c206b1f62ff586d3f76eb6da",
+  "windows_runtime_check_passed": true,
+  "pending_v5_preserved": true
+}
