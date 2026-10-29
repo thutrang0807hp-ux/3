@@ -1,0 +1,95 @@
+> Hiện hành: bản vá Windows v15 (2026.10.29.15), xem docs/flow-inputs-projects.md và docs/checks/flow-inputs-projects-release.json. Sửa bản ảnh gửi quá 6 MB, prompt chuyển động theo khung đã duyệt và giữ nhiều clip cùng một dự án Flow cho mỗi phòng/tài khoản. Tiện ích giữ 1.5.0. Không suy fixture thành đã tạo clip Google thật.
+
+# SceneForge · mã nguồn đầy đủ · 28/10/2026
+
+Đây là gói để chuyển sang máy/môi trường khác tiếp tục phát triển. Bao gồm frontend có thể chỉnh sửa, backend Python, tài nguyên giao diện/editor, tài liệu và thiết kế gốc, kiểm thử, cùng source làm bộ cài Windows. Gói không kèm môi trường Python/Node đã cài, model AI, dữ liệu dự án cá nhân, key/cookie hoặc tài khoản.
+
+Đọc `BAT-DAU-TU-DAY.md` để chạy/build. Đọc `NGU-CANH-BAN-GIAO.md` trước khi sửa tính năng. `MANIFEST-SHA256.json` ghi kích thước và SHA-256 của từng file.
+
+**Kho kịch bản v5 đang tạm hoãn theo yêu cầu người dùng.** ZIP thiết kế v5 được giữ trong `design/original-uploads/`; nó không phải bằng chứng tính năng v5 đã được triển khai.
+
+- Frontend nguồn: `scripts/recovered`, `scripts/app-shell`, `scripts/workflow`, `scripts/photo-studio`, `scripts/shared` và các thư mục tính năng khác trong `scripts`.
+- Trang đã dựng và tài nguyên chạy: `dist/web-demo`.
+- Backend và requirements: `local_engine`.
+- Source installer Windows: `scripts/windows-installer`.
+- Tài liệu và test reports: `docs`, `docs/checks`.
+- Thiết kế/tệp người dùng đã gửi: `design`, `design/original-uploads/INDEX.json`.
+- Thông tin file EXE đã phát hành và link tải: `releases/windows-release.json`.
+
+Bộ cài Windows v2 cho chọn nơi cài/dữ liệu/cache, kèm công cụ CPU/FFmpeg/Whisper và chuẩn bị SDK Gemini/Flow mặc định. Có mục gỡ trong Windows Apps và shortcut riêng, mặc định giữ dữ liệu. Giọng VieNeu là tùy chọn tải thêm. Báo cáo kiểm Windows hiện hành nằm trong `docs/checks/windows-check-report.json`; không suy từ kiểm SDK/fixture thành đã tạo media bằng tài khoản online.
+
+Bộ cài Windows v2 đã qua kiểm chọn ổ/thư mục thật, chuẩn bị Gemini/Flow bằng nguồn ghim, Whisper nhận dạng tiếng nói thật, xuất MP4 H264/AAC, mở lại/cài lại và gỡ giữ dự án. Xem báo cáo hiện hành; kiểm SDK dùng fixture và không xác nhận tạo media bằng tài khoản online. VieNeu là tùy chọn tải thêm.
+
+## Cập nhật cửa sổ riêng · 29/10/2026
+
+Bản đang phát hành là bộ cài nền v2 cộng bản vá nhỏ `SceneForge-Update-20261029.exe` (khoảng 3,9 MB). Bản vá đổi launcher sang cửa sổ WinForms/WebView2, ẩn backend và worker, sửa nút Phân tích gọi đủ pipeline CPU, giữ model/dữ liệu và lưu trước khi đóng app. Source của cửa sổ/bản vá ở `scripts/windows-installer/DesktopHost.cs`, `build_desktop.py`, `build_patch.py`, `apply_update.ps1`. Xem `docs/windows-desktop-patch.md` và `docs/checks/desktop-patch-release.json` để lấy link/hash và bài kiểm Windows. `build.py` cũ dựng bộ cài nền v2; cửa sổ riêng được áp qua bản vá, không suy rằng bộ cài nền đã đổi launcher.
+
+Đã thử trong cửa sổ thật bằng cách bấm nút Phân tích: video mới, dự án chỉ có cảnh cắt, kết quả CPU cũ thiếu lời; kiểm Whisper/OCR/chuyển động/mờ-rung, không gửi trùng khi bấm lại, xuất MP4, mở tab ảnh, đóng app dừng backend, gỡ giữ dữ liệu. Chưa kiểm tạo ảnh/video online bằng tài khoản thật.
+
+
+## Bản vá 2026.10.29.2
+Sửa lấy khung cuối khi audio dài hơn hình; cập nhật kết quả chia cảnh cũ; trạng thái khung gốc/Veo trung thực; mở Google bằng Chrome/Edge cài trên máy. Xem docs/scene-login-patch.md và docs/checks/scene-source-check.json. Đăng nhập Google tài khoản thật vẫn chưa xác minh.
+
+
+## Bản vá 2026.10.29.3
+Lỗi đọc khung proxy: thay bộ đọc nhảy khung OpenCV bằng FFmpeg tuần tự, bộ nhớ giới hạn; nút Phân tích tiếp tục lượt CPU lỗi cũ cùng mã. Xem docs/proxy-reader-patch.md. Các sửa đăng nhập từ bản .2 vẫn được giữ; tài khoản Google thật chưa xác minh.
+
+
+## Bản vá 2026.10.29.4
+Kết nối Gemini Chat/Flow mặc định bằng tiện ích trên trình duyệt đang đăng nhập. Nạp thư mục scripts/browser-extension một lần; tạo mã trong app, nhập vào tiện ích để chuyển phiên. Không dùng proxy hoặc cửa sổ đăng nhập tự động. Xem docs/browser-session-bridge.md; tài khoản thật/tạo nội dung vẫn cần thử thật.
+
+
+## Cập nhật 29/10/2026 — ảnh khung và chat theo dự án (v5)
+
+Bản vá 2026.10.29.5 dùng cùng quy trình viết prompt theo tham chiếu cho nút tạo/tạo lại và Chạy tự động. Ảnh gốc chỉ cung cấp bố cục/tư thế; mã ảnh người, mặt chuẩn, trang phục, sản phẩm gắn đúng thứ tự. Giữ phần sửa tay. Tab ảnh tĩnh áp cùng chỉ dẫn vai trò cho ảnh từng cảnh.
+
+Chat tạo ảnh được giữ theo dự án và tài khoản, lưu mã chat nhỏ trong vault mã hóa và xếp hàng từng lượt. Lần đầu dùng v5 tạo chat mới; các lần sau tiếp tục chat đó, kể cả sau khi mở lại app. Không thể tự nhận diện các chat rời từ phiên bản cũ. Phân tích và viết JSON dùng lượt riêng, không trộn vào chat tạo ảnh. Lượt ảnh chưa rõ kết quả chặn gửi tiếp; không tự tạo chat khác hoặc gửi lại.
+
+Xem docs/frame-reference-chat-patch.md và docs/checks/frame-*. Đã kiểm bằng dịch vụ giả và SDK thật với transport giả; không coi đó là kiểm chứng Gemini thật thay đúng mặt/sản phẩm. Cần xem lại cảnh 2 thật sau cập nhật. Dùng bản vá nhỏ, không tải lại model/runtime. Kho kịch bản v5 vẫn tạm hoãn.
+
+
+## Cập nhật v6 — thao tác node Ảnh khung và tải ảnh gốc
+
+Bản vá 2026.10.29.6: Tạo/Tạo lại từ node là lệnh gửi, không mở hai bảng xác nhận trung gian. Đầu node có nút Tạo lại N khung, tiến độ theo cảnh và Dừng gửi thêm. Vẫn giữ ảnh cũ và không gửi trùng lượt đang chạy/chưa rõ. Các nút của tiện ích AI trực tiếp riêng và tạo video không đổi.
+
+Đã tìm thấy worker dùng full_size=False, khiến SDK tải preview 1024. Nay dùng full_size=True để lấy bản gốc/lớn nhất nguồn cung cấp, giữ nguyên bytes và hiện kích thước thực nhận. Không bảo đảm mọi model/tài khoản trả đúng 1080×1920 chỉ vì prompt ghi vậy; không tự upscale. Ảnh cũ không được tự tải lại hay ghi đè. Xem docs/frame-node-run-patch.md và docs/checks/frame-v6-*.
+
+
+## Cập nhật v7 — Google dùng chung hoặc tách Gemini/Flow
+
+Bản vá 2026.10.29.7 mặc định cho nối cả Gemini Chat và Flow bằng một mã. Mỗi dịch vụ kiểm tra riêng; kết quả một phần nêu đúng bên thành công/thất bại. Trong Tài khoản và bảng nguồn của cả hai tab có tên từng tài khoản, nút nối cả hai và nút nối riêng Flow/Gemini. Chọn riêng một bên không đổi bên kia; lựa chọn tài khoản dùng chung toàn app, lượt đã gửi giữ kế hoạch cũ.
+
+Tiện ích lên 1.1.0, giữ nguyên ID và quyền. Cập nhật app rồi bấm tải lại ⟳ tiện ích một lần trong chrome://extensions hoặc edge://extensions. Nếu trước đây nạp ZIP ở thư mục riêng, dùng folder/ZIP mới trong app. Không tự ghép tài khoản cũ bằng tên/email đoán; cùng trình duyệt không chứng minh cùng email khi có nhiều nick Google. Xem docs/google-account-pairing.md và docs/checks/google-*.
+
+
+## Cập nhật v8 — sửa phiên Flow hiện tại
+
+2026.10.29.8, tiện ích 1.2.0: bản cũ bỏ sót cookie OSID của flow.google.com vì chỉ đọc Google/Labs. Bổ sung đúng quyền Flow và giữ phạm vi host-only/SameSite; kiểm cookie theo hợp đồng engine trước khi nhập. Lỗi kết nối nay có mã và thông báo riêng từng bước, không xuất nội dung phiên của người dùng.
+
+Sau cập nhật, mở trang quản lý tiện ích, tải lại và bảo đảm hiển thị 1.2.0; cấp quyền Flow nếu được hỏi. Nếu nạp ZIP ở thư mục riêng, thay bằng folder/ZIP mới trong app. Mở flow.google.com đã đăng nhập trong cùng trình duyệt và tạo mã mới. Không cần xóa tài khoản Gemini đang dùng. Xem docs/flow-current-session-fix.md; kiểm thử đã bổ sung validator thật của SDK và cookie Flow host-only trong tiện ích thật.
+
+
+## Cập nhật v9 — sửa điều kiện lọc phạm vi phiên Flow
+
+2026.10.29.9: v8 lọc OSID theo đúng một miền flow.google.com nên từ chối sai cookie DOMAIN .google.com vốn dùng được cho Flow. Đã tái hiện đối chiếu với bộ kiểm thật của engine; nay xét đúng domain/host-only/path/hạn dùng/phân vùng. Không bỏ bước xác minh thật của engine.
+
+Tiện ích giữ 1.2.0; người dùng đã có bản này chỉ cần cập nhật app. Nếu vẫn lỗi, trong bảng kết nối có Thông tin lỗi và Chép thông tin lỗi: chỉ số lượng/phạm vi cookie, không có giá trị cookie. Giữ tài khoản đã lưu. Xem docs/flow-cookie-scope-fix.md và docs/checks/flow-scope-*; các kiểm thử không chứng nhận tài khoản Google thật đã xác thực.
+
+
+## Cập nhật v10 — nhập tài khoản Flow và giữ lỗi gốc
+
+2026.10.29.10, giữ tiện ích 1.2.0: khi đã nhận OSID/Google hợp lệ mà FLOW_IMPORT_REJECTED, adapter cũ vẫn thử nhánh tài khoản trùng với mọi ValueError của SDK. Nay chỉ dùng lại đúng ID khi quan sát được kết quả tra cứu DB trùng. Các lỗi bootstrap/xác minh/hạn mức/dự án/lưu được giữ theo context của yêu cầu, kèm mã HTTP số và nhóm lỗi cố định; không xuất thông điệp thô, cookie hay phản hồi nhà cung cấp.
+
+Kiểm thử mới thực thi nguyên hàm TokenManager.add_token của source đã ghim, giả lập các phụ thuộc để bắt lỗi ở từng bước thay vì giả lập cả hàm nhập. Xem docs/flow-import-handling.md, docs/checks/flow-import-*. Đây là sửa xử lý lỗi và bổ sung điểm chẩn đoán, KHÔNG xác nhận lỗi live của tài khoản người dùng đã được giải quyết. Chỉ cập nhật app; không cài lại tiện ích hoặc đổi tài khoản để thử đoán.
+
+
+V11 (2026.10.29.11): Flow browser transport; extension 1.3.0 retains RPC-path cookies, browser UA and explicit authuser. See docs/flow-browser-transport.md. Loopback TLS/real-client tests do not prove live Google authentication; no real user session available. Reload the extension after updating app.
+
+
+V12 / extension 1.5.0: native-browser Flow transport. User confirmed native credit RPC200 while exported-session engine401. See docs/native-flow-transport.md. Keep Chrome/Edge and paired Flow tab open; browser restart/change of nick requires re-pairing. Native paid Google generation remains unverified; Windows uses intercepted fixture pages.
+
+
+V13: automatically load Flow model catalog on node/status read. See docs/flow-model-discovery.md. Keep extension 1.5.0 and existing Flow account; no re-pair needed. Targeted real UI/Windows tests pass; live paid generation not certified.
+
+
+V14: model selector + Advanced and one-click batch Run on Video Veo node. See docs/video-node-controls.md. Keeps existing clips, unknown receipts and account/model/source choice; no per-clip preparation dialogs required. Extension remains 1.5.0. Fixture-only generation tests; no paid Google certification.
