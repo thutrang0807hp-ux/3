@@ -1,0 +1,7 @@
+SceneForge v25 — thêm đăng nhập Flow trên web
+Đóng SceneForge, cập nhật vào D:\4, mở lại.
+Cài đặt → Tài khoản → Flow · Veo → Đăng nhập Flow trên web.
+Chrome/Edge mở profile riêng tại thư mục dữ liệu browser-profiles/flow-web. Tự đăng nhập Google/Flow. Profile được giữ cho lần sau; không dùng hoặc xóa profile Chrome cá nhân.
+Muốn app gửi qua cửa sổ mới: cài tiện ích SceneForge trong profile đó (một lần), chọn Kết nối bằng mã rồi nhập mã bằng tiện ích tại tab Flow đang mở. Cách kết nối mã hiện tại vẫn được giữ.
+Đăng nhập web không tự chọn/thay tài khoản engine và không gửi tạo video. Đây chưa phải bản sửa lỗi UNUSUAL_ACTIVITY.
+Đã kiểm tra profile dùng lại, API, lỗi mở trình duyệt và hai vị trí nút bằng Chromium. Chưa đăng nhập Google thật hay thử updater trên Windows.
