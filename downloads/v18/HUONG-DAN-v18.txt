@@ -1,0 +1,4 @@
+SceneForge v18 — AI viết lại prompt lỗi
+Cài trên v14 trở lên. Lưu dự án, đóng phần mềm, chạy bản cập nhật.
+Tại node Veo: bấm Chạy clip một lần để đọc kết quả cũ (không tự gửi lại Gemini). Nếu Gemini đã từ chối hoặc trả JSON lỗi, nút AI viết lại 1 prompt lỗi sẽ xuất hiện. Bấm nút này và xác nhận dùng thêm quota để AI viết lại một prompt. Kết quả cũ vẫn lưu trong Các lượt đã gửi. Sau khi có prompt mới hợp lệ, bấm Chạy clip để tiếp tục qua Flow. Không bỏ lượt thủ công. Nếu còn nhiều prompt lỗi, xử lý từng prompt. Không tự gửi lại lượt chưa rõ kết quả hoặc đang chạy. Không bảo đảm Gemini chấp nhận yêu cầu mới.
+Đã kiểm thử Chromium với phản hồi từ chối tiếng Việt, giữ kết quả cũ, hủy xác nhận không gửi, xác nhận chỉ gửi một lượt viết mới, không gọi Flow trước nút Chạy clip. Chưa chạy updater Windows hoặc tài khoản Google thật.
