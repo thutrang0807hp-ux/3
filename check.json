@@ -1,0 +1,13 @@
+﻿{
+    "install":  "D:\\SF-desktop-c51bf892-ệ\\Ứng dụng\\releases\\2026.10.28.2",
+    "checks":  [
+                   "update closes the running v2 app safely before replacing application files",
+                   "small native updater applies to v2 without reinstalling Python/models; project sentinel and model hash preserved",
+                   "native WinForms/WebView2 window starts the backend without external browser/console"
+               ],
+    "data":  "D:\\SF-desktop-c51bf892-ệ\\Dự án",
+    "passed":  false,
+    "error":  "Native UI check failed: python.exe : Traceback (most recent call last):\r\nAt D:\\a\\3\\3\\work\\source\\scripts\\windows-installer\\check_desktop_patch.ps1:35 char:80\r\n+ ... inue\u0027;$text=\u0026 $python -E -s -X utf8 \"$PSScriptRoot\\check_desktop_ui.p ...\r\n+                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n    + CategoryInfo          : NotSpecified: (Traceback (most recent call last)::String) [], RemoteException\r\n    + FullyQualifiedErrorId : NativeCommandError\r\n \r\n  File \"D:\\a\\3\\3\\work\\source\\scripts\\windows-installer\\check_desktop_ui.py\", line 30, in \u003cmodule\u003e\r\n    asyncio.run(verify_google_login_transport())\r\n  File \"D:\\SF-desktop-c51bf892-ệ\\Ứng dụng\\releases\\2026.10.28.2\\runtime\\Lib\\asyncio\\runners.py\", line 195, in run\r\n    return runner.run(main)\r\n           ^^^^^^^^^^^^^^^^\r\n  File \"D:\\SF-desktop-c51bf892-ệ\\Ứng dụng\\releases\\2026.10.28.2\\runtime\\Lib\\asyncio\\runners.py\", line 118, in run\r\n    return self._loop.run_until_complete(task)\r\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\r\n  File \"D:\\SF-desktop-c51bf892-ệ\\Ứng dụng\\releases\\2026.10.28.2\\runtime\\Lib\\asyncio\\base_events.py\", line 691, in \r\nrun_until_complete\r\n    return future.result()\r\n           ^^^^^^^^^^^^^^^\r\n  File \"D:\\a\\3\\3\\work\\source\\scripts\\windows-installer\\check_desktop_ui.py\", line 15, in verify_google_login_transport\r\n    login=await open_google_login(\u0027https://gemini.google.com/\u0027,data)\r\n          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\r\n  File \"D:\\SF-desktop-c51bf892-ệ\\Ứng dụng\\releases\\2026.10.28.2\\app\\local_engine\\google_login.py\", line 118, in \r\nopen_google_login\r\n    raise HTTPException(503, \u0027Chrome/Edge chưa sẵn sàng nhận phiên. Có thể trình duyệt bị chính sách máy chặn kết nối \r\ncục bộ; chưa lưu tài khoản.\u0027)\r\nfastapi.exceptions.HTTPException: 503: Chrome/Edge chưa sẵn sàng nhận phiên. Có thể trình duyệt bị chính sách máy chặn \r\nkết nối cục bộ; chưa lưu tài khoản.\r\n",
+    "line":  36,
+    "baseline":  "2026.10.28.2"
+}
