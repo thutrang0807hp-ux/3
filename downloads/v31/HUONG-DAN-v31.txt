@@ -1,0 +1,15 @@
+SceneForge v31 — BẢN THỬ điều khiển giao diện web Flow
+CHƯA xác minh trên Google Flow thật hoặc Windows. Không coi đây là bản đã bảo đảm tạo video thành công.
+
+1. Đóng SceneForge. Cập nhật vào D:\4 rồi mở lại.
+2. Cài đặt → Tài khoản → Flow/Veo → Đăng nhập Flow trên web. App tạo/nhận tài khoản có đuôi web UI và chọn dùng riêng tài khoản đó.
+3. Trong cửa sổ Flow riêng, giữ đúng một tab Flow, mở project; chọn Veo 3.1 Lite, 8 giây, 9:16, chế độ Frames to Video (video từ khung hình). Giữ cửa sổ mở.
+4. Quay lại SceneForge, mở một ô clip. Chuẩn bị prompt bằng Gemini rồi bấm Tạo/Tạo lại video của RIÊNG clip đó. Lượt chưa rõ từ đường cũ vẫn cần đối soát trước; không tự bỏ.
+5. Trong lúc app thao tác, không tự sửa/gửi trên tab web hoặc dùng nhiều tab. Bản thử nhập một ảnh đầu, điền prompt, bấm nút tạo trên web rồi tải clip về. Không gọi API Veo trả phí riêng, RPC nội bộ hay lấy token CAPTCHA.
+
+Giới hạn: chỉ hỗ trợ Lite I2V 8 giây, 9:16, một ảnh. Giao diện thực tế có thể khác cấu trúc được hỗ trợ. Nếu không nhận diện chắc chắn model, ô prompt, chỗ tải ảnh hoặc nút tạo, app dừng trước khi gửi. Có thể tạo xong trên web nhưng app chưa nhận diện được thẻ/nút tải; khi đó giữ lượt chưa rõ và kiểm tra web, không tự gửi lại. Bản thử không vượt xác minh hoặc lỗi hoạt động bất thường.
+
+Sau lượt đã bấm tạo nhưng chưa rõ kết quả, hàng chờ web dừng. Chỉ mở lại sau khi bạn kiểm tra lịch sử và xác nhận bỏ đúng lượt. Kết nối bằng mã vẫn giữ riêng; không chuyển lẫn tài khoản web UI vào chế độ chia việc/dự phòng của engine cũ.
+
+Đã kiểm tra: Chromium thật + trang Flow giả lập, tự nhận tài khoản không cần engine ID, dùng lại cửa sổ, đưa một ảnh/prompt, bấm tạo một lần, tải MP4 và giải mã bằng ffprobe; replay ID không tạo lại, dừng khi provider từ chối, giao diện không khớp, kết quả chưa rõ; các nút từng clip và đường tài khoản cũ.
+Rollback: có thể cài lại bản v30; dữ liệu dự án/ảnh không bị xóa. V30 không có đường tạo video web UI.
