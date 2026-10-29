@@ -1,0 +1,8 @@
+SceneForge v21 — chẩn đoán đường gửi Flow
+1. Lưu dự án, đóng SceneForge; chạy bản cập nhật và chọn D:\4 (thư mục cài).
+2. Mở lại SceneForge. Bản này không sửa cơ chế gửi, không cần cài lại extension.
+3. Với lượt chưa rõ kết quả, đối soát trước. Chỉ thử một clip khi đã xác định lượt cũ không còn chạy; không bấm Chạy 7 clip.
+4. Giải nén SceneForge-Flow-Diagnostic-v21.zip và chạy KIEM-TRA-FLOW.cmd.
+5. Gửi nội dung SceneForge-Flow-Diagnostic.txt. Cuối file có SCENEFORGE TRANSPORT TRACE (v21).
+Nhật ký chỉ ghi metadata theo danh sách cho phép, không ghi prompt/ảnh/cookie/token.
+Đã kiểm tra lưu trace và phân loại lỗi bằng dữ liệu giả lập; chưa thử bộ cập nhật trên Windows hay tạo video thật.
