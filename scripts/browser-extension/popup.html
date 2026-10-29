@@ -1,0 +1,8 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><title>Kết nối SceneForge</title><link rel="stylesheet" href="popup.css"></head>
+<body><h1>Kết nối SceneForge</h1><p>Dùng phiên Gemini hoặc Flow đang đăng nhập trong trình duyệt này.</p>
+<form id="connect"><label for="code">Mã 8 số trong SceneForge</label><input id="code" inputmode="numeric" pattern="[0-9]{8}" maxlength="8" autocomplete="off" required autofocus>
+<details><summary>App dùng cổng khác?</summary><label for="port">Cổng app <small>(giữ 8840 nếu app không ghi khác)</small></label><input id="port" inputmode="numeric" type="number" min="1024" max="65535" value="8840" required></details>
+<button id="submit" type="submit">Kết nối</button></form><p id="status" role="status"></p>
+<details id="probeBox"><summary>Kiểm tra Flow · không tạo nội dung</summary><p>Đọc hạn mức ngay trong tab Flow của trình duyệt. Không gửi cookie, token hoặc nội dung trang trong báo cáo.</p><button id="probeFlow" type="button">Kiểm tra trong tab Flow</button><textarea id="probeReport" hidden readonly rows="12" aria-label="Báo cáo kiểm tra Flow"></textarea><button id="copyProbe" hidden type="button">Chép báo cáo</button></details>
+<p class="note">Chỉ chuyển phiên khi bạn bấm nút. Chỉ gửi về SceneForge trên máy này; không lưu cookie trong tiện ích, không đọc mật khẩu.</p><script src="flow-probe.js"></script><script src="popup.js"></script></body></html>

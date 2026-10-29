@@ -1,0 +1,67 @@
+name: SceneForge read-only Flow browser probe
+on:
+  push:
+    branches: [sceneforge-flow-probe]
+permissions:
+  contents: write
+concurrency:
+  group: sceneforge-flow-probe
+  cancel-in-progress: true
+jobs:
+  probe:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install playwright==1.58.0
+      - uses: actions/cache@v4
+        id: browser
+        with:
+          path: test-browser
+          key: sceneforge-extension-test-browser-20261029
+      - name: Test-only Chrome for Testing
+        if: steps.browser.outputs.cache-hit != 'true'
+        shell: python
+        run: |
+          import urllib.request,json,zipfile,hashlib,io
+          from pathlib import Path
+          manifest=json.load(urllib.request.urlopen('https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json'))
+          channel=manifest['channels']['Stable'];url=next(x['url']for x in channel['downloads']['chrome']if x['platform']=='win64')
+          raw=urllib.request.urlopen(url).read();Path('test-browser').mkdir(exist_ok=True)
+          with zipfile.ZipFile(io.BytesIO(raw))as z:z.extractall('test-browser')
+          Path('test-browser/browser.json').write_text(json.dumps({'version':channel['version'],'url':url,'sha256':hashlib.sha256(raw).hexdigest()}))
+      - name: Test real extension MAIN world and read-only fetch
+        shell: python
+        run: |
+          import os,subprocess,json
+          from pathlib import Path
+          os.environ['SCENEFORGE_BRIDGE_TEST_BROWSER']=str(Path('test-browser/chrome-win64/chrome.exe').resolve())
+          r=subprocess.run(['python','local_engine/check_flow_browser_probe.py'],capture_output=True,text=True,encoding='utf-8')
+          log=r.stdout+r.stderr
+          Path('probe-check.json').write_text(json.dumps({'passed':r.returncode==0,'version':'1.4.0','live_google_verified':False,'log':log},indent=2))
+          print(log)
+          if r.returncode:raise SystemExit(r.returncode)
+      - name: Publish diagnostic ZIP only after actual extension test
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: powershell
+        run: |
+          $tag='sceneforge-flow-browser-probe-20261029'
+          gh release view $tag --repo $env:GITHUB_REPOSITORY
+          if($LASTEXITCODE-ne 0){gh release create $tag --repo $env:GITHUB_REPOSITORY --title 'Flow read-only browser diagnosis' --notes 'Extension 1.4.0 tests the credit RPC inside an already signed-in Flow tab. Requires scripting permission. Diagnostic only, not a confirmed fix for engine HTTP 401. No image/video generation, cookies/tokens/HTML/email excluded from report. Existing SceneForge v11 app stays unchanged.'}
+          gh release upload $tag scripts/browser-extension-package.zip probe-check.json --repo $env:GITHUB_REPOSITORY --clobber
+          if($LASTEXITCODE-ne 0){throw 'Probe publish failed'}
+      - name: Save report
+        if: always()
+        shell: python
+        run: |
+          from pathlib import Path
+          import subprocess,os,json
+          def git(*a,data=None):return subprocess.run(['git',*a],input=data,capture_output=True,check=True).stdout.decode().strip()
+          git('config','user.name','SceneForge extension checks');git('config','user.email','extension-checks@users.noreply.github.com')
+          p=Path('probe-check.json')
+          if not p.exists():p.write_text(json.dumps({'passed':False,'phase':'environment preparation'}))
+          blob=git('hash-object','-w','--stdin',data=p.read_bytes());tree=git('mktree',data=('100644 blob '+blob+'\tcheck.json\n').encode());commit=git('commit-tree',tree,data=b'Flow browser probe verification\n');git('push','origin',commit+':refs/heads/sceneforge-flow-probe-report-'+os.environ['GITHUB_RUN_ID'])
