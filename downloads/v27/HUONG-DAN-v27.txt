@@ -1,0 +1,7 @@
+SceneForge v27 — một ảnh đầu cho video
+Đóng SceneForge, cập nhật vào D:\4, rồi mở lại cảnh.
+Cửa sổ clip chỉ hiện ảnh đầu của clip (ảnh khung đã duyệt; nếu nối clip thì khung cuối của phần trước).
+AI viết prompt video và yêu cầu tạo video chỉ nhận ảnh đầu, không kèm bộ ảnh nhân vật/trang phục/sản phẩm.
+Node tham chiếu và bước tạo ảnh khung vẫn giữ các ảnh tham chiếu đã lưu. Không xóa ảnh khỏi dự án.
+Prompt AI cũ có thể cần chuẩn bị lại khi chạy lượt mới; các lượt đã gửi hoặc chưa rõ kết quả không được tự gửi lại.
+Đã kiểm tra giao diện, số ảnh và byte ảnh gửi bằng fixture. Chưa kiểm chứng tạo clip Google thật hoặc updater Windows.
