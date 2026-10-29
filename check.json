@@ -1,0 +1,51 @@
+﻿{
+    "install":  "D:\\SF-desktop-3007f67a-ệ\\Ứng dụng\\releases\\2026.10.28.2",
+    "checks":  [
+                   "update closes the running v2 app safely before replacing application files",
+                   "small native updater applies to v2 without reinstalling Python/models; project sentinel and model hash preserved",
+                   "native WinForms/WebView2 window starts the backend without external browser/console",
+                   "real unpacked extension transfers synthetic browser session to installed app; encrypted vault and origin/expiry/replay guards; no real account or generation"
+               ],
+    "data":  "D:\\SF-desktop-3007f67a-ệ\\Dự án",
+    "ui":  {
+               "native_window":  true,
+               "browser_container":  "WebView2",
+               "app_version":  "2026.10.29.11",
+               "requests":  [
+                                "http://127.0.0.1:8840/local-api/analysis/local/upload?duration=6.123583\u0026threshold=27\u0026min_scene=0.35\u0026ocr=true\u0026transcribe=true\u0026room_id=desktop-reference",
+                                "http://127.0.0.1:8840/local-api/analysis/local/upload?duration=6.123583\u0026threshold=27\u0026min_scene=0.35\u0026ocr=true\u0026transcribe=true\u0026room_id=desktop-reference",
+                                "http://127.0.0.1:8840/local-api/analysis/local/upload?duration=6.123583\u0026threshold=27\u0026min_scene=0.35\u0026ocr=true\u0026transcribe=true\u0026room_id=desktop-reference",
+                                "http://127.0.0.1:8840/local-api/analysis/local/upload?duration=6.083991\u0026threshold=27\u0026min_scene=0.35\u0026ocr=true\u0026transcribe=true\u0026room_id=desktop-cuts"
+                            ],
+               "checks":  [
+                              "installed Chrome/Edge login starts without automation; save reads only synthetic cookie; cancel cleans up",
+                              "fresh video: source button runs real Whisper, OCR, camera and quality measurements",
+                              "unapproved source frames labelled honestly; Veo waiting slots have no fake video thumbnails",
+                              "existing cut-only project: same source button completes missing local measurements",
+                              "partial older CPU result: missing speech is filled instead of skipped",
+                              "repeat click reuses complete measurements; no duplicate CPU job or paid generation",
+                              "native source button detects six actual shots and completes final-frame sampling when audio outlasts picture",
+                              "real MP4 export remains working after small update",
+                              "photo workflow opens in the same native app"
+                          ],
+               "real_google_login_verified":  false,
+               "flow_engine":  {
+                                   "ready":  true,
+                                   "protocol":  "sceneforge-account-pin-v1"
+                               },
+               "transcript":  [
+                                  "This is a scene forage test. We are checking speech recognition and video export."
+                              ],
+               "online_generation_requests":  [
+
+                                              ],
+               "page_errors":  [
+
+                               ]
+           },
+    "passed":  false,
+    "error":  "Flow transport check failed: python.exe : Traceback (most recent call last):\r\nAt D:\\a\\3\\3\\work\\source\\scripts\\windows-installer\\check_desktop_patch.ps1:55 char:22\r\n+ ... ansportText=\u0026 $python -E -s -X utf8 -m local_engine.check_flow_transp ...\r\n+                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n    + CategoryInfo          : NotSpecified: (Traceback (most recent call last)::String) [], RemoteException\r\n    + FullyQualifiedErrorId : NativeCommandError\r\n \r\n  File \"\u003cfrozen runpy\u003e\", line 198, in _run_module_as_main\r\n  File \"\u003cfrozen runpy\u003e\", line 88, in _run_code\r\n  File \"D:\\SF-desktop-3007f67a-ệ\\Ứng dụng\\releases\\2026.10.28.2\\app\\local_engine\\check_flow_transport.py\", line 111, \r\nin \u003cmodule\u003e\r\n    if __name__==\u0027__main__\u0027:asyncio.run(main(Path(sys.argv[1]) if len(sys.argv)\u003e1 else \r\nPath(\u0027/tmp/sceneforge-flow-pinned\u0027)))\r\n                            \r\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\r\n  File \"D:\\SF-desktop-3007f67a-ệ\\Ứng dụng\\releases\\2026.10.28.2\\runtime\\Lib\\asyncio\\runners.py\", line 195, in run\r\n    return runner.run(main)\r\n           ^^^^^^^^^^^^^^^^\r\n  File \"D:\\SF-desktop-3007f67a-ệ\\Ứng dụng\\releases\\2026.10.28.2\\runtime\\Lib\\asyncio\\runners.py\", line 118, in run\r\n    return self._loop.run_until_complete(task)\r\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\r\n  File \"D:\\SF-desktop-3007f67a-ệ\\Ứng dụng\\releases\\2026.10.28.2\\runtime\\Lib\\asyncio\\base_events.py\", line 691, in \r\nrun_until_complete\r\n    return future.result()\r\n           ^^^^^^^^^^^^^^^\r\n  File \"D:\\SF-desktop-3007f67a-ệ\\Ứng dụng\\releases\\2026.10.28.2\\app\\local_engine\\check_flow_transport.py\", line 27, in \r\nmain\r\n    from curl_cffi import CurlOpt\r\nModuleNotFoundError: No module named \u0027curl_cffi\u0027\r\n",
+    "line":  61,
+    "baseline":  "2026.10.28.2",
+    "extension":  "PASS real unpacked Chromium extension cookie permission, exact extension-origin loopback transport, actual app pairing/cancel UI, encrypted Gemini session, Flow scoping, one-use/expiry/replay/origin/body-size guards. Joint/separate connections, RPC-path cookies, browser UA and selected authuser preserved; independent checks; synthetic accounts, zero generation.\r\n"
+}
