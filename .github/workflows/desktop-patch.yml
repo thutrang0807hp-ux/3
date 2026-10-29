@@ -74,7 +74,7 @@ jobs:
           $env:SCENEFORGE_BRIDGE_TEST_BROWSER=(Resolve-Path test-browser/chrome-win64/chrome.exe).Path
           $installer=(Resolve-Path baseline/SceneForge-Setup-Windows-x64-v2.exe).Path
           Set-Location work/source
-          & scripts/windows-installer/check_desktop_patch.ps1 -Installer $installer -Patch (Resolve-Path patch/SceneForge-Update-20261029-v6.exe)
+          & scripts/windows-installer/check_desktop_patch.ps1 -Installer $installer -Patch (Resolve-Path patch/SceneForge-Update-20261029-v7.exe)
       - name: Publish small patch only after Windows GUI tests pass
         shell: powershell
         env:
@@ -84,9 +84,9 @@ jobs:
           $test=Get-Content desktop-patch-check.json -Raw -Encoding UTF8|ConvertFrom-Json
           if(!$test.passed){throw 'Native window test not passed'}
           $build=Get-Content patch/patch-build.json -Raw -Encoding UTF8|ConvertFrom-Json
-          $tag='sceneforge-frame-run-patch-20261029';$ErrorActionPreference='Continue'
+          $tag='sceneforge-google-accounts-patch-20261029';$ErrorActionPreference='Continue'
           gh release view $tag --repo $env:GITHUB_REPOSITORY
-          if($LASTEXITCODE -ne 0){gh release create $tag --repo $env:GITHUB_REPOSITORY --title 'SceneForge one-click frame node and original image download update' --notes 'Small update for installed v2. Native WebView2 window, hidden backend/workers, actual source-button CPU pipeline; models and projects preserved. Online generation not tested with real accounts.'}
+          if($LASTEXITCODE -ne 0){gh release create $tag --repo $env:GITHUB_REPOSITORY --title 'SceneForge shared or separate Google account connections update' --notes 'Small update for installed v2. Native WebView2 window, hidden backend/workers, actual source-button CPU pipeline; models and projects preserved. Online generation not tested with real accounts.'}
           if($LASTEXITCODE -ne 0){throw 'Release creation failed'}
           gh release upload $tag ('patch/'+$build.file) ('patch/'+$build.file+'.sha256') patch/patch-build.json desktop-patch-check.json scripts/browser-extension-package.zip --repo $env:GITHUB_REPOSITORY --clobber
           if($LASTEXITCODE -ne 0){throw 'Patch upload failed'}
