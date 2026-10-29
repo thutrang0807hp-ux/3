@@ -50,12 +50,12 @@
     "online_generation_requests": [],
     "page_errors": []
   },
-  "video_node": "PASS actual video node: shared friendly model select + advanced variants, explicit selection retained, header sends two missing/known-failed clips in one action, no per-clip/prepare/send modal, old result/unknown/queued/unapproved slots preserved, double-click sends once. Fixture provider only; zero Google calls.\r\n",
+  "video_node": "PASS actual video node: shared friendly model select + advanced variants, explicit selection retained, header sends two missing/known-failed clips in one action, no per-clip/prepare/send modal, old result/unknown/queued/unapproved slots preserved, double-click sends once, changed room during preparation blocks dispatch. Fixture provider only; zero Google calls.\r\n",
   "passed": true,
   "flow_native_broker": "PASS native Flow broker: separated browser/engine capabilities, route URL/origin validation, offline refuses before send, cross-route result/replay denied, one dispatch, canceled result not reused, disconnect blocks new work. No provider calls.\r\n",
   "google_pairing": "PASS real app joint code -> two scoped provider adapters -> independent checks and exact account selection; linked names; separate Chat/Flow preserves other selection; partial success, old-extension guard and secret isolation. Fixture providers only; zero generation.\r\n",
   "google_engine": "PASS owned Flow account import: provider-verified exact duplicate identity, credential refresh preserves existing concurrency and disabled policy, active jobs/unknown identity refuse mutation; new account defaults only. Fixture provider only.\r\n",
-  "data": "D:\\SF-desktop-eb80cf42-ệ\\Dự án",
+  "data": "D:\\SF-desktop-28959270-ệ\\Dự án",
   "flow_browser_transport": "PASS actual pinned FlowClient + real curl_cffi over isolated loopback TLS: old transport and missing RPC-path cookie reject 401; preserved browser UA/account + full scoped cookies authenticate; rotation, persisted restart and concurrent account isolation pass. No Google calls; real user session not verified.\r\n",
-  "install": "D:\\SF-desktop-eb80cf42-ệ\\Ứng dụng\\releases\\2026.10.28.2"
+  "install": "D:\\SF-desktop-28959270-ệ\\Ứng dụng\\releases\\2026.10.28.2"
 }
