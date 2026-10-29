@@ -1,0 +1,7 @@
+SceneForge v29 — sửa khóa nút khi mở clip
+Đóng SceneForge, cập nhật vào D:\4, mở lại.
+Trong node Video Veo phải thấy dòng Veo v29. Nếu không có dòng này thì giao diện đang mở chưa phải bản v29; chưa bấm tạo thêm.
+Bấm một ô clip: nút AI viết / viết lại prompt ở phía trên ô prompt; Tạo/Tạo lại video ở chân cửa sổ; Kiểm tra lượt cũ cũng ở chân cửa sổ nếu lượt chưa rõ.
+Sửa trạng thái busy tồn đọng khi bấm ô clip, đổi cảnh hoặc đổi phiên bản. Làm mới mã giao diện nhúng sau khi build hoàn chỉnh.
+Đã kiểm thử trực tiếp HTML từ gói cập nhật bằng thao tác bấm ô clip; các nút hoạt động, viết prompt không tạo video, unknown vẫn chặn gửi trùng.
+Chưa kiểm chứng updater Windows hoặc sửa lỗi Google UNUSUAL_ACTIVITY.
