@@ -1,0 +1,3 @@
+SceneForge v19 — cửa sổ đối soát Flow
+Cài trên v14 trở lên. Lưu dự án, đóng phần mềm rồi cài bản cập nhật. Mở node Video Veo > Xem lỗi / các lượt đã gửi > mục Flow unknown > Đối soát engine · chỉ tra/tải. Cửa sổ mới hiện trạng thái/lỗi engine và lỗi lưu dự án riêng. Nếu có tệp kết quả, có nút tải tệp đã lưu. Không bỏ lượt hoặc tạo lại khi chưa rõ kết quả.
+Đã kiểm thử Chromium khi backend trả unknown, lỗi engine, kết quả đã hoàn tất nhưng lưu dự án bị bận; không có POST tạo clip mới. Kiểm thử backend đối soát Flow/Muse và hồi quy node Veo đã qua. Chưa chạy updater Windows hoặc tạo video Google thật.
