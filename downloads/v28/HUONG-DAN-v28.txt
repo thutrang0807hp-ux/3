@@ -1,0 +1,8 @@
+SceneForge v28 — thao tác riêng từng clip
+Đóng SceneForge, cập nhật vào D:\4 rồi mở lại. Bấm ô clip trong node Veo.
+AI viết / viết lại prompt: Gemini viết từ đúng 1 ảnh đầu, không gửi tạo video Flow. Có thể viết lại khi lỗi Gemini đã kết thúc; giữ bản cũ trong lịch sử. Lượt Gemini chưa rõ/đang chạy không được tự gửi trùng.
+Tạo video / Tạo lại video: chỉ gửi clip đang mở, dùng prompt đã chuẩn bị; không chạy tất cả. Nếu prompt chưa có, app yêu cầu viết prompt trước.
+Kiểm tra lượt cũ: đối soát trực tiếp clip này. Nếu xác nhận failed, mở lại nút tạo lại. Nếu vẫn unknown, giữ khóa để tránh tạo trùng; không cần tìm trong danh sách dài.
+Prompt AI cũ thuộc mẫu 3 còn khớp đầu vào được giữ, không bắt viết lại chỉ vì chuyển sang 1 ảnh. Prompt thật sự đổi dữ liệu vẫn cần chuẩn bị lại.
+Đã kiểm tra giao diện thật bằng Chromium và provider giả lập: viết prompt không gửi Flow, viết lại sau lỗi Gemini, unknown vẫn khóa, failed được tạo lại riêng, chỉ một ảnh, không gửi trùng.
+Chưa kiểm chứng updater Windows hoặc sửa được PUBLIC_ERROR_UNUSUAL_ACTIVITY phía Google.
