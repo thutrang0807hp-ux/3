@@ -1,0 +1,9 @@
+SceneForge v26 — tự nhận tài khoản khi đăng nhập web
+1. Đóng SceneForge và cửa sổ Flow riêng do v25 mở (không cần đóng Chrome cá nhân).
+2. Cập nhật vào D:\4 rồi mở lại SceneForge.
+3. Cài đặt → Tài khoản → Flow/Veo → Đăng nhập Flow trên web.
+4. Đăng nhập trong cửa sổ vừa mở và giữ cửa sổ đó mở. App tự chờ tối đa 5 phút, nhận phiên và yêu cầu engine xác minh. Thành công thì trang tài khoản tự cập nhật.
+Cách này không cần nhập mã hoặc cài tiện ích. Kết nối bằng mã vẫn có thể dùng riêng.
+Không báo nhận thành công khi engine chưa xác minh; lỗi sẽ hiện trong hộp đăng nhập. Không tự tạo video. Không bảo đảm sửa lỗi UNUSUAL_ACTIVITY.
+Profile đăng nhập được giữ tại Data/browser-profiles/flow-web. Chỉ đọc phiên từ cửa sổ do app mở. Kết nối cục bộ phục vụ nhận đăng nhập, không sửa tín hiệu trình duyệt hoặc cấu hình proxy.
+Đã kiểm thử Chromium thật với trang Flow giả lập và engine giả lập; chưa đăng nhập Google thật hoặc chạy updater trên Windows.
