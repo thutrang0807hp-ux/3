@@ -1,7 +1,7 @@
 {
   "google_engine": "PASS owned Flow account import: provider-verified exact duplicate identity, credential refresh preserves existing concurrency and disabled policy, active jobs/unknown identity refuse mutation; new account defaults only. Fixture provider only.\r\n",
   "sdk_chat_worker": "PASS: actual SDK types, one-send generator, private-cookie session, guest denied, typed quota vs partial/block/auth distinctions, original-size generated-image save (RPC and large-URL fallback), exact downloaded bytes. Fake init/transport only; no Google requests.\r\n",
-  "extension": "PASS real unpacked Chromium extension cookie permission, exact extension-origin loopback transport, actual app pairing/cancel UI, encrypted Gemini session, Flow scoping, one-use/expiry/replay/origin/body-size guards. Joint and separate connections with scoped cookies and independent checks; synthetic accounts, zero generation.\r\n",
+  "extension": "PASS real unpacked Chromium extension cookie permission, exact extension-origin loopback transport, actual app pairing/cancel UI, encrypted Gemini session, Flow scoping, one-use/expiry/replay/origin/body-size guards. Joint/separate connections, RPC-path cookies, browser UA and selected authuser preserved; independent checks; synthetic accounts, zero generation.\r\n",
   "project_chat": "PASS project image chats: queued same-project turns, cursor restart persistence, project/account isolation, stateless writing, encrypted metadata, uncertain/interrupted turns block new sends. Synthetic SDK, zero generation calls to Google.\r\n",
   "flow_import_control": "PASS ACTUAL pinned TokenManager.add_token control flow: bootstrap/auth/credits/project/storage failure phases and numeric statuses preserved; no spurious duplicate retry; recovered identity failure may succeed; later project failure replaces recovered error; exact duplicate reuse and busy guard. Provider/database/model dependencies are fixtures; zero Google calls.\r\n",
   "baseline": "2026.10.28.2",
@@ -18,7 +18,7 @@
   "ui": {
     "native_window": true,
     "browser_container": "WebView2",
-    "app_version": "2026.10.29.10",
+    "app_version": "2026.10.29.11",
     "requests": [
       "http://127.0.0.1:8840/local-api/analysis/local/upload?duration=6.123583&threshold=27&min_scene=0.35&ocr=true&transcribe=true&room_id=desktop-reference",
       "http://127.0.0.1:8840/local-api/analysis/local/upload?duration=6.123583&threshold=27&min_scene=0.35&ocr=true&transcribe=true&room_id=desktop-reference",
@@ -42,7 +42,7 @@
       "protocol": "sceneforge-account-pin-v1"
     },
     "transcript": [
-      "This is a scene forage test. We are checking speech recognition and video export."
+      "This is a scene forge test. We are checking speech recognition and video export."
     ],
     "online_generation_requests": [],
     "page_errors": []
@@ -50,6 +50,7 @@
   "flow_cookie_contract": "PASS ACTUAL pinned Flow cookie validator rejects old Google/Labs-only transfer and accepts host-only flow.google.com OSID + Google identity; host-only and Google DOMAIN sessions, path/expiry/partition scope matrix agree with actual engine; diagnostics exclude values; extension permission present; safe engine-stage codes relay without provider secrets. No Google network calls.\r\n",
   "passed": true,
   "google_pairing": "PASS real app joint code -> two scoped provider adapters -> independent checks and exact account selection; linked names; separate Chat/Flow preserves other selection; partial success, old-extension guard and secret isolation. Fixture providers only; zero generation.\r\n",
-  "data": "D:\\SF-desktop-069e821e-ệ\\Dự án",
-  "install": "D:\\SF-desktop-069e821e-ệ\\Ứng dụng\\releases\\2026.10.28.2"
+  "data": "D:\\SF-desktop-15453dfa-ệ\\Dự án",
+  "flow_browser_transport": "PASS actual pinned FlowClient + real curl_cffi over isolated loopback TLS: old transport and missing RPC-path cookie reject 401; preserved browser UA/account + full scoped cookies authenticate; rotation, persisted restart and concurrent account isolation pass. No Google calls; real user session not verified.\r\n",
+  "install": "D:\\SF-desktop-15453dfa-ệ\\Ứng dụng\\releases\\2026.10.28.2"
 }
