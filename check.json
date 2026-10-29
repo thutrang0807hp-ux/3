@@ -1,0 +1,6 @@
+{
+  "passed": true,
+  "version": "1.4.0",
+  "live_google_verified": false,
+  "log": "PASS actual extension MAIN-world injection + actual same-origin Chromium fetch: credit zero accepted, RPC401/HTTP403 distinguished, HTML fallback, missing metadata makes no request, no generation/secret/email in report. Fixture Google page only; live Google session not verified.\n"
+}
