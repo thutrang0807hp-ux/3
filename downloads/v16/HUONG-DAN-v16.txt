@@ -1,0 +1,12 @@
+SceneForge update v16 — sửa lựa chọn model Veo I2V
+
+Yêu cầu: SceneForge đã cài bản cập nhật v14 trở lên.
+1. Lưu dự án, dừng các lượt đang chạy rồi đóng SceneForge.
+2. Chạy SceneForge-Update-20261029-v16.exe, chọn thư mục có SceneForge.exe và install-settings.json, bấm Cập nhật.
+3. Mở lại SceneForge. Trên node Video Veo, bấm Đọc lại model.
+4. Chọn model có I2V · từ ảnh; chọn thời lượng phù hợp. Sau đó bấm Chạy clip.
+
+Không tự đổi model đã chọn, không tự chạy lại các lượt chưa rõ kết quả. Bản vá giữ model, tài khoản và dữ liệu; tạo bản sao lưu các tệp được thay trong thư mục updates.
+Nếu danh sách I2V vẫn trống, engine Flow hiện tại chưa cung cấp model nhận ảnh; gửi lại ảnh thông báo và danh sách model trong Cài đặt để chẩn đoán. Không gửi cookie hay token.
+
+Đã kiểm thử UI Chromium và luồng gửi bằng fixture, chuyển bản ảnh >6 MiB thành bản gửi đúng giới hạn, kiểm tra toàn bộ checksum gói. Chưa chạy updater trên Windows hoặc tạo clip bằng tài khoản Flow thật.
