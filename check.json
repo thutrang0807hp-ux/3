@@ -1,0 +1,49 @@
+﻿{
+    "install":  "D:\\SF-desktop-5e98a030-ệ\\Ứng dụng\\releases\\2026.10.28.2",
+    "checks":  [
+                   "update closes the running v2 app safely before replacing application files",
+                   "small native updater applies to v2 without reinstalling Python/models; project sentinel and model hash preserved",
+                   "native WinForms/WebView2 window starts the backend without external browser/console"
+               ],
+    "data":  "D:\\SF-desktop-5e98a030-ệ\\Dự án",
+    "ui":  {
+               "native_window":  true,
+               "browser_container":  "WebView2",
+               "app_version":  "2026.10.29.12",
+               "requests":  [
+                                "http://127.0.0.1:8840/local-api/analysis/local/upload?duration=6.123583\u0026threshold=27\u0026min_scene=0.35\u0026ocr=true\u0026transcribe=true\u0026room_id=desktop-reference",
+                                "http://127.0.0.1:8840/local-api/analysis/local/upload?duration=6.123583\u0026threshold=27\u0026min_scene=0.35\u0026ocr=true\u0026transcribe=true\u0026room_id=desktop-reference",
+                                "http://127.0.0.1:8840/local-api/analysis/local/upload?duration=6.123583\u0026threshold=27\u0026min_scene=0.35\u0026ocr=true\u0026transcribe=true\u0026room_id=desktop-reference",
+                                "http://127.0.0.1:8840/local-api/analysis/local/upload?duration=6.083991\u0026threshold=27\u0026min_scene=0.35\u0026ocr=true\u0026transcribe=true\u0026room_id=desktop-cuts"
+                            ],
+               "checks":  [
+                              "installed Chrome/Edge login starts without automation; save reads only synthetic cookie; cancel cleans up",
+                              "fresh video: source button runs real Whisper, OCR, camera and quality measurements",
+                              "unapproved source frames labelled honestly; Veo waiting slots have no fake video thumbnails",
+                              "existing cut-only project: same source button completes missing local measurements",
+                              "partial older CPU result: missing speech is filled instead of skipped",
+                              "repeat click reuses complete measurements; no duplicate CPU job or paid generation",
+                              "native source button detects six actual shots and completes final-frame sampling when audio outlasts picture",
+                              "real MP4 export remains working after small update",
+                              "photo workflow opens in the same native app"
+                          ],
+               "real_google_login_verified":  false,
+               "flow_engine":  {
+                                   "ready":  true,
+                                   "protocol":  "sceneforge-account-pin-v1"
+                               },
+               "transcript":  [
+                                  "This is a scene forage test. We are checking speech recognition and video export."
+                              ],
+               "online_generation_requests":  [
+
+                                              ],
+               "page_errors":  [
+
+                               ]
+           },
+    "passed":  false,
+    "error":  "Extension connection check failed: python.exe : Traceback (most recent call last):\r\nAt D:\\a\\3\\3\\work\\source\\scripts\\windows-installer\\check_desktop_patch.ps1:42 char:18\r\n+ ... $bridgeText=\u0026 $python -E -s -X utf8 -m local_engine.check_browser_bri ...\r\n+                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n    + CategoryInfo          : NotSpecified: (Traceback (most recent call last)::String) [], RemoteException\r\n    + FullyQualifiedErrorId : NativeCommandError\r\n \r\n  File \"\u003cfrozen runpy\u003e\", line 198, in _run_module_as_main\r\n  File \"\u003cfrozen runpy\u003e\", line 88, in _run_code\r\n  File \"D:\\SF-desktop-5e98a030-ệ\\Ứng dụng\\releases\\2026.10.28.2\\app\\local_engine\\check_browser_bridge.py\", line 181, \r\nin \u003cmodule\u003e\r\n    if __name__==\u0027__main__\u0027:main()\r\n                            ^^^^^^\r\n  File \"D:\\SF-desktop-5e98a030-ệ\\Ứng dụng\\releases\\2026.10.28.2\\app\\local_engine\\check_browser_bridge.py\", line 86, in \r\nmain\r\n    if not page.locator(\u0027#port\u0027).is_visible():page.locator(\u0027summary\u0027).click()\r\n                                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\r\n  File \"D:\\SF-desktop-5e98a030-ệ\\Ứng \r\ndụng\\releases\\2026.10.28.2\\runtime\\Lib\\site-packages\\playwright\\sync_api\\_generated.py\", line 11021, in click\r\n    self._sync(\r\n  File \"D:\\SF-desktop-5e98a030-ệ\\Ứng \r\ndụng\\releases\\2026.10.28.2\\runtime\\Lib\\site-packages\\playwright\\_impl\\_sync_base.py\", line 111, in _sync\r\n    return task.result()\r\n           ^^^^^^^^^^^^^\r\n  File \"D:\\SF-desktop-5e98a030-ệ\\Ứng \r\ndụng\\releases\\2026.10.28.2\\runtime\\Lib\\site-packages\\playwright\\_impl\\_locator.py\", line 174, in click\r\n    return await self._frame._click(self._selector, strict=True, **params)\r\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\r\n  File \"D:\\SF-desktop-5e98a030-ệ\\Ứng dụng\\releases\\2026.10.28.2\\runtime\\Lib\\site-packages\\playwright\\_impl\\_frame.py\", \r\nline 598, in _click\r\n    await self._channel.send(\"click\", self._timeout, locals_to_params(locals()))\r\n  File \"D:\\SF-desktop-5e98a030-ệ\\Ứng \r\ndụng\\releases\\2026.10.28.2\\runtime\\Lib\\site-packages\\playwright\\_impl\\_connection.py\", line 78, in send\r\n    return await self._connection.wrap_api_call(\r\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\r\n  File \"D:\\SF-desktop-5e98a030-ệ\\Ứng \r\ndụng\\releases\\2026.10.28.2\\runtime\\Lib\\site-packages\\playwright\\_impl\\_connection.py\", line 636, in wrap_api_call\r\n    raise rewrite_error(error, f\"{parsed_st[\u0027apiName\u0027]}: {error}\") from None\r\nplaywright._impl._errors.Error: Locator.click: Error: strict mode violation: locator(\"summary\") resolved to 2 elements:\r\n    1) \u003csummary\u003eApp dùng cổng khác?\u003c/summary\u003e aka get_by_text(\"App dùng cổng khác?\")\r\n    2) \u003csummary\u003eKiểm tra Flow · không tạo nội dung\u003c/summary\u003e aka get_by_text(\"Kiểm tra Flow · không tạo nội\")\r\n\r\nCall log:\r\n  - waiting for locator(\"summary\")\r\n\r\n",
+    "line":  43,
+    "baseline":  "2026.10.28.2"
+}
