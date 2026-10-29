@@ -1,0 +1,6 @@
+SceneForge v30 — chặn tạo video bằng phiên web chưa gắn với tab
+Bản này KHÔNG hoàn thiện tự nối đăng nhập web vào bước tạo video.
+Sửa: nếu tài khoản chỉ nhập phiên web nhưng không có đường nối tab Flow, app chặn trước bước engine kiểm tra/tạo video và hiện thông báo rõ, tránh engine mở cửa sổ trình duyệt khác.
+Các tài khoản đã nối bằng mã/tiện ích giữ nguyên đường nối. Đăng nhập web tự nhận tài khoản vẫn có nhưng không được mô tả là đã sẵn sàng tạo video.
+Đóng app, cập nhật vào D:\4 rồi mở lại. Muốn dùng đường gửi hiện có, nối tab Flow bằng tiện ích/mã. Chưa có bản tự nối hoàn chỉnh đã được kiểm chứng.
+Đã kiểm tra guard không gọi engine khi thiếu binding và bảo toàn phiên đã ghép nối bằng fixture. Chưa kiểm thử Google thật hoặc updater Windows, chưa sửa được UNUSUAL_ACTIVITY.
