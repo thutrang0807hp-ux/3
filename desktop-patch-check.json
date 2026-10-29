@@ -17,11 +17,11 @@
   "ui": {
     "native_window": true,
     "browser_container": "WebView2",
-    "app_version": "2026.10.29.8",
+    "app_version": "2026.10.29.9",
     "requests": [
-      "http://127.0.0.1:8840/local-api/analysis/local/upload?duration=6.123583&threshold=27&min_scene=0.35&ocr=true&transcribe=true&room_id=desktop-reference",
-      "http://127.0.0.1:8840/local-api/analysis/local/upload?duration=6.123583&threshold=27&min_scene=0.35&ocr=true&transcribe=true&room_id=desktop-reference",
-      "http://127.0.0.1:8840/local-api/analysis/local/upload?duration=6.123583&threshold=27&min_scene=0.35&ocr=true&transcribe=true&room_id=desktop-reference",
+      "http://127.0.0.1:8840/local-api/analysis/local/upload?duration=10.25&threshold=27&min_scene=0.35&ocr=true&transcribe=true&room_id=desktop-reference",
+      "http://127.0.0.1:8840/local-api/analysis/local/upload?duration=10.25&threshold=27&min_scene=0.35&ocr=true&transcribe=true&room_id=desktop-reference",
+      "http://127.0.0.1:8840/local-api/analysis/local/upload?duration=10.25&threshold=27&min_scene=0.35&ocr=true&transcribe=true&room_id=desktop-reference",
       "http://127.0.0.1:8840/local-api/analysis/local/upload?duration=6.083991&threshold=27&min_scene=0.35&ocr=true&transcribe=true&room_id=desktop-cuts"
     ],
     "checks": [
@@ -41,14 +41,14 @@
       "protocol": "sceneforge-account-pin-v1"
     },
     "transcript": [
-      "This is a scene forage test. We are checking speech recognition and video export."
+      "This is a scene forge test. We are checking speech recognition and video export."
     ],
     "online_generation_requests": [],
     "page_errors": []
   },
-  "flow_cookie_contract": "PASS ACTUAL pinned Flow cookie validator rejects old Google/Labs-only transfer and accepts host-only flow.google.com OSID + Google identity; host scope preserved; extension permission present; safe engine-stage codes relay without provider secrets. No Google network calls.\r\n",
+  "flow_cookie_contract": "PASS ACTUAL pinned Flow cookie validator rejects old Google/Labs-only transfer and accepts host-only flow.google.com OSID + Google identity; host-only and Google DOMAIN sessions, path/expiry/partition scope matrix agree with actual engine; diagnostics exclude values; extension permission present; safe engine-stage codes relay without provider secrets. No Google network calls.\r\n",
   "passed": true,
   "google_pairing": "PASS real app joint code -> two scoped provider adapters -> independent checks and exact account selection; linked names; separate Chat/Flow preserves other selection; partial success, old-extension guard and secret isolation. Fixture providers only; zero generation.\r\n",
-  "data": "D:\\SF-desktop-056b7d5d-ệ\\Dự án",
-  "install": "D:\\SF-desktop-056b7d5d-ệ\\Ứng dụng\\releases\\2026.10.28.2"
+  "data": "D:\\SF-desktop-b5edccb5-ệ\\Dự án",
+  "install": "D:\\SF-desktop-b5edccb5-ệ\\Ứng dụng\\releases\\2026.10.28.2"
 }
