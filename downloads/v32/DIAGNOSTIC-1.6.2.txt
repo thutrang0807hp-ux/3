@@ -1,0 +1,8 @@
+Tiện ích 1.6.2 — chẩn đoán, chưa phải bản sửa lỗi model đã xác nhận.
+Không cần cập nhật app v32.
+1. Thay thư mục tiện ích bằng ZIP mới, Tải lại trong chrome://extensions. Xác nhận 1.6.2.
+2. Nối lại RIÊNG Flow bằng mã mới. Giữ đúng tab dự án Flow đang mở.
+3. Thử MỘT clip để ghi nhận bước lỗi, không chạy hàng loạt.
+4. Ngay trên tab Flow đó, mở tiện ích -> Chẩn đoán nút model Flow -> Đọc giao diện model -> Chép chẩn đoán model.
+5. Gửi đoạn JSON báo cáo. Có thể chụp thêm một báo cáo khi danh sách model đang mở.
+Công cụ không bấm tạo, không đọc prompt, tài khoản, cookie hoặc URL dự án. Báo cáo chỉ gồm tên model chuẩn hóa, loại nút, thuộc tính chọn và bước lỗi adapter. Chưa kiểm chứng giao diện Google Flow thật.
