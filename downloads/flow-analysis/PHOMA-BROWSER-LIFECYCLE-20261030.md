@@ -29,7 +29,7 @@ Thêm `local_engine/flow_browser_probe.py`, dùng chung cho watcher và session:
 - Trả nguyên nhân kết nối cục bộ riêng, không coi mở cửa sổ hoặc có file cổng là xác minh đăng nhập thành công.
 - Không đổi lệnh đăng nhập, không sửa fingerprint, không trì hoãn kết nối để tránh kiểm tra, không nhập profile Phoma và không thêm private RPC.
 
-Các thay đổi này mới ở source trong workspace. Chưa phát updater v35; bản public hiện vẫn v34. Không coi phần sửa kết nối này là đã giải quyết Google's sign-in rejection.
+Các thay đổi kiểm tra kết nối này đã được đóng gói trong updater v35 theo yêu cầu người dùng. Không coi phần sửa kết nối này là đã giải quyết Google's sign-in rejection. Chưa xác minh đăng nhập Google thật hoặc updater Windows.
 
 ## Kiểm tra đã chạy
 

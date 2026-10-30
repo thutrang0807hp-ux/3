@@ -1,0 +1,10 @@
+SceneForge v35 — xác nhận đúng cổng/instance trình duyệt Flow
+
+PHẠM VI: sửa quản lý kết nối cục bộ. KHÔNG phải bản khắc phục Google từ chối đăng nhập.
+Đối chiếu định danh instance trong DevToolsActivePort với endpoint thật trước khi nối Chrome/Edge. Từ chối cổng cũ, bị dùng lại, sai instance hoặc ngoài loopback. Sau 30 giây nếu không có endpoint hợp lệ, watcher báo lỗi kết nối thay vì tiếp tục hiển thị chờ đăng nhập. Nhận diện đường dẫn Google signin/rejected độc lập ngôn ngữ và dừng kiểm tra. Không đổi fingerprint, thời điểm kết nối để tránh kiểm tra, không thu token xác minh hoặc tự thử lại đăng nhập.
+
+CÀI: đóng app, chạy updater, chọn đúng thư mục có SceneForge.exe (ví dụ D:\4), mở lại. Không cần tải tiện ích. Dữ liệu, tài khoản và profile giữ nguyên. Nhánh đăng nhập web vẫn có trong Tài khoản -> Flow/Veo.
+Nếu Google vẫn hiện This browser or app may not be secure, bản sửa này không làm phản hồi đó biến mất. Không cần đăng nhập hoặc gửi tạo lặp lại để kiểm thử.
+
+ĐÃ KIỂM TRA: fixture HTTP xác nhận đúng/sai instance, cổng không phản hồi, host sai; watcher không nhận tài khoản khi endpoint không hợp lệ; Chromium fixture giữ profile, nhận tài khoản, gửi/nhận clip mô phỏng, chống gửi trùng, từ chối đổi account/project và dừng signin/rejected; giao diện ba đường mở đăng nhập lấy từ chính updater; checksum 50 file nhúng.
+CHƯA KIỂM CHỨNG: đăng nhập Google Flow thật và chạy updater trên Windows. Không bảo đảm khôi phục đăng nhập hoặc tạo video thành công.
