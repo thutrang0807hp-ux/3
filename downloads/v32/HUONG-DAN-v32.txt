@@ -1,0 +1,37 @@
+SceneForge v32 — cầu nối tab Flow, tiện ích 1.6
+
+BẢN THỬ: Đã kiểm tra đường truyền và DOM bằng Chromium trên trang mô phỏng.
+CHƯA xác minh giao diện Flow thật, đăng nhập Google thật hoặc chạy updater trên Windows.
+Không bảo đảm sửa được PUBLIC_ERROR_UNUSUAL_ACTIVITY.
+
+CÀI ĐẶT
+1. Đóng SceneForge. Chạy SceneForge-Update-20261030-v32.exe, chọn thư mục đã cài (D:\4 nếu đúng máy bạn). Mở lại.
+2. Trong Chrome/Edge bạn đang dùng Flow, mở chrome://extensions hoặc edge://extensions.
+   Nếu tiện ích đang dùng thư mục của app: bấm Tải lại và kiểm tra phiên bản 1.6.0.
+   Nếu tiện ích cũ nạp từ ZIP riêng: giải nén ZIP 1.6 mới vào chính thư mục đó rồi Tải lại.
+   Hoặc xóa tiện ích cũ, Tải tiện ích đã giải nén từ thư mục SceneForge-Browser-Connect trong ZIP mới.
+3. Mở đúng dự án Flow đã đăng nhập trong trình duyệt đó. Chọn tab này khi bấm tiện ích.
+4. SceneForge -> Cài đặt -> Tài khoản -> Flow/Veo -> Kết nối bằng mã.
+   BỎ CHỌN Dùng phiên trình duyệt này cho cả Gemini Chat và Flow. Kết nối riêng Flow.
+   Tạo mã, nhập mã và cổng app trong tiện ích, bấm Kết nối.
+   Thành công: tài khoản trong app có tên kết thúc bằng "tab Flow".
+5. Về node Veo, Đọc lại model -> chọn Lite I2V 8 giây, dọc 9:16.
+   Mở MỘT ô clip, viết/kiểm tra prompt rồi bấm tạo riêng clip đó.
+   Giữ tab Flow mở; không thao tác đồng thời trong tab lúc app đang tạo.
+
+CƠ CHẾ
+SceneForge -> capability loopback ghép bằng mã -> extension -> giao diện tab Flow.
+Nhánh kết nối riêng Flow không xuất cookie, không gọi RPC tạo video hoặc API CAPTCHA.
+Một ảnh đầu + prompt; từng lượt gửi một lần; video chuyển theo chunk và kiểm tra hash + ffprobe.
+Nếu tab đổi tài khoản, giao diện không nhận diện được, xuất hiện xác minh hoặc kết quả không rõ thì dừng.
+Không tự chuyển model, tài khoản hoặc thử lại để vượt lỗi Google.
+Kết nối chung Gemini + Flow và nút Đăng nhập web riêng vẫn là các nhánh cũ, không phải cầu nối 1.6.
+
+KIỂM TRA ĐÃ CHẠY
+- Protocol4 ghép tab không cookie -> tài khoản app, không dùng engine.
+- Chromium isolated-world fixture: Agent OFF, ảnh/prompt, một lần gửi, blob video -> chunk -> hash/ffprobe -> kết quả app.
+- Cùng request ID không gửi lần hai; model không nhận diện thì không bấm tạo.
+- Lỗi sau khi gửi khóa lượt tiếp theo; chỉ xác nhận đúng request mới gỡ khóa.
+- Kiểm tra API ghép mã: origin, mã một lần, hết hạn, replay, body-size và vault.
+- UI từng clip: viết lại prompt độc lập, tạo lại từng clip, chống bấm đúp và đổi phòng giữa lượt.
+Các kiểm tra trên KHÔNG phải bằng chứng tạo video thành công trên Google Flow thật.
