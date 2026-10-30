@@ -1,0 +1,27 @@
+SỬA LỖI v34: nút Đăng nhập Flow trên web trong cửa sổ Kết nối Flow trước đây dùng newProfile ngoài phạm vi. Đã dùng chung hàm đăng nhập và kiểm tra đủ ba đường mở trong frontend lấy từ updater. Không thay đổi chính sách đăng nhập Google; chưa xác minh Google thật.
+
+SceneForge v34 — đăng nhập Flow trên web, không cần tiện ích
+
+PHẠM VI
+Đã nối luồng Chrome/Edge riêng -> nhận tài khoản -> điều khiển cùng cửa sổ. Profile lưu theo tài khoản, không xuất cookie vào app, không cần ghép mã/tiện ích, không dùng Flow2API để tạo trong nhánh này. Bộ điều khiển DOM được dùng chung với tiện ích đã sửa.
+Đây KHÔNG phải chuyển backend API của Phoma sang SceneForge và KHÔNG khắc phục Google UNUSUAL_ACTIVITY. Chưa kiểm chứng đăng nhập/tạo thật trên Google Flow hoặc chạy updater trên Windows.
+
+CÀI VÀ ĐĂNG NHẬP
+1. Đóng SceneForge. Chạy updater v34 và chọn thư mục đã cài, ví dụ D:\4. Mở lại.
+2. Cài đặt -> Tài khoản -> Flow/Veo -> Đăng nhập Flow trên web (hoặc Đăng nhập Flow · không tiện ích).
+3. Đăng nhập Google trực tiếp trong cửa sổ Chrome/Edge vừa mở. Không cần tiện ích, mã kết nối hoặc nhập cookie vào app.
+4. Chờ app hiện tài khoản có tên kết thúc bằng "trình duyệt riêng". Mở đúng dự án Flow trong cửa sổ này và giữ mở khi sử dụng SceneForge.
+5. Có thể dùng nút đăng nhập lại để mở/nhận đúng profile đã lưu. Thêm tài khoản Flow trên web tạo profile khác; hoàn tất lượt đăng nhập đang chờ trước khi thêm.
+
+NHẬN DIỆN VÀ DỪNG
+App chỉ nhận tài khoản sau khi kiểm tra đúng cửa sổ/profile. Việc mở cửa sổ không được coi là đăng nhập thành công. Đổi tài khoản hoặc project giữa lượt sẽ dừng, không tự chuyển sang phiên khác.
+Nếu Google báo trình duyệt không an toàn, xác minh hoặc hoạt động bất thường: app báo lỗi/dừng, không tự đổi nhận diện, không thu token xác minh và không tự gửi lại. Không cần thử thêm lượt tạo đang bị Google từ chối.
+Tài khoản nối riêng Flow bằng tiện ích trước đó sẽ chuyển sang nhánh cửa sổ riêng sau khi đăng nhập web được xác minh thành công; kết nối cũ của tài khoản khác không bị chuyển.
+Dữ liệu profile cũ không bị xóa. Profile mới nằm trong Data/browser-profiles/flow-accounts; profile flow-web cũ được giữ tương thích. Xóa tài khoản trong app không xóa dữ liệu Chrome trên đĩa.
+
+KIỂM TRA ĐÃ CHẠY
+- Chromium thật với mọi trang được thay bằng fixture: nhận tài khoản, lưu và mở lại đúng profile, không mở thêm cửa sổ, không gọi extension relay/engine, không đọc cookie API.
+- Một ảnh + prompt -> một submit -> dữ liệu video theo chunk -> SHA256/ffprobe -> kết quả app. Cùng request ID không gửi hai lần.
+- Tài khoản/project đổi thì dừng. Google sign-in rejection được mô phỏng thì báo lỗi, không thử lại. Kiểm tra profile path chống đi ra ngoài thư mục đã định.
+- Giao diện lấy từ chính updater: nút đăng nhập chính, nút thêm profile, trạng thái đăng nhập và trở về danh sách tài khoản.
+- 49 file trong updater đã đối chiếu checksum. Các kiểm tra trên không phải Google Flow thật hoặc Windows installer execution.
