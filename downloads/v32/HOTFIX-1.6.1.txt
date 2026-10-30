@@ -1,0 +1,18 @@
+Tiện ích SceneForge 1.6.1 — sửa nhận diện/chọn Veo 3.1 Lite
+Dùng với app v32; không cần cài lại app.
+
+Sửa hai lỗi trong bản 1.6.0:
+- Tên model dùng gạch ngang Unicode hoặc khoảng trắng NBSP không khớp biểu thức tên model.
+- Mục model có thể là button thông thường; bản cũ chỉ bấm khi có role option/menuitem.
+Bản mới đợi menu, chọn Lite và kiểm tra nút đang chọn đổi thành Lite trước khi tiếp tục.
+Không tự chọn Fast/Quality thay thế. Giữ nguyên xác nhận tạo của Google.
+
+Cài:
+1. Giải nén ZIP mới, thay nội dung thư mục tiện ích cũ (hoặc xóa tiện ích cũ rồi nạp thư mục mới).
+2. chrome://extensions hoặc edge://extensions -> Tải lại, xác nhận phiên bản 1.6.1.
+3. Trong app tạo mã mới, nối RIÊNG Flow với tab dự án đang đăng nhập (bỏ chọn kết nối chung Gemini).
+4. Thử tạo lại một clip trong SceneForge. Không chạy đồng thời nhiều clip khi kiểm tra.
+
+Đã kiểm tra bằng Chromium trên trang mô phỏng, KHÔNG phải Flow thật.
+Ảnh người dùng xác nhận danh sách có Veo 3.1 Lite; ảnh không đủ để chứng minh DOM thật khớp hoàn toàn.
+Nếu vẫn lỗi, cần metadata DOM của menu thực tế để xác định bước còn sai.
