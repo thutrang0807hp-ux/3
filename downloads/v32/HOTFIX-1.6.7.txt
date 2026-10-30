@@ -1,0 +1,5 @@
+Tiện ích 1.6.7 cho app v32, không cần cài lại app.
+Sửa theo ảnh thực tế: menu Video/Khung hình, 16:9 và x2; thời lượng 8 giây trong thanh tóm tắt Video ·720p·8 giây x2.
+Bản mới dùng thanh tóm tắt làm bằng chứng thời lượng khi không có nút 8s riêng; chọn và xác nhận 9:16/x1, kiểm tra thanh tóm tắt đã thành x1. Nhận diện chữ trên nút thiết lập khi aria-label là tên chung. Chỉ điền ảnh đầu/prompt và chuẩn bị gửi sau khi xác nhận được thông số.
+Kiểm tra Chromium fixture mô phỏng ảnh: một ảnh + prompt, đổi ratio/quantity, không gửi trước lệnh submit, 6 giây và x1 không có tác dụng thì dừng. Chạy lại kiểm tra chọn model, chuyển từ Agent defaults, ghép tab/nhận video và báo cáo riêng tư. Chưa xác minh thành công trên Flow thật.
+Thay thư mục tiện ích, Tải lại tại chrome://extensions/edge://extensions, xác nhận 1.6.7. Mở đúng dự án Flow rồi nối lại riêng Flow bằng mã mới. Thử một clip, không cần tự nhập prompt trên web. Nếu lỗi, giữ nguyên trang và gửi JSON chẩn đoán mới; báo cáo v3 có video_summaries và data-state.
