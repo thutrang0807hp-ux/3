@@ -1,0 +1,4 @@
+Tiện ích 1.6.9: quản lý workspace và hiển thị transport, không phải bản sửa UNUSUAL_ACTIVITY.
+Chỉ chuẩn bị video khi tab ở project, giữ project đã ghép cho lượt làm việc, không tiếp tục sau khi đổi project. Query khác không bị coi là đổi project. Báo cáo có paired_transport (extension_dom hoặc native_relay), paired_tab, workspace_pinned và page_kind; không đưa project ID/URL hay route key vào báo cáo.
+Đã kiểm tra fixture Chromium và chạy lại nhận diện lỗi hoạt động bất thường + bridge; chưa xác minh Google thật. Không thêm nhánh API mới và không cần gửi thêm lượt tạo để kiểm thử. Dùng với app v32, sau thay thư mục và Tải lại cần ghép mã lại khi sử dụng.
+Xem bản đối chiếu Phoma trong downloads/flow-analysis/PHOMA-SCENEFORGE-20261030.md. Bộ cài Phoma đã được xác nhận cấu hình API, không phải DOM; chưa có bản SceneForge thay thế tương đương đã hoạt động.
