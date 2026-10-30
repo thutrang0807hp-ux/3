@@ -1,0 +1,4 @@
+Tiện ích SceneForge 1.6.5, dùng với app v32. Không cần cài lại app.
+Sửa tên model trên nút bị aria-label chung che khuất. Nút model có aria-haspopup vẫn được nhận là nút mở danh sách khi nằm trong menu cài đặt, thay vì bị nhầm với option.
+Kiểm tra Chromium fixture đã tái hiện trường hợp aria-label chung + chữ Omni/Veo + menu lồng nhau; đồng thời chạy kiểm tra lại luồng ghép tab, gửi ảnh/prompt, tải video, chống gửi trùng, dừng khi không rõ kết quả. Chưa thử Google Flow thật.
+Giải nén thay thư mục tiện ích cũ, Tải lại tại chrome://extensions hoặc edge://extensions, xác nhận 1.6.5. Nối lại riêng Flow bằng mã mới rồi thử một clip. Nếu vẫn lỗi, gửi báo cáo Chẩn đoán nút model Flow mới để xác định bước đang dừng.
