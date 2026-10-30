@@ -1,0 +1,4 @@
+Tiện ích 1.6.3, dùng với app v32.
+Sửa trường hợp báo cáo thực tế có hai nút Cài đặt: ưu tiên nút mở menu/listbox, không bỏ qua vì trùng tên, không đóng menu đã mở. Đợi menu hiện trước khi tìm model.
+Đã kiểm tra fixture Chromium tái hiện hai nút và menu hiện chậm; chưa kiểm chứng Google Flow thật.
+Thay thư mục tiện ích, Tải lại trong chrome://extensions, xác nhận 1.6.3. Nối lại riêng Flow bằng mã mới, thử một clip. Nếu còn lỗi, dùng Chẩn đoán nút model Flow và gửi JSON mới. Không cần cài lại app.
