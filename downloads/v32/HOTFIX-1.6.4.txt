@@ -1,0 +1,4 @@
+Tiện ích 1.6.4 dùng với app v32; không cần cài lại app.
+Báo cáo 1.6.3 cho thấy nút menu Cài đặt đã mở nhưng không thấy model. Chưa đủ chứng minh đó là cài đặt tạo nội dung. Bản 1.6.4 tìm nút trong tổ tiên gần ô prompt, không ưu tiên nút toàn trang chỉ vì aria-haspopup. Dừng nếu không nhận diện được vùng tạo.
+Đã kiểm tra fixture mô phỏng menu cài đặt chung và nút cạnh prompt, và kiểm tra lại đường truyền/nhận clip. Chưa kiểm chứng Google Flow thật.
+Cập nhật thư mục tiện ích, Tải lại tại chrome://extensions, xác nhận 1.6.4. Nối lại riêng Flow bằng mã mới. Đóng menu cài đặt đang mở, giữ trang dự án. Thử một clip. Nếu còn lỗi, Chẩn đoán nút model Flow -> Đọc -> Chép và gửi JSON mới. Báo cáo thêm độ sâu tổ tiên chung với editor, không đọc prompt hoặc cookie.
