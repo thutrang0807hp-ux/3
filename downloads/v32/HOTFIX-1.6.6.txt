@@ -1,0 +1,6 @@
+Tiện ích SceneForge 1.6.6 cho app v32. Không cần cài lại app.
+Báo cáo 1.6.5 đã xác nhận chọn được Lite nhưng đang dừng ở video_settings trong Agent defaults (hai x1, không có thời lượng/tỷ lệ video).
+Nhánh mới chỉ khi nhận diện đúng Agent settings: Save model, đợi composer trở lại, tắt Agent nếu toggle có aria-pressed rõ ràng, mở thiết lập cạnh prompt và xác minh model/thời lượng/tỷ lệ/số lượng tại vùng tạo thực tế. Không thay việc xác minh bằng phỏng đoán hoặc text trong prompt. Không thay lựa chọn Always/Never xác nhận của Google.
+Nếu không nhận diện được vùng tạo/thông số, dừng trước gửi; vẫn có thể cần tương thích thêm với DOM Flow thật.
+Đã kiểm tra Chromium fixture: Save -> editor -> Agent OFF -> thiết lập video; Save không tác dụng và thiếu thời lượng thì dừng; chạy lại kiểm tra model, đường truyền video và riêng tư báo cáo. Đây không phải bằng chứng chạy thành công trên Flow thật.
+Thay thư mục tiện ích, Tải lại ở chrome://extensions hoặc edge://extensions, xác nhận phiên bản 1.6.6. Nối lại riêng Flow bằng mã mới. Thử một clip. Nếu lỗi, dùng Chẩn đoán nút model Flow, chép và gửi JSON mới.
