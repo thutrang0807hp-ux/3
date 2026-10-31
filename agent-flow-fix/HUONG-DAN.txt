@@ -1,7 +1,17 @@
-Bo cuoi - dieu khien web Flow theo giao dien Agent.
+BỘ CUỐI – điều khiển web Flow theo giao diện Agent
 
-Cach cai:
-1. Tat SceneForge.
-2. Copy local_engine/ de len local_engine cua app.
-3. Copy scripts/browser-extension/dom-flow.js de len thu muc cai.
-4. Mo lai SceneForge va thu tao video.
+Cách cài:
+1. Tắt SceneForge.
+2. Copy toàn bộ file trong local_engine/ đè lên local_engine của app.
+3. Copy scripts/browser-extension/dom-flow.js đè lên
+   [thư mục cài SceneForge]/scripts/browser-extension/dom-flow.js
+4. Mở lại SceneForge.
+5. Thử tạo video MỘT lần.
+
+App sẽ cố:
+- Đóng Agent settings
+- Chọn 9:16
+- Bấm Animate trên ảnh
+- Gửi prompt kèm "Create a video from this image."
+
+Nếu vẫn lỗi, gửi đúng 1 ảnh màn hình lỗi.

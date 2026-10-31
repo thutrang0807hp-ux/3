@@ -16,6 +16,7 @@ async def probe_flow_browser(data,profile_key=None):
         port=int(rows[0]);browser_path=rows[1]
         if not 1<=port<=65535 or not re.fullmatch(r'/devtools/browser/[a-zA-Z0-9-]+',browser_path):raise ValueError()
     except (OSError,ValueError,IndexError):
+        # Fallback: try fixed port we launch with
         port = 9333
         browser_path = None
         try:
