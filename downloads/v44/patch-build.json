@@ -1,0 +1,9 @@
+{
+  "version": "2026.11.01.44",
+  "file": "SceneForge-Update-20261101-v44.exe",
+  "bytes": 3986944,
+  "sha256": "b5dc019c3a8a37b00a8575b30f8c2e6b3d60600743ef8d4a25d8f8fac2ff0958",
+  "files": 53,
+  "models_included": false,
+  "baseline_payload_sha256": "8178af48a4db6180eb0fb3ef042b04ea21617c7380ca2e106d8e967990eb0c35"
+}
