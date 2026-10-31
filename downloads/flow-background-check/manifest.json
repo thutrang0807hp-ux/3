@@ -1,0 +1,29 @@
+{
+  "tool": "flow-background-auth-check-v1",
+  "file": "SceneForge-Flow-Background-Check.zip",
+  "bytes": 5649,
+  "sha256": "bcbadb7952f77dbd67788ee7ecfbababa36d81fc66760ef762bb89ab81371233",
+  "app_update": false,
+  "generation_attempted_by_tool": false,
+  "windows_verified": false,
+  "live_google_verified": false,
+  "headless_fixture_test": "passed",
+  "files": [
+    {
+      "path": "CHAY-KIEM-TRA.bat",
+      "sha256": "14b5a14bcfd384cb1d327582e7216f374c63778eac6ccd43660203b717cfb7ac"
+    },
+    {
+      "path": "Kiem-tra.ps1",
+      "sha256": "6fa50fee34ee5f4cabe66f09c615b2ce5cb7143f6877a5e406541711a6870d4d"
+    },
+    {
+      "path": "probe.py",
+      "sha256": "4a9d68aaf5508025ce3ac35203f8c0dd5f8a7f324b38547a46378a2c4c11fcda"
+    },
+    {
+      "path": "README.md",
+      "sha256": "053ec3520c7cd8cda696705384d7fa065b834544222c77de3bd4a52d91dd680e"
+    }
+  ]
+}
