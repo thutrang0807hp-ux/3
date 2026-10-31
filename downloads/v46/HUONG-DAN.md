@@ -1,0 +1,37 @@
+# v46 — bản thử tạo clip chạy nền bằng tài khoản web đã chọn
+
+## Bằng chứng và phạm vi
+
+Người dùng đã gửi kết quả BACKGROUND_SESSION_OK từ công cụ kiểm tra trên máy Windows của mình: phiên đã lưu đọc được đúng danh tính khi mở nền. Đây là xác minh đăng nhập nền trên máy đó, **không phải xác minh tạo/tải video Google thật**.
+
+v46 nối cơ chế chạy nền vào bộ chạy Veo. Đây là **bản thử một clip**, chưa coi là bản đã sửa hết lỗi Flow. Trang xem thử mặc định trên GitHub vẫn giữ v45 đã giao trước đó.
+
+## Cài và dùng
+
+1. Đóng SceneForge và cửa sổ đăng nhập Flow do app mở nếu còn. Không cần đóng Chrome/Edge cá nhân. Chạy **SceneForge-Update-20261101-v46.exe**, chọn bản cài có SceneForge.exe cùng install-settings.json; theo đường dẫn đã cung cấp là `D:\4\releases\2026.10.28.2`.
+2. Updater kiểm baseline v2, tối thiểu patch v14 và sao lưu các file thay. Giữ runtime/model/dự án/tài khoản/profile; không cần cài lại hoặc chạy công cụ kiểm tra nền lần nữa.
+3. Mở lại. Giữ tài khoản đăng nhập web đã chọn ở tab Tài khoản. Không mở trang Flow để tạo clip. Nếu sau này cần đăng nhập/xác minh, xử lý tại tab Tài khoản, rồi đóng cửa sổ đăng nhập sau khi app nhận tài khoản.
+4. Node phải hiện **Veo v46**. Chọn ảnh đã duyệt và prompt, bấm **Tạo clip cảnh này** cho đúng một clip. Xác nhận có thể dùng credit Flow; không dùng Veo API/key hoặc đổi nguồn tính phí.
+5. App mở đúng profile ở chế độ headless, chuẩn bị dự án của phòng và xử lý nền. Khi nhận video về, xem rồi bấm Dùng clip này cho workflow như trước.
+6. Nếu báo lỗi, xem **Xem bước Flow đang vướng** ngay trong node nếu có ảnh. Không phải mở web để bấm tiếp. Ảnh nằm trong Data trên máy; không tự gửi lên GitHub hoặc dịch vụ khác. Lỗi sau khi có thể đã bấm Tạo vẫn giữ chưa rõ kết quả, không tự tạo lại.
+
+Tài khoản trong tab Tài khoản là nguồn duy nhất. Node không có nút kết nối, không tạo profile đăng nhập thứ hai, không cần endpoint/cửa sổ CDP của v45 đang mở. Sau mỗi lượt, browser nền được đóng để giải phóng profile. Nếu profile vẫn do cửa sổ đăng nhập dùng, app dừng và nhắc đóng riêng cửa sổ đó một lần; không kill trình duyệt cá nhân hoặc xóa khóa profile.
+
+## Cách hoạt động
+
+- AccountWebSession lấy account_id/email/profile_key từ registry đăng nhập web cũ. BackgroundFlowSession mở profile đó bằng Chrome/Edge đã cài với headless=True; không sao chép cookie, không thay nhận diện trình duyệt hay xử lý CAPTCHA.
+- Kiểm tài khoản và thử thách trước các thao tác. Dự án riêng được tạo qua nút New project được nhận diện duy nhất khi phòng/tài khoản chưa có ánh xạ; URL hợp lệ lưu trong vault theo cặp account/room. Lượt sau dùng lại. Không chọn bừa một dự án trong danh sách. Tạo dự án không đồng nghĩa bấm tạo video; bước chuẩn bị lỗi không tự gửi video.
+- Tải một ảnh, xác minh preview, điền prompt; chỉ bấm Generate một lần khi kiểm được Lite, 8s, 9:16, x1 và chế độ từ khung. Các tab/option đang hiện nhưng chưa được chọn không được coi là cài đặt hiện tại. Nếu chưa xử lý được thì dừng và lưu ảnh lỗi trong node, không chuyển sang chuỗi thao tác tay trên một web khác.
+- Theo dõi thẻ mới khớp prompt, loại thẻ cũ/nhiều kết quả. Chỉ hiển thị phần trăm đọc được từ thẻ đó. Khi có đúng video, đọc tài nguyên media của thẻ qua trang đã đăng nhập và stream từng đoạn tối đa 256 KiB xuống file, tổng tối đa 100 MiB. Chỉ nhận blob của origin Flow hoặc HTTPS từ các host media Google được cho phép; không gọi RPC tạo video riêng. Không phụ thuộc bấm nút tải/native download manager hoặc nạp toàn bộ video thành base64 trong RAM.
+- Kiểm ffprobe, container MP4/WebM, 8s, 9:16, dung lượng và hash rồi nhập đúng phòng/cảnh/phần clip. Giữ ID/cổng/dây node và schema job v43. Không tự retry khi có thể đã gửi. URL media có chữ ký không đưa ra API trạng thái/log; kết quả chỉ lưu file và hash.
+- Lỗi của job lưu từ bản trước được gắn nhãn rõ. CancelledError mới có lý do dừng và phân biệt trước/sau bước tạo; lịch sử cũ không bị xóa hay tự coi là chưa gửi.
+
+## Kiểm tra
+
+- check_background_veo_v46: Chromium headless thật, profile fixture có phiên lưu sẵn; không đọc endpoint cửa sổ, hai lượt liên tiếp dùng lại dự án, đúng ảnh/prompt/một click, tiến độ 37%, stream blob video thực và ffprobe/hash; đóng profile sau lượt; chặn nguồn lạ/quá dung lượng/sai nick/cài đặt chưa kiểm; lỗi trước gửi có ảnh, không checkpoint thao tác web. Trang và dữ liệu Google đều là fixture, DNS ngoài bị chặn. Kiểm tab hiện nhưng chưa chọn không làm giả settings_ready.
+- check_account_api_v46: lựa chọn tài khoản dùng chung, background flag, chặn đăng nhập riêng/chuyển mode cũ; ảnh chẩn đoán cần phiên local và không cache.
+- check_account_ui_v46, check_veo_node_v46: giữ bảng/sơ đồ Tài khoản cũ, đồng bộ lựa chọn sang node, không có nút kết nối, hiển thị ảnh lỗi trong app, giữ cổng/dây/clip/giọng/phụ đề và chống nhập trùng. Đã chạy bằng frontend lấy từ payload giao.
+- check_simple_flow và check_simple_flow_v44: hồi quy đường cũ và bộ kiểm video dùng chung; các test constructor cũ không đại diện cách đăng nhập của v46. check_lightweight_start kiểm không khởi động engine cũ mặc định.
+- So khớp từng file/hash của ZIP nhúng EXE với nguồn; kiểm ZIP integrity và compile Python. Không tuyên bố tất cả test UI lịch sử áp dụng cho v46.
+
+**Chưa kiểm việc tạo/tải một video Google thật từ v46 và chưa chạy updater v46 trên Windows.** Đăng nhập nền đã có kết quả người dùng; selector/cài đặt/tài nguyên media/CORS của Flow thật vẫn cần thử một clip. Nếu UI hoặc nguồn tải không hỗ trợ, v46 báo rõ và không tự đổi model, tài khoản hay gửi lại. Không khẳng định mọi tài khoản Google đều chạy nền được.
