@@ -1,0 +1,7 @@
+Bo cuoi - dieu khien web Flow theo giao dien Agent.
+
+Cach cai:
+1. Tat SceneForge.
+2. Copy local_engine/ de len local_engine cua app.
+3. Copy scripts/browser-extension/dom-flow.js de len thu muc cai.
+4. Mo lai SceneForge va thu tao video.
