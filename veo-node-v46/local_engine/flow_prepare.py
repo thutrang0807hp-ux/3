@@ -21,6 +21,12 @@ class PrepareStopped(RuntimeError):
     pass
 
 
+class ReferenceChoiceNeeded(PrepareStopped):
+    def __init__(self, matches):
+        super().__init__('Có nhiều ảnh khớp trong thư viện. Chọn một thumbnail để tiếp tục; chưa điền prompt hoặc gửi tạo.')
+        self.matches=matches
+
+
 def prompt_text(value):
     return str(value).replace('\r\n', '\n').strip()
 
@@ -44,7 +50,8 @@ async def reference_images(scope, expected, report=None):
         raise PrepareStopped('Có quá nhiều ảnh để đối chiếu an toàn. Thu gọn thư viện Flow rồi thử lại.')
     matches=[];candidates=[]
     for index in range(await images.count()):
-        item=images.nth(index)
+        item=await images.nth(index).element_handle()
+        if item is None:continue
         details=await item.evaluate('''e=>({ready:e.complete&&e.naturalWidth>32&&e.naturalHeight>32,
             composer:!!e.closest('[data-sf-flow-composer]'),src:e.currentSrc||e.src,
             media:e.closest('[data-media-id],[data-asset-id]')?.getAttribute('data-media-id')||e.closest('[data-asset-id]')?.getAttribute('data-asset-id')||null})''')
@@ -58,7 +65,14 @@ async def reference_images(scope, expected, report=None):
         candidates.append({'index':index,'error':round(score,3),'composer':details['composer'],
                            'media_id':details['media'],'source_hash':hashlib.sha256(details['src'].encode()).hexdigest()})
         if score <= 4:
-            matches.append({'item':item,'error':round(score,3),'composer':details['composer'],
+            marker='data-sf-reference-'+secrets.token_hex(10)
+            stable=await item.evaluate('''(e,{src,marker})=>{
+                if(!e.isConnected||(e.currentSrc||e.src)!==src)return false;
+                e.setAttribute(marker,'');return true;
+            }''',{'src':details['src'],'marker':marker})
+            if not stable:continue
+            pinned=scope.locator('img['+marker+']')
+            matches.append({'item':pinned,'error':round(score,3),'composer':details['composer'],
                             'media_id':details['media'],'source_hash':hashlib.sha256(details['src'].encode()).hexdigest()})
     if report is not None:
         report['image_matches']=[{k:v for k,v in m.items() if k!='item'} for m in matches]
@@ -78,7 +92,7 @@ async def attached_reference(page, expected):
     return len(await reference_images(scope,expected))==1
 
 
-async def prepare_composer(page, reference, prompt, settings, check, report):
+async def prepare_composer(page, reference, prompt, settings, check, report, selected_reference=None):
     phase=lambda value:report.update(phase=value)
     with Image.open(reference) as image:expected=ImageOps.exif_transpose(image).convert('RGB')
     phase('apply_settings')
@@ -115,9 +129,21 @@ async def prepare_composer(page, reference, prompt, settings, check, report):
             matches=[m for m in found if not m['composer']]
             if matches:break
             await asyncio.sleep(.5)
+        if selected_reference:
+            chosen=[m for m in matches if (m['media_id']==selected_reference['media_id'] if selected_reference.get('media_id') else m['source_hash']==selected_reference.get('source_hash'))]
+            if len(chosen)==1:
+                matches=chosen
+                report['reference_selection']='explicit_or_remembered_choice'
+            elif matches:
+                raise ReferenceChoiceNeeded(matches)
+        if len(matches)>1:
+            raise ReferenceChoiceNeeded(matches)
         if len(matches)!=1:
             raise PrepareStopped('Chưa xác định duy nhất đúng ảnh đã upload trong thư viện (khớp '+str(len(matches))+'). Không chọn ảnh gần giống hoặc ảnh đầu danh sách.')
         match=matches[0];report['matched_reference']={k:v for k,v in match.items() if k not in ('item','composer')}
+        current_source=await match['item'].evaluate('e=>e.currentSrc||e.src')
+        if hashlib.sha256(current_source.encode()).hexdigest()!=match['source_hash']:
+            raise PrepareStopped('Thumbnail đã đổi trong lúc đối chiếu. Chuẩn bị lại; chưa mở menu ảnh.')
         await match['item'].hover()
         phase('open_reference_menu')
         more=None
@@ -184,6 +210,7 @@ async def validate_prepared(service, payload, raw):
 
 def register_prepare_routes(app, service):
     service.prepare_report=None;service.prepared_page=None;service.prepared_reference=None
+    service.reference_choices={}
     def status(rid):
         report=service.prepare_report
         if not report or report['request_id']!=rid:raise HTTPException(404,'Không có lượt chuẩn bị này trong phiên hiện tại.')
@@ -194,9 +221,23 @@ def register_prepare_routes(app, service):
             if not selection['available'] or selection['account_id']!=report['account_id'] or selection['token']!=token:raise PrepareStopped('Tài khoản đã đổi; dừng trước khi gửi tạo.')
             await service.assert_ready()
         try:
-            await prepare_composer(service.page,reference,report.pop('_prompt'),report['settings'],check,report)
+            await prepare_composer(service.page,reference,report.pop('_prompt'),report['settings'],check,report,report.get('selected_reference'))
             service.prepared_page=service.page;service.prepared_reference=reference
+            matched=report.get('matched_reference')
+            if matched:
+                service.reference_choices[(report['account_id'],report['room_id'],report['reference_sha256'])]={k:matched[k] for k in ('media_id','source_hash')}
             report.update(state='ready',message='Đã đối chiếu đúng ảnh và prompt trong ô tạo. Xem ảnh kiểm tra trước khi tạo một lần.')
+        except ReferenceChoiceNeeded as error:
+            choices=[]
+            for index,match in enumerate(error.matches[:8]):
+                candidate_id=secrets.token_hex(8)
+                candidate={'id':candidate_id,'media_id':match['media_id'],'source_hash':match['source_hash'],'error':match['error'],'has_preview':False}
+                try:
+                    await match['item'].screenshot(path=str(service.root/(report['request_id']+'.candidate-'+candidate_id+'.png')),timeout=3000)
+                    candidate['has_preview']=True
+                except Exception:pass
+                choices.append(candidate)
+            report.update(state='awaiting_selection',message='Có '+str(len(error.matches))+' ảnh khớp trong thư viện. Chọn thumbnail bên dưới để gắn đúng ảnh và tiếp tục điền prompt; chưa gửi tạo.',candidates=choices)
         except asyncio.CancelledError:
             report.update(state='failed',message='Đã dừng chuẩn bị; chưa gửi tạo video.');raise
         except Exception as error:
@@ -228,8 +269,21 @@ def register_prepare_routes(app, service):
             paths=[service.root/(upload['request_id']+ext) for ext in ('.png','.jpg','.webp')]
             paths=[p for p in paths if p.is_file()]
             if len(paths)!=1 or hashlib.sha256(paths[0].read_bytes()).hexdigest()!=body['reference_sha256']:raise HTTPException(409,'Không còn tệp ảnh gốc đã upload. Upload lại trước khi gắn prompt.')
+            selected=service.reference_choices.get((selection['account_id'],body['room_id'],body['reference_sha256']))
+            choice=body.get('candidate_choice')
+            if choice is not None:
+                previous=service.prepare_report
+                if (not isinstance(choice,dict) or not previous or previous['state']!='awaiting_selection'
+                    or choice.get('request_id')!=previous['request_id']
+                    or any(previous.get(k)!=body[k] for k in ('room_id','scene_id','part','reference_sha256'))
+                    or previous['account_id']!=selection['account_id'] or previous['settings']!=settings
+                    or previous['prompt_sha256']!=hashlib.sha256(prompt.encode()).hexdigest()):
+                    raise HTTPException(409,'Ảnh, prompt, cảnh hoặc tài khoản đã đổi. Bấm Gắn ảnh + điền prompt lại trước khi chọn.')
+                candidates=[c for c in previous['candidates'] if c['id']==choice.get('candidate_id')]
+                if len(candidates)!=1:raise HTTPException(409,'Lựa chọn thumbnail không thuộc lượt chuẩn bị này.')
+                selected={k:candidates[0][k] for k in ('media_id','source_hash')}
             rid='flow-prepare-'+secrets.token_hex(12)
-            report={'request_id':rid,'state':'running','message':'Đang đối chiếu ảnh, gắn vào ô tạo và điền prompt; chưa gửi tạo.', 'settings':settings,'account_id':selection['account_id'],'room_id':body['room_id'],'scene_id':body['scene_id'],'part':body['part'],'has_preview':False,'_prompt':prompt}
+            report={'request_id':rid,'state':'running','message':'Đang đối chiếu ảnh, gắn vào ô tạo và điền prompt; chưa gửi tạo.', 'settings':settings,'account_id':selection['account_id'],'room_id':body['room_id'],'scene_id':body['scene_id'],'part':body['part'],'has_preview':False,'_prompt':prompt,'reference_sha256':body['reference_sha256'],'prompt_sha256':hashlib.sha256(prompt.encode()).hexdigest(),'selected_reference':selected}
             service.prepare_report=report;service.active=rid;service.sent=False
             service.task=asyncio.create_task(run(report,paths[0],selection['token']))
             receipt=status(rid);receipt.pop('_prompt',None);return receipt
@@ -241,3 +295,9 @@ def register_prepare_routes(app, service):
         report=status(rid)
         if not report['has_preview']:raise HTTPException(404,'Chưa có ảnh kiểm tra prompt.')
         return FileResponse(service.root/(rid+'.prepare.png'),media_type='image/png',headers={'Cache-Control':'no-store'})
+    @app.get('/local-api/flow/simple/prepare/{rid}/candidates/{candidate_id}')
+    async def candidate_preview(rid:str,candidate_id:str):
+        report=status(rid)
+        candidates=[c for c in report.get('candidates',[]) if c['id']==candidate_id and c['has_preview']]
+        if len(candidates)!=1:raise HTTPException(404,'Không có thumbnail của lựa chọn này.')
+        return FileResponse(service.root/(rid+'.candidate-'+candidates[0]['id']+'.png'),media_type='image/png',headers={'Cache-Control':'no-store'})
