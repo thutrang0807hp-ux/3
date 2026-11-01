@@ -9,8 +9,8 @@ import zipfile
 import dnfile
 
 ROOT = Path(__file__).resolve().parents[3]
-VERSION = '2026.11.02.4627'
-NAME = 'SceneForge-Update-20261102-v46.27-Image-Prompt-Trace.exe'
+VERSION = '2026.11.02.4628'
+NAME = 'SceneForge-Update-20261102-v46.28-Prompt-Filled.exe'
 BASELINE = '8178af48a4db6180eb0fb3ef042b04ea21617c7380ca2e106d8e967990eb0c35'
 
 def main():
@@ -64,6 +64,7 @@ def main():
     exe.with_suffix('.exe.sha256').write_text(digest+'  '+NAME+'\n')
     report = {'version': VERSION, 'file': NAME, 'bytes': len(data), 'sha256': digest, 'files': len(sources),
               'minimum_patch': manifest['minimum_patch'], 'embedded_files_verified': True,
+              'prompt_filled_separate_from_verified': True, 'prompt_readback_required': False,
               'image_prompt_trial': True, 'generation_disabled': True, 'preview_required': False,
               'upload_timeout_seconds': 20, 'attachment_timeout_seconds': 10,
               'upload_implementation': 'project_upload_v46_19', 'uploader_byte_identical_to_v46_19': True,

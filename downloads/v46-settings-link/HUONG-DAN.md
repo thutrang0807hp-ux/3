@@ -1,7 +1,9 @@
-# SceneForge v46.27 — thử ảnh + prompt
+# SceneForge v46.28 — thử ảnh + prompt
 
-Đóng SceneForge, chạy SceneForge-Update-20261102-v46.27-Image-Prompt-Trace.exe và chọn thư mục đang cài có SceneForge.exe cùng install-settings.json. Yêu cầu bản vá v46.7 trở lên.
+Đóng SceneForge, chạy SceneForge-Update-20261102-v46.28-Prompt-Filled.exe và chọn thư mục đang cài có SceneForge.exe cùng install-settings.json. Yêu cầu bản vá v46.7 trở lên.
 
 Mở lại app, vào node Veo, chọn ảnh và nhập prompt rồi bấm **Thử ảnh + prompt trên Flow**. Bản thử áp dụng settings, gửi ảnh, điền prompt ngay và thử gắn ảnh. Không bắt buộc preview, không tự gửi lại khi timeout, không tạo video.
 
 Kết quả giao tệp, prompt và gắn ảnh được báo riêng. Tải báo cáo lượt ảnh + prompt nếu lỗi. Chưa xác minh toàn luồng trên Flow thật hoặc chạy installer trên Windows.
+
+Bản .28 báo riêng prompt_filled (đã điền) và prompt_verified (đọc lại khớp). Kết quả gửi đầu vào dựa trên delivered + prompt_filled. Báo cáo chứa prompt_expected và prompt_actual để đối chiếu. Việc này không sửa lỗi gắn ảnh và không bật tạo video.

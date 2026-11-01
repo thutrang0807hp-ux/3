@@ -41,9 +41,10 @@ def comparable_prompt(value):
     # Only whitespace is normalized; no words, punctuation or case are discarded.
     return re.sub(r'\s+', ' ', prompt_text(value)).strip()
 
-async def write_prompt(page,prompt,replace=False,probe=None):
+async def write_prompt(page,prompt,replace=False,probe=None,report=None):
     editor,_=await reference_scope(page)
     if editor is None:raise PairStopped('Chưa tìm được duy nhất ô prompt trên Flow.')
+    if report is not None:report['prompt_expected']=prompt
     expected=comparable_prompt(prompt)
     current=comparable_prompt(await editor_text(editor))
     if current!=expected:
@@ -53,17 +54,22 @@ async def write_prompt(page,prompt,replace=False,probe=None):
             await editor.focus();await editor.press('Control+End');await page.keyboard.insert_text(prompt)
         else:
             await editor.fill(prompt,timeout=10000)
+    if report is not None:report['prompt_filled']=True
     for attempt in range(8):
-        readback=prompt_text(await editor_text(editor))
+        try:readback=prompt_text(await editor_text(editor))
+        except Exception as exc:
+            if probe is not None:probe.update(verified=False,readback_error=type(exc).__name__)
+            return None
+        if report is not None:report['prompt_actual']=readback
         observed=comparable_prompt(readback)
         if probe is not None:
             probe.update(expected_length=len(prompt),observed_length=len(readback),
                          observed_sha256=hashlib.sha256(readback.encode()).hexdigest(),
-                         comparison='whitespace_normalized',attempts=attempt+1)
+                         comparison='whitespace_normalized',attempts=attempt+1,verified=observed==expected)
         if observed==expected:
             return hashlib.sha256(readback.encode()).hexdigest()
         await asyncio.sleep(.15)
-    raise PairStopped('Prompt đọc lại khác nội dung của cảnh sau khi chuẩn hóa khoảng trắng. Xem prompt_probe.')
+    return hashlib.sha256(readback.encode()).hexdigest()
 
 async def trace_uploaded_media(page,before,stem,check,report,timeout=30):
     deadline=asyncio.get_running_loop().time()+timeout
@@ -174,10 +180,10 @@ async def upload_and_fill_prompt(
         async def check(): pass
     report = {} if report is None else report
     report.update(state='running', delivered=False, upload_uncertain=False,
-                  prompt_verified=False, image_attached=False, settings_verified=False,
+                  prompt_filled=False, prompt_verified=False, image_attached=False, settings_verified=False,
                   generation_submitted=False, logs=[], errors={}, upload_report={},
                   settings_report={}, upload_provenance={})
-    for key in ('uploaded_media_id', 'attachment_evidence', 'composer_state', 'prompt_readback_sha256'):
+    for key in ('uploaded_media_id', 'attachment_evidence', 'composer_state', 'prompt_readback_sha256', 'prompt_probe', 'prompt_actual', 'prompt_expected'):
         report.pop(key, None)
     def log(message): report['logs'].append(message)
     def phase(name, message):
@@ -189,10 +195,10 @@ async def upload_and_fill_prompt(
         log(step + ': ' + detail)
     async def fill(replace):
         report['prompt_verified'] = False
-        digest = await asyncio.wait_for(write_prompt(page, prompt, replace=replace, probe=report.setdefault('prompt_probe',{})), prompt_timeout)
-        report.update(prompt_verified=True, prompt_readback_sha256=digest)
+        digest = await asyncio.wait_for(write_prompt(page, prompt, replace=replace, probe=report.setdefault('prompt_probe',{}), report=report), prompt_timeout)
+        report.update(prompt_verified=bool(report.get('prompt_probe',{}).get('verified')), prompt_readback_sha256=digest)
         report['errors'].pop('prompt', None)
-        log('Đã điền và đọc lại đúng prompt.')
+        log('Đã điền prompt; đọc lại khớp.' if report['prompt_verified'] else 'Đã điền prompt; chưa xác nhận đọc lại khớp. Xem prompt_expected và prompt_actual trong báo cáo.')
     if not re.fullmatch(r'flow-pair-[a-f0-9]{24}', reference.stem):
         destination = Path(tempfile.mkdtemp(prefix='sceneforge-pair-')) / ('flow-pair-'+secrets.token_hex(12)+reference.suffix)
         shutil.copyfile(reference, destination)
@@ -256,9 +262,9 @@ async def upload_and_fill_prompt(
             try: await fill(False)
             except Exception as exc: error('prompt', exc)
         await check()
-        complete = report['delivered'] and report['prompt_verified']
+        complete = report['delivered'] and report.get('prompt_filled', False)
         report.update(state='inputs_sent' if complete else 'partial', phase='complete',
-                      message='Đã giao tệp và điền đúng prompt. Kết quả gắn ảnh được báo riêng; chưa tạo video.' if complete else 'Chưa xác nhận đủ ảnh và prompt. Xem báo cáo; chưa tạo video.')
+                      message=('Đã giao tệp và điền prompt; '+('đã ghi nhận gắn ảnh.' if report['image_attached'] else 'chưa xác nhận gắn ảnh.')+' Đọc lại prompt được báo riêng; chưa tạo video.') if complete else 'Chưa xác nhận đủ ảnh và prompt. Xem báo cáo; chưa tạo video.')
     except asyncio.CancelledError:
         report.update(state='cancelled', phase='stopped', message='Đã dừng lượt thử; chưa tạo video.')
         raise
@@ -267,9 +273,9 @@ async def upload_and_fill_prompt(
         report.update(state='failed', phase='stopped', message='Đã dừng lượt thử: '+str(exc))
     finally:
         report['generation_submitted'] = False
-        if report['upload_uncertain'] and report['prompt_verified']:
+        if report['upload_uncertain'] and report['prompt_filled']:
             log('Prompt đã điền dù upload chưa xác nhận.')
-        log(f"Kết quả: delivered={report['delivered']}, prompt={report['prompt_verified']}, attached={report['image_attached']}")
+        log(f"Kết quả: delivered={report['delivered']}, prompt_filled={report['prompt_filled']}, prompt_verified={report['prompt_verified']}, attached={report['image_attached']}")
     return report
 
 
@@ -329,7 +335,7 @@ def register_pair_routes(app,service):
             selection=service.account_bridge.selection()
             if not selection['available']or body.get('selection_token')!=selection['token']:raise HTTPException(409,'Tài khoản đã đổi hoặc chưa sẵn sàng.')
             rid='flow-pair-'+secrets.token_hex(12)
-            report={'request_id':rid,'state':'running','message':'Đang tự đưa ảnh và prompt của cảnh sang Flow; chưa tạo video.','room_id':body['room_id'],'scene_id':body['scene_id'],'part':body['part'],'account_id':selection['account_id'],'reference_sha256':hashlib.sha256(raw).hexdigest(),'prompt_sha256':hashlib.sha256(prompt_text(prompt).encode()).hexdigest(),'delivered':False,'image_attached':False,'prompt_verified':False,'settings_verified':False,'has_preview':False,'generation_submitted':False,'logs':[],'errors':{}}
+            report={'request_id':rid,'state':'running','message':'Đang tự đưa ảnh và prompt của cảnh sang Flow; chưa tạo video.','room_id':body['room_id'],'scene_id':body['scene_id'],'part':body['part'],'account_id':selection['account_id'],'reference_sha256':hashlib.sha256(raw).hexdigest(),'prompt_sha256':hashlib.sha256(prompt_text(prompt).encode()).hexdigest(),'delivered':False,'image_attached':False,'prompt_filled':False,'prompt_verified':False,'settings_verified':False,'has_preview':False,'generation_submitted':False,'logs':[],'errors':{}}
             service.prepare_report=None;service.prepared_page=None;service.prepared_reference=None
             service.pair_page=None
             service.pair_report=report;service.upload_report=report;service.active=rid;service.sent=False

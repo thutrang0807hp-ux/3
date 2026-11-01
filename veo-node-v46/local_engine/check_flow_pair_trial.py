@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, patch
 from . import flow_pair_trial as m
 
 class PairTrialTests(unittest.IsolatedAsyncioTestCase):
-    async def exercise(self, *, upload_error=False, settings_error=False, attach_error=False):
+    async def exercise(self, *, upload_error=False, settings_error=False, attach_error=False, readback_mismatch=False):
         events=[]
         async def upload(*args):
             events.append('upload')
@@ -16,6 +16,8 @@ class PairTrialTests(unittest.IsolatedAsyncioTestCase):
             return True
         async def write(*args, **kwargs):
             events.append('prompt')
+            kwargs['report']['prompt_filled']=True
+            kwargs['probe']['verified']=not readback_mismatch
             return 'verified-digest'
         async def trace(*args, **kwargs):
             events.append('trace')
@@ -64,6 +66,14 @@ class PairTrialTests(unittest.IsolatedAsyncioTestCase):
             with self.assertRaises(m.PairStopped):
                 await m.trace_uploaded_media(None,{},'unique-file',AsyncMock(),report,timeout=.01)
         self.assertNotIn('method',report['upload_provenance'])
+
+    async def test_prompt_readback_mismatch_does_not_mark_delivery_partial(self):
+        report,_=await self.exercise(readback_mismatch=True,attach_error=True)
+        self.assertTrue(report['prompt_filled'])
+        self.assertFalse(report['prompt_verified'])
+        self.assertFalse(report['image_attached'])
+        self.assertEqual(report['state'],'inputs_sent')
+        self.assertFalse(report['generation_submitted'])
 
     async def test_original_bytes_select_correct_asset_among_two_new_ids(self):
         import hashlib
