@@ -91,3 +91,11 @@ Báo cáo thực tế đã xác nhận image_ready và một media mới khớp,
 ## v46.13 — đúng accessible name nút chế độ
 
 Báo cáo thực tế v46.12 có composer_controls: nút text Video · 720p · 8s/crop_16_9/x2 mang aria-label Settings trigger. get_by_role(name bắt đầu Video) không thể khớp vì aria-label thay tên hiển thị. Thêm nhận diện chính xác Settings trigger trong composer và dùng control này khi xác định ancestor không có form, bỏ Start/End làm dấu nhận diện vùng cấu hình. Không thay đường upload. Chromium tái hiện đúng aria-label trên form và div composer đều đạt, cùng hồi quy ghép ảnh/prompt và timeout overlay. Chưa xác minh Google thật. Delta 3 file v46.7+, EXE tại downloads/v46-settings-trigger.
+
+## v46.14 — đầy đủ cài đặt và đọc lại Flow
+
+Thêm simple_flow_settings.py: mở Settings trigger trong composer, tìm panel Video/Image + các nhóm cấu hình; chọn Video, Ingredients, Veo 3.1 Lite, 9:16 và x1, đọc lại toàn bộ, kiểm tra summary 8s/x1. Dùng aria/data-state khi có; với dark UI người dùng đã cung cấp, so nền sáng hơn trong đúng nhóm lựa chọn khi không có trạng thái ngữ nghĩa; không đọc rõ thì dừng. Chọn model trước ratio/output để sửa reset mặc định. Không toggle lại các lựa chọn đã đúng. Sau gắn ảnh đọc/sửa lại cấu hình lần nữa rồi xác minh ảnh vẫn còn và đúng trước prompt.
+
+Giữ nguyên upload_to_project/rtrtr4. Dùng nút More options trong đúng media card (không dùng menu đầu trang); hỗ trợ Add to prompt mở hộp tài nguyên bằng chọn đúng media_id/source_key, không chọn video cũ giống thumbnail. UI hiện dòng cấu hình đã kiểm tra chỉ khi prompt_ready. Report có project_url, verified_settings/settings_controls và lỗi ở từng bước. Cơ chế account+workflow -> project hiện có được giữ, kiểm thử mở lại hai lần chỉ tạo một dự án. Không Generate. Chưa đổi sang direct-composer upload.
+
+Đã kiểm thử Chromium full worker, settings CSS/aria, mode/model reset, picker ảnh đúng, không ghi đè ảnh/prompt khác, upload-only/readiness và UI/API Accounts; chưa xác minh Google thật hoặc GUI updater Windows. Delta 4 file, v46.7+, EXE ở downloads/v46-flow-settings.

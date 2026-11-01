@@ -127,12 +127,12 @@ async def upload_to_project(page,reference,log,report):
     # Menu Upload/image input is now open; source function remains untouched.
     return await upload_reference(page,reference,log)
 
-async def library_images(page):
+async def library_images(page,root=None,include_dialogs=False):
     """Read image identities from the project library, excluding upload dialogs/composers."""
     import hashlib
-    rows=await page.locator('img').evaluate_all(r'''xs=>xs.map((e,i)=>{
-      const r=e.getBoundingClientRect();if(!r.width||!r.height||e.closest('form,[role=dialog]'))return null;
-      const editor=e.closest('[data-testid*=composer]');if(editor)return null;
+    rows=await (root or page).locator('img').evaluate_all(r'''(xs,includeDialogs)=>xs.map((e,i)=>{
+      const r=e.getBoundingClientRect();if(!r.width||!r.height||(!includeDialogs&&e.closest('form,[role=dialog]')))return null;
+      const editor=e.closest('[data-testid*=composer]');if(editor&&!includeDialogs)return null;
       const card=e.closest('[data-media-id],[data-asset-id],article,[role=listitem]')||e.parentElement;
       const id=card?.getAttribute('data-media-id')||card?.getAttribute('data-asset-id')||'';
       const src=e.currentSrc||e.src||'';
@@ -140,14 +140,14 @@ async def library_images(page):
       const busy=card?.getAttribute('aria-busy')==='true'||/^(uploading|loading|pending)$/.test(card?.getAttribute('data-state')||'')||[...(card?.querySelectorAll('[role=progressbar],[aria-busy=true]')||[])].some(visible);
       e.setAttribute('data-sf-upload-image',String(i));
       return {token:String(i),id,src,name:[e.alt,e.title,card?.getAttribute('title')].filter(Boolean).join(' '),loaded:e.complete&&e.naturalWidth>32&&e.naturalHeight>32,busy,width:e.naturalWidth,height:e.naturalHeight};
-    }).filter(Boolean)''')
+    }).filter(Boolean)''',include_dialogs)
     from urllib.parse import urlsplit,urlunsplit,parse_qsl,urlencode
     for row in rows:
         src=urlsplit(row['src'])
         transient={'token','signature','expires','width','height','w','h','sz','t','timestamp'}
         query=[(key,value)for key,value in parse_qsl(src.query,keep_blank_values=True)if key.lower()not in transient and not key.lower().startswith(('x-goog-','x-amz-'))]
         canonical=urlunsplit((src.scheme,src.netloc,src.path,urlencode(sorted(query)),''))if src.scheme in ('http','https')else row['src']
-        row['key']=hashlib.sha256((row['id']or canonical).encode()).hexdigest()
+        row['key']=hashlib.sha256((row['id']or canonical).encode()).hexdigest();row['source_key']=hashlib.sha256(canonical.encode()).hexdigest()
     return rows
 
 async def wait_uploaded_image(page,before,reference,check,report,timeout=60):
@@ -180,7 +180,7 @@ async def wait_uploaded_image(page,before,reference,check,report,timeout=60):
             match=matches[0]
             if stable_key!=match['key']:stable_key=match['key'];stable_since=time.monotonic()
             elif time.monotonic()-stable_since>=.75:
-                return {'key':match['key'],'media_id':match['id']or None,'name':match['name'][:160],'width':match['width'],'height':match['height'],'visual_difference':match['visual_difference']}
+                return {'key':match['key'],'source_key':match['source_key'],'media_id':match['id']or None,'name':match['name'][:160],'width':match['width'],'height':match['height'],'visual_difference':match['visual_difference']}
         else:stable_key=None;stable_since=None
         await asyncio.sleep(.25)
     return None
@@ -198,7 +198,7 @@ async def prompt_composer(page):
         if await modes.count():return editor,scope
     return editor,None
 
-async def prepare_uploaded_prompt(page,asset,reference,prompt,check,report,timeout=10):
+async def prepare_uploaded_prompt(page,asset,reference,prompt,check,report,timeout=10,mode_verified=False,before_fill=None):
     """Bind the exact uploaded library asset to Ingredients, fill text, never Generate."""
     import time,io
     from PIL import Image,ImageOps,ImageChops,ImageStat
@@ -207,6 +207,7 @@ async def prepare_uploaded_prompt(page,asset,reference,prompt,check,report,timeo
         report['preparation_error']=message;return False
     async def ready_mode(scope):
         if scope is None:return False
+        if mode_verified:return True
         controls=scope.get_by_role('button',name=ingredients).or_(scope.get_by_role('tab',name=ingredients)).filter(visible=True)
         selected=await controls.evaluate_all("""xs=>xs.some(e=>{
           if(e.closest('[role=menu],[role=listbox]'))return false;
@@ -260,8 +261,15 @@ async def prepare_uploaded_prompt(page,asset,reference,prompt,check,report,timeo
     if len(rows)!=1:return await fail('Ảnh vừa upload không còn nhận diện duy nhất trong dự án; chưa chọn ảnh cũ.')
     image=page.locator('img[data-sf-upload-image="'+rows[0]['token']+'"]')
     report['preparation_stage']='open_asset_menu'
-    await check();await image.click(button='right',timeout=3000)
-    actions=page.get_by_role('menuitem',name=re.compile(r'^(Add to prompt|Use in prompt|Use as ingredient|Add as ingredient|Add to ingredients|Thêm vào prompt|Dùng làm thành phần|Thêm vào thành phần)$',re.I)).filter(visible=True)
+    await check()
+    card=image.locator('xpath=ancestor::*[@data-media-id or @data-asset-id][1]')
+    more=card.get_by_role('button',name=re.compile(r'^(More options|More|Tùy chọn khác)$',re.I)).filter(visible=True)
+    if await card.count()==1:
+        await card.hover()
+    if await more.count()==1:await more.click(timeout=3000)
+    else:await image.click(button='right',timeout=3000)
+    action_name=re.compile(r'^(Add to prompt|Use in prompt|Use as ingredient|Add as ingredient|Add to ingredients|Thêm vào prompt|Dùng làm thành phần|Thêm vào thành phần)$',re.I)
+    actions=page.get_by_role('menuitem',name=action_name).or_(page.get_by_role('button',name=action_name)).filter(visible=True)
     try:await actions.first.wait_for(state='visible',timeout=2500)
     except Exception:
         report['image_menu']=await page.get_by_role('menuitem').filter(visible=True).all_text_contents()
@@ -269,6 +277,7 @@ async def prepare_uploaded_prompt(page,asset,reference,prompt,check,report,timeo
     if await actions.count()!=1:return await fail('Không xác định duy nhất thao tác gắn ảnh vào Ingredients.')
     report['preparation_stage']='attach_asset'
     await actions.click(timeout=3000)
+    if not await confirm_asset_picker(page,asset,check,report):return await fail(report.get('preparation_error','Chưa chọn đúng ảnh trong hộp tài nguyên.'))
     report['preparation_stage']='attaching'
     with Image.open(reference)as original:expected=ImageOps.fit(ImageOps.exif_transpose(original).convert('RGB'),(64,64))
     deadline=time.monotonic()+timeout;attached=False
@@ -289,6 +298,14 @@ async def prepare_uploaded_prompt(page,asset,reference,prompt,check,report,timeo
     if not await ready_mode(scope):return await fail('Chế độ tạo đã thay đổi; chưa điền prompt.')
     current=await editor.evaluate('(e)=>e.value??e.innerText??""')
     if current.strip()and current.strip()!=prompt.strip():return await fail('Prompt trên Flow đã đổi; chưa ghi đè.')
+    if before_fill is not None:
+        if not await before_fill():return False
+        editor,scope=await prompt_composer(page)
+        if scope is None or await scope.locator('img').filter(visible=True).count()!=1:return await fail('Ảnh đã bị gỡ khi đổi cấu hình; chưa điền prompt.')
+        with Image.open(io.BytesIO(await scope.locator('img').filter(visible=True).screenshot(timeout=2000)))as thumb:final_image=ImageOps.fit(thumb.convert('RGB'),(64,64))
+        if sum(ImageStat.Stat(ImageChops.difference(expected,final_image)).mean)/(3*255)>.035:return await fail('Ảnh tham khảo đổi sau cài đặt; chưa điền prompt.')
+        current=await editor.evaluate('(e)=>e.value??e.innerText??""')
+        if current.strip()and current.strip()!=prompt.strip():return await fail('Prompt trên Flow đã đổi; chưa ghi đè.')
     report['preparation_stage']='fill_prompt'
     await editor.fill(prompt,timeout=5000)
     report['preparation_stage']='verify_prompt'
@@ -297,3 +314,37 @@ async def prepare_uploaded_prompt(page,asset,reference,prompt,check,report,timeo
     report['attached_asset_key']=asset['key'];report['prompt_sha256']=__import__('hashlib').sha256(prompt.encode()).hexdigest()
     report['preparation_stage']='prompt_ready'
     return True
+
+async def confirm_asset_picker(page,asset,check,report):
+ """Some Add to prompt actions open a library picker; bind the exact asset there."""
+ await asyncio.sleep(.15)
+ dialogs=page.get_by_role('dialog').filter(visible=True)
+ picker=dialogs if await dialogs.count()==1 else None
+ if picker is None:
+  search=page.get_by_placeholder('Search assets',exact=True).filter(visible=True)
+  if await search.count()==1:
+   for depth in range(1,9):
+    root=search.locator('xpath=ancestor::*['+str(depth)+']')
+    if await root.count()!=1 or await root.evaluate('(e)=>["BODY","HTML"].includes(e.tagName)'):break
+    if await root.get_by_role('button',name=re.compile(r'^Add to prompt$',re.I)).count()==1:picker=root;break
+ if picker is None:return True
+ report['preparation_stage']='select_picker_asset'
+ rows=await library_images(page,picker,include_dialogs=True)
+ matches=[x for x in rows if x['loaded']and not x['busy']and (x['key']==asset['key']or asset.get('source_key')and x['source_key']==asset['source_key'])]
+ report['picker_check']={'images':len(rows),'matching_views':len(matches)}
+ report['picker_images']=[{key:item[key]for key in ('id','key','source_key','name','loaded','busy','width','height')}for item in rows[:80]]
+ if not matches:report['preparation_error']='Hộp tài nguyên chưa có đúng mã ảnh mới; chưa chọn ảnh khác.';return False
+ # Multiple representations of the same asset (row thumbnail + large preview)
+ # are safe; choose its smallest view, not the first/last unrelated library tile.
+ sizes=[]
+ for item in matches:
+  locator=picker.locator('img[data-sf-upload-image="'+item['token']+'"]')
+  box=await locator.bounding_box()
+  if box:sizes.append((box['width']*box['height'],locator))
+ if not sizes:report['preparation_error']='Ảnh mới chưa hiển thị để chọn.';return False
+ sizes.sort(key=lambda x:x[0]);await check();await sizes[0][1].click(timeout=3000)
+ add=picker.get_by_role('button',name=re.compile(r'^Add to prompt$',re.I)).filter(visible=True)
+ if await add.count()!=1 or not await add.is_enabled():report['preparation_error']='Chưa có nút Add to prompt duy nhất trong hộp ảnh.';return False
+ report['preparation_stage']='confirm_picker_asset'
+ await add.click(timeout=3000)
+ return True

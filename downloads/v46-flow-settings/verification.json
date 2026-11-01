@@ -1,0 +1,28 @@
+{
+  "version": "2026.11.01.4614",
+  "sha256": "df7219a54faa8953a6430fb9b196c888449ac9bde2f74d9c6ba0c1e932dab8ef",
+  "verified_files": 4,
+  "working_upload_path_unchanged": true,
+  "required_settings": {
+    "mode": "Video",
+    "references": "Ingredients",
+    "ratio": "9:16",
+    "model": "Veo 3.1 Lite",
+    "outputs": 1,
+    "duration_seconds": 8
+  },
+  "checks": [
+    "CSS and semantic selected states: preset every field and read back; correct state not toggled; changed/unreadable state rejected",
+    "Model selection resets ratio/x2: repaired before readback",
+    "Full worker: exact new image via scoped More menu and asset picker; attachment resets Frames: repaired; prompt after verification; zero Generate",
+    "Same account/workflow project reopened twice with one creation",
+    "Upload-only, readiness, prompt guards and Accounts/UI/API regression",
+    "PowerShell updater version checks"
+  ],
+  "limitations": [
+    "Real Google Flow session not tested here",
+    "Windows updater GUI not run",
+    "This build uses the existing working project-library upload path, not the unverified direct-composer upload path",
+    "Selected-state CSS fallback validated against supplied dark layout only"
+  ]
+}

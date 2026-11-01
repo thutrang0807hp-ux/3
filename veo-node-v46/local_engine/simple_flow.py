@@ -5,6 +5,7 @@ from fastapi import HTTPException
 from fastapi.responses import FileResponse
 from .request_ledger import NO_RESULT,RequestConflict
 from .admission import guarded_submission
+from .simple_flow_settings import prepare_scene_prompt
 from .simple_flow_upload import upload_reference,upload_to_project,library_images,wait_uploaded_image,prepare_uploaded_prompt
 from .simple_flow_dom import ResultObserver,create_button,wait_composer,prepare_settings,settings_ready,previews,uploaded_preview
 
@@ -96,6 +97,7 @@ class SimpleFlow:
   try:
    reference.write_bytes(raw)
    await self.disconnect_browser();await self.restore();await self.assert_ready()
+   report['project_url']=self.project
    # Only wait for an editor or file input. No Ingredients/settings/Generate check.
    deadline=time.monotonic()+90
    while time.monotonic()<deadline:
@@ -116,8 +118,8 @@ class SimpleFlow:
      outcome='image_ready';report['message']='Đã nhận diện đúng ảnh mới trong thư viện: ảnh đã hiển thị và không còn trạng thái tải. Đã ghi nhận ảnh cho cảnh này; chưa điền prompt hoặc tạo video.'
      if prompt is not None:
       log('Ảnh đã sẵn sàng; đang gắn đúng ảnh vào Ingredients rồi điền prompt.')
-      if await prepare_uploaded_prompt(self.page,asset,reference,prompt,self.assert_ready,report):
-       outcome='prompt_ready';report['message']='Đã gắn đúng ảnh vừa upload vào Ingredients và điền prompt của cảnh này. Đã dừng trước nút Tạo video.'
+      if await prepare_scene_prompt(self.page,asset,reference,prompt,self.assert_ready,report):
+       outcome='prompt_ready';report['message']='Đã kiểm tra Video · Ingredients · 9:16 · Veo 3.1 Lite · x1 · 8 giây, gắn đúng ảnh mới và điền prompt của cảnh này. Đã dừng trước nút Tạo video.'
       else:report['message']='Ảnh đã upload xong. '+report.get('preparation_error','Chưa hoàn tất ghép ảnh và prompt.')
     else:report['message']='Đã giao tệp nhưng chưa xác nhận duy nhất ảnh mới tải xong sau 60 giây. Giữ ảnh và phiên Flow; chưa điền prompt hoặc chọn ảnh cũ.'
   except BaseException as exc:
@@ -127,7 +129,7 @@ class SimpleFlow:
     detail=str(exc)
     if prompt:detail=detail.replace(prompt,'[prompt]')
     report['timeout_detail']=('Hết thời gian chờ thao tác prompt; đã lược nội dung văn bản.'if report['error_stage']in ('fill_prompt','verify_prompt')else detail[:6000])
-    names={'close_upload_overlay':'đóng menu tải ảnh','find_composer':'tìm vùng prompt','open_mode_menu':'mở menu chọn chế độ','find_ingredients_option':'tìm lựa chọn Ingredients','choose_ingredients':'chọn Ingredients','verify_ingredients':'xác nhận Ingredients','find_uploaded_asset':'tìm ảnh mới đã ghi nhận','open_asset_menu':'mở menu ảnh mới','attach_asset':'gắn ảnh vào Ingredients','fill_prompt':'điền prompt','verify_prompt':'kiểm tra prompt'}
+    names={'open_settings_panel':'mở bảng cài đặt Flow','set_video':'chọn Video','set_ingredients':'chọn Ingredients','set_ratio':'chọn 9:16','set_outputs':'chọn x1','set_model':'chọn Veo 3.1 Lite','select_picker_asset':'chọn đúng ảnh trong hộp tài nguyên','confirm_picker_asset':'xác nhận ảnh trong hộp tài nguyên','close_upload_overlay':'đóng menu tải ảnh','find_composer':'tìm vùng prompt','open_mode_menu':'mở menu chọn chế độ','find_ingredients_option':'tìm lựa chọn Ingredients','choose_ingredients':'chọn Ingredients','verify_ingredients':'xác nhận Ingredients','find_uploaded_asset':'tìm ảnh mới đã ghi nhận','open_asset_menu':'mở menu ảnh mới','attach_asset':'gắn ảnh vào Ingredients','fill_prompt':'điền prompt','verify_prompt':'kiểm tra prompt'}
     stage=names.get(report['error_stage'],report['error_stage'])
     report['message']=('Ảnh đã tải xong. 'if report.get('uploaded_asset')else'')+'Hết thời gian chờ tại bước '+stage+'. Chưa tạo video; báo cáo đã ghi chi tiết thao tác.'
    if isinstance(exc,asyncio.CancelledError):raise

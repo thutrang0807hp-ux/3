@@ -68,9 +68,10 @@ def main():
     assert workflow.evaluate('(project.cloudJobs||[]).length')==0
     # One request contains the exact selected scene's image and prompt.
     node.locator('[data-vn-prompt]').fill('Prompt bound to scene')
-    workflow.route('**/local-api/flow/simple/upload-only/*',lambda r:r.fulfill(json={'request_id':'flow-upload-fixture123','state':'prompt_ready','message':'Đã gắn đúng ảnh và điền prompt; chưa tạo video','scene_id':'scene','part':'a','has_preview':False}))
+    workflow.route('**/local-api/flow/simple/upload-only/*',lambda r:r.fulfill(json={'request_id':'flow-upload-fixture123','state':'prompt_ready','verified_settings':{'mode':'video','references':'ingredients','ratio':'9:16','model':'Veo 3.1 Lite','outputs':1,'duration_seconds':8},'message':'Đã gắn đúng ảnh và điền prompt; chưa tạo video','scene_id':'scene','part':'a','has_preview':False}))
     node.locator('[data-vn=prepare-prompt]').click()
     expect(node.locator('[data-vn-upload-state]')).to_contain_text('điền prompt')
+    expect(node.locator('[data-vn-settings]')).to_contain_text('9:16 · Veo 3.1 Lite · x1')
     assert len(posted)==2 and posted[-1]['prepare_prompt']is True
     assert posted[-1]['prompt']=='Prompt bound to scene'and posted[-1]['scene_id']=='scene'
     assert workflow.evaluate('(project.cloudJobs||[]).length')==0
