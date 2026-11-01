@@ -99,3 +99,9 @@ Thêm simple_flow_settings.py: mở Settings trigger trong composer, tìm panel 
 Giữ nguyên upload_to_project/rtrtr4. Dùng nút More options trong đúng media card (không dùng menu đầu trang); hỗ trợ Add to prompt mở hộp tài nguyên bằng chọn đúng media_id/source_key, không chọn video cũ giống thumbnail. UI hiện dòng cấu hình đã kiểm tra chỉ khi prompt_ready. Report có project_url, verified_settings/settings_controls và lỗi ở từng bước. Cơ chế account+workflow -> project hiện có được giữ, kiểm thử mở lại hai lần chỉ tạo một dự án. Không Generate. Chưa đổi sang direct-composer upload.
 
 Đã kiểm thử Chromium full worker, settings CSS/aria, mode/model reset, picker ảnh đúng, không ghi đè ảnh/prompt khác, upload-only/readiness và UI/API Accounts; chưa xác minh Google thật hoặc GUI updater Windows. Delta 4 file, v46.7+, EXE ở downloads/v46-flow-settings.
+
+## v46.15 — đọc ô model thay danh sách tên cứng
+
+Bỏ whitelist Veo/Imagen/Nano khi đọc model hiện tại. model_controls xác định field theo tên Model/combobox/select/aria-haspopup, rồi icon dropdown hoặc nhãn có version khi thiếu ngữ nghĩa; loại nhóm Video/Ingredients/ratio/output, chất lượng và thời lượng. Không thêm riêng Omni vào enum. Báo cáo có model_identification/model_candidates/model_before/model_after và toàn bộ lựa chọn model. Chờ menu model tải chậm; chỉ chọn Lite duy nhất và không bị disabled, không tự thay bằng Quality/Fast.
+
+Đã tái hiện Omni 1.1 Flash cùng 360p/720p/4s/6s/8s/10s; model không có số phiên bản với combobox tên Model; menu options mở chậm; Lite khóa; full worker từ Omni tới ảnh-prompt. UI/Accounts/API và updater version kiểm tra đạt; chưa xác minh Google thật hay GUI updater Windows. Binary chỉ đổi simple_flow_settings.py so với v46.14 (cùng manifestversion), giữ nguyên upload/UI. Delta4file v46.7+, EXE tại downloads/v46-model-selector.

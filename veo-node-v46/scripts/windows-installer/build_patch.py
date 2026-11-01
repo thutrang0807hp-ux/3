@@ -2,7 +2,7 @@
 from pathlib import Path
 import argparse,hashlib,json,os,shutil,subprocess,tempfile,zipfile
 HERE=Path(__file__).resolve().parent;ROOT=HERE.parents[1]
-VERSION='2026.11.01.4614'
+VERSION='2026.11.01.4615'
 BASELINE='8178af48a4db6180eb0fb3ef042b04ea21617c7380ca2e106d8e967990eb0c35'
 def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
 def main():
@@ -31,7 +31,7 @@ def main():
   with zipfile.ZipFile(archive,'w',zipfile.ZIP_DEFLATED,compresslevel=9)as z:
    for p in sorted(stage.rglob('*')):
     if p.is_file():z.write(p,p.relative_to(stage).as_posix())
-  exe=args.output/'SceneForge-Update-20261101-v46.14-Flow-Settings.exe'
+  exe=args.output/'SceneForge-Update-20261101-v46.15-Model-Selector.exe'
   if args.launcher_template:
    import dnfile,struct
    original=args.launcher_template.read_bytes();pe=dnfile.dnPE(data=original)

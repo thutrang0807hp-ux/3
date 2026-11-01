@@ -12,7 +12,7 @@ PANEL_SCRIPT=r'''() => {
  for(const button of controls(document).filter(e=>text(e)==='video')){
   for(let e=button.parentElement,depth=0;e&&e!==document.body&&depth<8;e=e.parentElement,depth++){
    const labels=controls(e).map(text);
-   if(labels.includes('image')&&labels.includes('video')&&labels.some(x=>/^(ingredients|frames|veo|nano|imagen|\d+\s*:\s*\d+)/.test(x))){if(!roots.includes(e))roots.push(e);break;}
+   if(labels.includes('image')&&labels.includes('video')&&labels.some(x=>/^(ingredients|frames|\d+\s*:\s*\d+)/.test(x))){if(!roots.includes(e))roots.push(e);break;}
   }
  }
  if(!roots.length)return null;
@@ -26,7 +26,7 @@ PANEL_SCRIPT=r'''() => {
   if(values.includes('false'))selected=false;else if(values.includes('true'))selected=true;
   const state=e.getAttribute('data-state');if(selected===null&&['active','checked','on'].includes(state))selected=true;if(selected===null&&['inactive','unchecked','off'].includes(state))selected=false;
   const label=e.tagName==='SELECT'?text(e.selectedOptions[0]||e):text(e);
-  return {token:String(i),label,role:e.getAttribute('role'),selected,light:light(e),tag:e.tagName,disabled:!!e.disabled};
+  return {token:String(i),label,role:e.getAttribute('role'),name:e.getAttribute('aria-label')||'',popup:e.getAttribute('aria-haspopup')||'',icons:[...e.querySelectorAll('i,[class*=symbol],[class*=material]')].map(x=>x.textContent.trim()),selected,light:light(e),tag:e.tagName,disabled:!!e.disabled||e.getAttribute('aria-disabled')==='true'};
  });
 }'''
 
@@ -52,6 +52,23 @@ def selected_group(rows,name):
  return None,wanted[0]
 
 def lite(label):return bool(re.fullmatch(r'veo\s*3\.1\s+lite',label))
+
+def model_controls(rows):
+ """Identify the model field, regardless of which provider/model is selected."""
+ values=set().union(*(labels for _,labels in GROUPS.values()))
+ def eligible(row):
+  label=clean(row['label'])
+  return bool(label)and label not in values and not re.fullmatch(r'(?:\d+\s*(?:s|seconds?|p)|[1248]k)',label)and label not in ('pro','ultra')
+ candidates=[row for row in rows if eligible(row)]
+ named=[row for row in candidates if re.search(r'\b(?:model|mô hình)\b',row.get('name',''),re.I)]
+ if named:return named,'named_model_field'
+ dropdowns=[row for row in candidates if row['tag']=='SELECT'or row.get('role')=='combobox'or row.get('popup')in ('listbox','menu')]
+ if dropdowns:return dropdowns,'dropdown_field'
+ arrows=[row for row in candidates if set(row.get('icons',[]))&{'expand_more','arrow_drop_down','keyboard_arrow_down'}]
+ if arrows:return arrows,'dropdown_arrow'
+ # Older Flow builds omit dropdown semantics but expose a versioned label.
+ versioned=[row for row in candidates if re.search(r'[a-z].*\d',row['label'],re.I)]
+ return versioned,'versioned_field'
 
 async def configure_flow_settings(page,check,report,verify_only=False):
  """Never click Generate; ambiguous or unreadable setting states stop preparation."""
@@ -97,8 +114,10 @@ async def configure_flow_settings(page,check,report,verify_only=False):
     await asyncio.sleep(.1)
    else:return await fail('Chưa xác nhận lựa chọn '+name+' đã được áp dụng; không tự coi là thành công.')
  rows=await snapshot()
- models=[row for row in (rows or[])if re.match(r'^(veo|imagen|nano)\b',row['label'])]
+ models,method=model_controls(rows or[])
+ report['model_identification']=method;report['model_candidates']=models
  if len(models)!=1:return await fail('Chưa đọc duy nhất mô hình đang chọn trên Flow.')
+ report['model_before']=models[0]['label']
  if not lite(models[0]['label']):
   if verify_only:return await fail('Mô hình Flow đã đổi; chưa điền prompt.')
   report['preparation_stage']='set_model'
@@ -110,8 +129,17 @@ async def configure_flow_settings(page,check,report,verify_only=False):
    await trigger.select_option(wanted[0]['value'])
   else:
    await trigger.click(timeout=3000)
-   found=await page.locator('[role=option],[role=menuitem],[role=menuitemradio],[role=listbox] button').filter(visible=True).evaluate_all(r'''xs=>xs.map((e,i)=>{const c=e.cloneNode(true);c.querySelectorAll('i,svg,[class*=symbol],[class*=material]').forEach(n=>n.remove());const t=c.textContent.normalize('NFKC').replace(/[\u2010-\u2015\u2212·-]/g,' ').replace(/\s+/g,' ').trim();e.setAttribute('data-sf-lite-option',String(i));return {token:String(i),text:t};}).filter(x=>/^Veo\s*3\.1\s+Lite$/i.test(x.text))''')
-   if len(found)!=1:return await fail('Menu mô hình chưa có Veo 3.1 Lite duy nhất; không dùng Fast/Quality thay thế.')
+   option_deadline=time.monotonic()+3
+   while time.monotonic()<option_deadline:
+    await check()
+    options=await page.locator('[role=option],[role=menuitem],[role=menuitemradio],[role=listbox] button').filter(visible=True).evaluate_all(r'''xs=>xs.map((e,i)=>{const c=e.cloneNode(true);c.querySelectorAll('i,svg,[class*=symbol],[class*=material]').forEach(n=>n.remove());const t=c.textContent.normalize('NFKC').replace(/[\u2010-\u2015\u2212·-]/g,' ').replace(/\s+/g,' ').trim();e.setAttribute('data-sf-lite-option',String(i));return {token:String(i),text:t,disabled:!!e.disabled||e.getAttribute('aria-disabled')==='true'};})''')
+    report['model_options']=options
+    found=[row for row in options if lite(row['text'].lower())and not row['disabled']]
+    if len(found)==1:break
+    if len(found)>1:return await fail('Có nhiều lựa chọn Veo 3.1 Lite; chưa tự chọn bừa.')
+    if any(lite(row['text'].lower())and row['disabled']for row in options):return await fail('Veo 3.1 Lite đang bị khóa trên Flow; chưa tự đổi sang mô hình khác.')
+    await asyncio.sleep(.1)
+   else:return await fail('Menu mô hình chưa có Veo 3.1 Lite duy nhất; không dùng Fast/Quality thay thế.')
    await page.locator('[data-sf-lite-option="'+found[0]['token']+'"]').click(timeout=3000)
   end=time.monotonic()+3
   while time.monotonic()<end:
@@ -137,7 +165,7 @@ async def configure_flow_settings(page,check,report,verify_only=False):
  # Read all fields again; changing the model may reset ratio or output count.
  rows=await snapshot()
  states={name:selected_group(rows or[],name)[0]for name in GROUPS}
- models=[x for x in (rows or[])if re.match(r'^(veo|imagen|nano)\b',x['label'])]
+ models,_=model_controls(rows or[])
  if not all(x is True for x in states.values())or len(models)!=1 or not lite(models[0]['label']):
   return await fail('Một cài đặt đã thay đổi sau khi chọn mô hình. Chưa điền prompt.')
  await page.keyboard.press('Escape')
@@ -149,6 +177,7 @@ async def configure_flow_settings(page,check,report,verify_only=False):
  report['settings_summary']=text[:200]
  if not re.search(r'\b8\s*s\b',text,re.I)or not re.search(r'\bx\s*1\b',text,re.I):
   return await fail('Tóm tắt Flow chưa xác nhận 8 giây và x1; chưa điền prompt.')
+ report['model_after']=models[0]['label']
  report['verified_settings']={'mode':'video','references':'ingredients','ratio':'9:16','model':'Veo 3.1 Lite','outputs':1,'duration_seconds':8}
  return True
 

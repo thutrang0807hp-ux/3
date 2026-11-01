@@ -1,0 +1,20 @@
+{
+  "version": "2026.11.01.4615",
+  "sha256": "f4983b2c44b87686cd0cfa64ffcba3ea87173faa489349d116f44dfbae4c07a8",
+  "verified_files": 4,
+  "changed_from_46_14": [
+    "files/app/local_engine/simple_flow_settings.py",
+    "patch-manifest.json"
+  ],
+  "fix": "Identify current model field by semantics/dropdown structure rather than a brand-prefix whitelist; target Lite only if uniquely available and enabled",
+  "checks": [
+    "Omni 1.1 Flash -> Lite",
+    "Unversioned Experimental Model with named combobox -> Lite",
+    "720p/8s/x1 controls not misidentified as models",
+    "Delayed model options awaited; disabled Lite rejected",
+    "Full workflow from Omni: settings readback, exact new image/prompt, same project reuse, zero Generate",
+    "Accounts/UI/API and PowerShell updater regression"
+  ],
+  "real_google_flow_verified": false,
+  "windows_gui_tested": false
+}

@@ -19,7 +19,7 @@ async def main():
   async with async_playwright()as pw:
    browser=await pw.chromium.launch(executable_path='/usr/bin/chromium',args=['--no-sandbox']);page=await browser.new_page()
    await page.route('https://media.fixture/**',lambda r:r.fulfill(body=raw,content_type='image/png'))
-   extra='''<style>.tile .more{visibility:hidden}.tile:hover .more{visibility:visible}</style><script>window.chosen='';window.picked='old-video';window.wrong=false;</script>
+   extra='''<style>.tile .more{visibility:hidden}.tile:hover .more{visibility:visible}</style><script>window.chosen='';window.picked='old-video';window.wrong=false;settings.model='Omni 1.1 Flash';drawSettings();</script>
    <button aria-label="More options" onclick="window.wrong=true">Header menu</button>
    <article data-media-id=old><img src=https://media.fixture/old.png></article>
    <input type=file accept="image/*" hidden onchange="const card=document.createElement('article');card.className='tile';card.dataset.mediaId='new';card.innerHTML='<img src=https://media.fixture/new.png><button class=more type=button aria-label=&quot;More options&quot;>more_vert</button>';card.querySelector('button').onclick=()=>{window.chosen='new';document.querySelector('#actions').hidden=false};document.body.append(card)">

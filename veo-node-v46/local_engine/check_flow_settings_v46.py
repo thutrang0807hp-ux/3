@@ -37,6 +37,29 @@ async def main():
    await page.evaluate("()=>{settings.outputs='x4';drawSettings()}")
    report={};assert not await configure_flow_settings(page,check,report,verify_only=True)
    assert await page.evaluate('settings.outputs')=='x4'and await page.evaluate('settingsActions.length')==count
+  # Reproduce the real report: Omni is selected, with resolution/duration
+  # controls present; do not hardcode names of the current model family.
+  for model,kind in [('Omni 1.1 Flash','icon'),('Experimental Model','semantic')]:
+   await page.set_content(FIXTURE)
+   await page.evaluate("model=>{settings.model=model;drawSettings()}",model)
+   if kind=='semantic':
+    await page.evaluate("()=>{settings.video='video';settings.ingredients='ingredients';drawSettings()}")
+    await page.locator('#settings button').filter(has_text=model).evaluate("e=>{e.setAttribute('role','combobox');e.setAttribute('aria-haspopup','listbox');e.setAttribute('aria-label','Model');e.querySelector('i').remove()}")
+   # Extra numeric controls must not be misidentified as the model dropdown.
+   await page.locator('#settings').evaluate("e=>e.insertAdjacentHTML('beforeend','<button>360p</button><button>720p</button><button>4s</button><button>6s</button><button>8s</button><button>10s</button>')")
+   report={};assert await configure_flow_settings(page,check,report),report
+   assert report['model_before']==model.lower()and report['model_after']=='veo 3.1 lite',report
+   assert report['model_identification']==('named_model_field'if kind=='semantic'else'dropdown_arrow'),report
+   assert await page.evaluate('sent')==0
+  await page.set_content(FIXTURE)
+  await page.evaluate("()=>{settings.video='video';settings.ingredients='ingredients';settings.model='Omni 1.1 Flash';drawSettings()}")
+  await page.locator('#settings button').filter(has_text='Omni').evaluate("e=>e.onclick=()=>setTimeout(()=>document.querySelector('#models').hidden=false,350)")
+  report={};assert await configure_flow_settings(page,check,report),report
+  assert report['model_before']=='omni 1.1 flash'and report['model_after']=='veo 3.1 lite'
+  await page.set_content(FIXTURE)
+  await page.locator('#lite').evaluate('(e)=>e.disabled=true')
+  report={};assert not await configure_flow_settings(page,check,report),report
+  assert any(row['disabled']for row in report['model_options'])and await page.evaluate('sent')==0
   await page.set_content(FIXTURE)
   await page.evaluate('()=>{settings.unreadable=true;drawSettings()}')
   report={};assert not await configure_flow_settings(page,check,report),report
