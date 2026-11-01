@@ -103,7 +103,7 @@ class SimpleFlow:
    await self.page.screenshot(path=str(self.root/(rid+'.before.png')),timeout=5000)
    report['delivered']=await upload_to_project(self.page,reference,log,report)
    outcome='delivered_unverified'if report['delivered']else'failed'
-   report['message']=('Đã giao tệp ảnh cho Flow bằng nguyên hàm rtrtr4. Chưa xác minh ảnh đã lưu vào thư viện dự án; xem ảnh sau tải. Không điền prompt hoặc tạo video.'if report['delivered']else'Chưa giao được ảnh vào dự án qua nút + thanh trên và hàm rtrtr4. Không điền prompt hoặc tạo video.')
+   report['message']=('Đã giao tệp ảnh cho Flow. Chưa xác minh ảnh đã lưu vào dự án. Không điền prompt hoặc tạo video.'if report['delivered']else report.get('message','Chưa giao được tệp ảnh cho Flow.'))
    if report['delivered']:await asyncio.sleep(3)
   except BaseException as exc:
    report['state']='failed';report['message']=str(exc)if isinstance(exc,SimpleStopped)else'Đã dừng thử tải ảnh: '+type(exc).__name__+'. Không tạo video.'
@@ -506,6 +506,8 @@ def install_simple_flow(app,data,vault,ledger,provider):
  service=SimpleFlow(data,vault,ledger);provider.simple=service
  from .flow_account_session import AccountWebSession
  service.account_bridge=AccountWebSession(data,provider.account_service,background=True)
+ from .flow_settings import register_settings_routes
+ register_settings_routes(app,service)
  @app.post('/local-api/flow/simple/jobs')
  async def submit(body:dict):return await service.submit(body)
  @app.post('/local-api/flow/simple/upload-only')

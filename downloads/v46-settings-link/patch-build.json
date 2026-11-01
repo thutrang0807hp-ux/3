@@ -1,11 +1,14 @@
 {
-  "version": "2026.11.02.4618",
-  "file": "SceneForge-Update-20261102-v46.18-Settings-Fix.exe",
+  "version": "2026.11.02.4620",
+  "file": "SceneForge-Update-20261102-v46.20-Upload19-Settings.exe",
   "bytes": 3986944,
-  "sha256": "73fd8ac0cc5fe13bafcd059361177153a3d7f5359e62c7d1ff9d999771fb9f1a",
+  "sha256": "68300c0cf7ecee79da464f07b1bb31e009ce295e3d5b4ff141f75c7355c56824",
   "files": 4,
   "minimum_patch": "2026.11.01.467",
   "embedded_files_verified": true,
+  "upload_implementation": "project_upload_v46_19",
+  "uploader_byte_identical_to_v46_19": true,
+  "uploader_sha256": "342e1bde247a0ca3612efe7c363cb0d741c84a1b014a71c35a402d1e6aba5869",
   "launcher_code_unchanged": true,
   "live_flow_verified": false,
   "windows_installer_tested": false
