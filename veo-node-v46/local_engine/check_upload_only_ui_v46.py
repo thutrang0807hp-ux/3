@@ -66,6 +66,15 @@ def main():
     assert report['report']['request_id']=='flow-upload-fixture123'
     assert len(posted)==1 and 'prompt'not in posted[0]and posted[0]['room_id']=='shared-account-room'
     assert workflow.evaluate('(project.cloudJobs||[]).length')==0
+    # One request contains the exact selected scene's image and prompt.
+    node.locator('[data-vn-prompt]').fill('Prompt bound to scene')
+    workflow.route('**/local-api/flow/simple/upload-only/*',lambda r:r.fulfill(json={'request_id':'flow-upload-fixture123','state':'prompt_ready','message':'Đã gắn đúng ảnh và điền prompt; chưa tạo video','scene_id':'scene','part':'a','has_preview':False}))
+    node.locator('[data-vn=prepare-prompt]').click()
+    expect(node.locator('[data-vn-upload-state]')).to_contain_text('điền prompt')
+    assert len(posted)==2 and posted[-1]['prepare_prompt']is True
+    assert posted[-1]['prompt']=='Prompt bound to scene'and posted[-1]['scene_id']=='scene'
+    assert workflow.evaluate('(project.cloudJobs||[]).length')==0
+    expect(node.locator('[data-vn=create]')).to_be_disabled()
     assert not errors,errors;browser.close()
    print('PASS upload-only UI: dedicated button sends image without prompt, creation disabled, report shown, no video job; original Accounts UI retained.')
   finally:

@@ -5,7 +5,7 @@ from fastapi import HTTPException
 from fastapi.responses import FileResponse
 from .request_ledger import NO_RESULT,RequestConflict
 from .admission import guarded_submission
-from .simple_flow_upload import upload_reference,upload_to_project,library_images,wait_uploaded_image
+from .simple_flow_upload import upload_reference,upload_to_project,library_images,wait_uploaded_image,prepare_uploaded_prompt
 from .simple_flow_dom import ResultObserver,create_button,wait_composer,prepare_settings,settings_ready,previews,uploaded_preview
 
 MODEL='veo-3.1-lite-i2v-8s-portrait'
@@ -62,6 +62,9 @@ class SimpleFlow:
   return 'flow-simple-'+hashlib.sha256(self.token.encode()).hexdigest()[:24] if self.connected or self.binding() else None
  def busy(self):return bool(self.task and not self.task.done())
  async def start_upload_only(self,body):
+  prepare=body.get('prepare_prompt')is True
+  prompt=body.get('prompt','')
+  if prepare and (not isinstance(prompt,str)or not prompt.strip()or len(prompt)>20000):raise HTTPException(400,'Prompt trống hoặc quá dài.')
   ref=body.get('reference')or{}
   try:
    raw=base64.b64decode(ref.get('data',''),validate=True)
@@ -81,12 +84,12 @@ class SimpleFlow:
    rid='flow-upload-'+secrets.token_hex(12)
    self.upload_report={'request_id':rid,'room_id':body['room_id'],'scene_id':str(body.get('scene_id',''))[:100],'part':str(body.get('part',''))[:40],'state':'running','message':'Đang mở dự án để chỉ tải ảnh.','delivered':False,'has_preview':False,'reference_sha256':hashlib.sha256(raw).hexdigest(),'logs':[]}
    self.active=rid;self.pinned_account=selection['account_id'];self.pinned_room=body['room_id'];self.sent=False
-   self.task=asyncio.create_task(self.run_upload_only(rid,raw,mime))
+   self.task=asyncio.create_task(self.run_upload_only(rid,raw,mime,prompt if prepare else None))
    return dict(self.upload_report)
  def upload_only_status(self,rid):
   if not self.upload_report or self.upload_report['request_id']!=rid:raise HTTPException(404,'Không có lần thử tải ảnh này trong phiên đang mở.')
   return dict(self.upload_report)
- async def run_upload_only(self,rid,raw,mime):
+ async def run_upload_only(self,rid,raw,mime,prompt=None):
   reference=self.root/(rid+{'image/png':'.png','image/jpeg':'.jpg','image/webp':'.webp'}[mime])
   report=self.upload_report;outcome='failed'
   def log(text):report['logs'].append(text);report['message']=text
@@ -111,6 +114,11 @@ class SimpleFlow:
     report['uploaded_asset']=asset
     if asset:
      outcome='image_ready';report['message']='Đã nhận diện đúng ảnh mới trong thư viện: ảnh đã hiển thị và không còn trạng thái tải. Đã ghi nhận ảnh cho cảnh này; chưa điền prompt hoặc tạo video.'
+     if prompt is not None:
+      log('Ảnh đã sẵn sàng; đang gắn đúng ảnh vào Ingredients rồi điền prompt.')
+      if await prepare_uploaded_prompt(self.page,asset,reference,prompt,self.assert_ready,report):
+       outcome='prompt_ready';report['message']='Đã gắn đúng ảnh vừa upload vào Ingredients và điền prompt của cảnh này. Đã dừng trước nút Tạo video.'
+      else:report['message']='Ảnh đã upload xong. '+report.get('preparation_error','Chưa hoàn tất ghép ảnh và prompt.')
     else:report['message']='Đã giao tệp nhưng chưa xác nhận duy nhất ảnh mới tải xong sau 60 giây. Giữ ảnh và phiên Flow; chưa điền prompt hoặc chọn ảnh cũ.'
   except BaseException as exc:
    report['state']='failed';report['message']=str(exc)if isinstance(exc,SimpleStopped)else'Đã dừng thử tải ảnh: '+type(exc).__name__+'. Không tạo video.'

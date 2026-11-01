@@ -141,10 +141,12 @@ async def library_images(page):
       e.setAttribute('data-sf-upload-image',String(i));
       return {token:String(i),id,src,name:[e.alt,e.title,card?.getAttribute('title')].filter(Boolean).join(' '),loaded:e.complete&&e.naturalWidth>32&&e.naturalHeight>32,busy,width:e.naturalWidth,height:e.naturalHeight};
     }).filter(Boolean)''')
-    from urllib.parse import urlsplit,urlunsplit
+    from urllib.parse import urlsplit,urlunsplit,parse_qsl,urlencode
     for row in rows:
         src=urlsplit(row['src'])
-        canonical=urlunsplit((src.scheme,src.netloc,src.path,'',''))if src.scheme in ('http','https')else row['src']
+        transient={'token','signature','expires','width','height','w','h','sz','t','timestamp'}
+        query=[(key,value)for key,value in parse_qsl(src.query,keep_blank_values=True)if key.lower()not in transient and not key.lower().startswith(('x-goog-','x-amz-'))]
+        canonical=urlunsplit((src.scheme,src.netloc,src.path,urlencode(sorted(query)),''))if src.scheme in ('http','https')else row['src']
         row['key']=hashlib.sha256((row['id']or canonical).encode()).hexdigest()
     return rows
 
@@ -182,3 +184,108 @@ async def wait_uploaded_image(page,before,reference,check,report,timeout=60):
         else:stable_key=None;stable_since=None
         await asyncio.sleep(.25)
     return None
+
+async def prompt_composer(page):
+    editors=page.locator('textarea,[contenteditable="true"],[contenteditable="plaintext-only"],[role=textbox]').filter(visible=True)
+    if await editors.count()!=1:return None,None
+    editor=editors.first
+    form=editor.locator('xpath=ancestor::form[1]')
+    if await form.count()==1:return editor,form
+    for depth in range(1,9):
+        scope=editor.locator('xpath=ancestor::*['+str(depth)+']')
+        if await scope.count()!=1 or await scope.evaluate('(e)=>["BODY","HTML"].includes(e.tagName)'):break
+        modes=scope.get_by_role('button',name=re.compile(r'^(Video|Ingredients|Frames|Start|End)(?:\b|\s)',re.I)).filter(visible=True)
+        if await modes.count():return editor,scope
+    return editor,None
+
+async def prepare_uploaded_prompt(page,asset,reference,prompt,check,report,timeout=10):
+    """Bind the exact uploaded library asset to Ingredients, fill text, never Generate."""
+    import time,io
+    from PIL import Image,ImageOps,ImageChops,ImageStat
+    ingredients=re.compile(r'^(Ingredients|Ingredients to Video|Thành phần|Thành phần thành video|Từ thành phần)$',re.I)
+    async def fail(message):
+        report['preparation_error']=message;return False
+    async def ready_mode(scope):
+        if scope is None:return False
+        controls=scope.get_by_role('button',name=ingredients).or_(scope.get_by_role('tab',name=ingredients)).filter(visible=True)
+        for control in await controls.all():
+            selected=await control.get_attribute('aria-selected')
+            role=await control.get_attribute('role')
+            pressed=await control.get_attribute('aria-pressed')
+            if selected=='false'or pressed=='false':continue
+            if role=='tab'and selected!='true'and await control.get_attribute('data-state')not in ('active','checked'):continue
+            return True
+        labels=scope.get_by_text(ingredients).filter(visible=True)
+        if await labels.count()==1:
+            return await labels.evaluate("e=>!e.closest('[aria-selected=false],[aria-pressed=false],[aria-checked=false]')&&!e.closest('[role=menu],[role=listbox]')")
+        return False
+    await check()
+    editor,scope=await prompt_composer(page)
+    if scope is None:return await fail('Chưa xác định duy nhất vùng nhập prompt. Ảnh đã tải vẫn được giữ.')
+    if not await ready_mode(scope):
+        # Only explicit mode controls and Ingredients choices are eligible.
+        triggers=scope.get_by_role('button',name=re.compile(r'^(Video|Videos|Text to Video|Frames to Video|Frames|Start|End)(?:\s|[·•]|$)',re.I)).filter(visible=True)
+        # Start/End are image slots, never mode switches.
+        valid=[]
+        for item in await triggers.all():
+            text=(await item.inner_text()).strip()
+            if not re.fullmatch(r'Start|End',text,re.I):valid.append(item)
+        if len(valid)!=1:return await fail('Chưa nhận diện duy nhất nút chọn chế độ Ingredients; chưa gắn ảnh hoặc điền prompt.')
+        await valid[0].click(timeout=3000)
+        options=page.get_by_role('option',name=ingredients).or_(page.get_by_role('menuitem',name=ingredients)).or_(page.get_by_role('tab',name=ingredients)).or_(page.get_by_role('button',name=ingredients)).filter(visible=True)
+        try:await options.first.wait_for(state='visible',timeout=2500)
+        except Exception:
+            report['mode_menu']=await page.locator('[role=menu] button,[role=menuitem],[role=option],[role=tab]').filter(visible=True).all_text_contents()
+            return await fail('Menu chưa có lựa chọn Ingredients rõ ràng; chưa dùng Frames thay thế.')
+        report['mode_options']=await options.all_text_contents()
+        if await options.count()!=1:return await fail('Có nhiều lựa chọn Ingredients; chưa tự chọn bừa.')
+        await options.click(timeout=3000)
+        mode_deadline=time.monotonic()+3
+        while time.monotonic()<mode_deadline:
+            editor,scope=await prompt_composer(page)
+            if await ready_mode(scope):break
+            await asyncio.sleep(.1)
+        else:return await fail('Chưa xác nhận giao diện đã chuyển sang Ingredients.')
+    report['preparation_stage']='ingredients'
+    # Do not silently delete old references or overwrite an existing prompt.
+    existing=scope.locator('img').filter(visible=True)
+    if await existing.count():return await fail('Ô tạo đang có ảnh tham khảo khác. Chưa thay ảnh hoặc ghi đè prompt.')
+    old_text=await editor.evaluate('(e)=>e.value??e.innerText??""')
+    if old_text.strip()and old_text.strip()!=prompt.strip():return await fail('Ô Flow đã có prompt khác; chưa tự ghi đè.')
+    rows=[row for row in await library_images(page)if row['key']==asset['key']and row['loaded']and not row['busy']]
+    if len(rows)!=1:return await fail('Ảnh vừa upload không còn nhận diện duy nhất trong dự án; chưa chọn ảnh cũ.')
+    image=page.locator('img[data-sf-upload-image="'+rows[0]['token']+'"]')
+    await check();await image.click(button='right',timeout=3000)
+    actions=page.get_by_role('menuitem',name=re.compile(r'^(Add to prompt|Use in prompt|Use as ingredient|Add as ingredient|Add to ingredients|Thêm vào prompt|Dùng làm thành phần|Thêm vào thành phần)$',re.I)).filter(visible=True)
+    try:await actions.first.wait_for(state='visible',timeout=2500)
+    except Exception:
+        report['image_menu']=await page.get_by_role('menuitem').filter(visible=True).all_text_contents()
+        return await fail('Đã chọn đúng ảnh mới nhưng chưa nhận diện nút đưa ảnh vào Ingredients; chưa điền prompt.')
+    if await actions.count()!=1:return await fail('Không xác định duy nhất thao tác gắn ảnh vào Ingredients.')
+    await actions.click(timeout=3000)
+    report['preparation_stage']='attaching'
+    with Image.open(reference)as original:expected=ImageOps.fit(ImageOps.exif_transpose(original).convert('RGB'),(64,64))
+    deadline=time.monotonic()+timeout;attached=False
+    while time.monotonic()<deadline:
+        await check();editor,scope=await prompt_composer(page)
+        if scope is None or not await ready_mode(scope):break
+        images=scope.locator('img').filter(visible=True)
+        if await images.count()==1 and not await scope.locator('[aria-busy=true],[role=progressbar]').filter(visible=True).count():
+            item=images.first
+            if await item.evaluate('(e)=>e.complete&&e.naturalWidth>32&&e.naturalHeight>32'):
+                with Image.open(io.BytesIO(await item.screenshot(timeout=2000)))as thumb:actual=ImageOps.fit(thumb.convert('RGB'),(64,64))
+                error=sum(ImageStat.Stat(ImageChops.difference(expected,actual)).mean)/(3*255)
+                if error<=.035:attached=True;break
+        await asyncio.sleep(.2)
+    if not attached:return await fail('Chưa xác nhận đúng ảnh mới đã gắn vào Ingredients. Chưa điền prompt.')
+    # Recheck identity and the selected mode directly before modifying text.
+    await check()
+    if not await ready_mode(scope):return await fail('Chế độ tạo đã thay đổi; chưa điền prompt.')
+    current=await editor.evaluate('(e)=>e.value??e.innerText??""')
+    if current.strip()and current.strip()!=prompt.strip():return await fail('Prompt trên Flow đã đổi; chưa ghi đè.')
+    await editor.fill(prompt)
+    actual=await editor.evaluate('(e)=>e.value??e.innerText??""')
+    if actual.strip()!=prompt.strip():return await fail('Chưa xác nhận nội dung prompt sau khi điền.')
+    report['attached_asset_key']=asset['key'];report['prompt_sha256']=__import__('hashlib').sha256(prompt.encode()).hexdigest()
+    report['preparation_stage']='prompt_ready'
+    return True

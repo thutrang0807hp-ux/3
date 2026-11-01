@@ -29,6 +29,9 @@ async def main():
     report={};asset=await wait_uploaded_image(page,before,ref,check,report,timeout=1.5)
     if case=='duplicate':assert asset and asset['media_id']=='new',report
     else:assert asset is None,(case,asset)
+   await page.set_content('<div><img src="https://media.fixture/same.png?asset=old&token=a"><img src="https://media.fixture/same.png?asset=new&token=b"></div>')
+   rows=await library_images(page)
+   assert len({row['key']for row in rows})==2,'Distinct asset query IDs must stay distinct'
    # Return identity of the new image, never an index or the first/last tile.
    await page.set_content('<article data-media-id=old><img src=https://media.fixture/old.png></article>')
    before=await library_images(page)

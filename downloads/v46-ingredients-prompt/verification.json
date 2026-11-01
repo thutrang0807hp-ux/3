@@ -1,0 +1,17 @@
+{
+  "version": "2026.11.01.4611",
+  "sha256": "23a8771f0b94989681494293f3f3779f0740b06e023a179797af41b321fbb98c",
+  "verified_files": 3,
+  "original_upload_function_unchanged": true,
+  "behavior": "upload -> new asset ready -> Ingredients -> exact asset context action -> verify attached image -> fill snapshot prompt -> stop before Generate",
+  "checks": [
+    "Chromium full preparation worker, exact scene/part/image/prompt",
+    "Chromium mode selection and attachment: success, plain Ingredients label, wrong attachment, old refs/prompt, missing asset, unsafe action",
+    "Chromium UI: one preparation request includes bound image/prompt/scene; generation disabled; Accounts preserved",
+    "API invalid prompt validation and Accounts/diagnostics regression",
+    "upload/readiness regression, including signed token vs asset-ID query identities",
+    "PowerShell version checks"
+  ],
+  "real_google_flow_verified": false,
+  "windows_gui_tested": false
+}
