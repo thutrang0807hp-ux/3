@@ -1,0 +1,15 @@
+{
+  "version": "2026.11.01.464",
+  "sha256": "584c252e092bd6e830fbfa0fd74b067d77ff6e47c6cf34f1e070117bc96a6694",
+  "verified_files": 55,
+  "changed_from_46_3": [
+    "files/app/local_engine/simple_flow.py",
+    "files/app/local_engine/simple_flow_dom.py",
+    "files/app/local_engine/simple_flow_upload.py",
+    "patch-manifest.json"
+  ],
+  "chromium_fixture_checks": "passed: portal input, add_2 icon, nested composer, native chooser, background worker",
+  "powershell_version_check": "passed",
+  "real_google_flow_tested": false,
+  "windows_gui_tested": false
+}

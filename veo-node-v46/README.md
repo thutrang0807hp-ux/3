@@ -51,3 +51,7 @@ Kiểm thử trên bản nguồn đầy đủ (ZIP v46 giải nén, chép đè c
 ## v46.3 — sửa trình cập nhật
 
 Hai bản hotfix trước ghi phiên bản 5 phần không hợp lệ với System.Version. Bản mới dùng 2026.11.01.463 (4 phần); updater chấp nhận metadata 5 phần cũ chỉ trong phép kiểm tra baseline tối thiểu, vẫn chặn bản thấp hơn v14. Kiểm thử check_patch_versions.ps1 đạt bằng PowerShell 7.4.6 trên Linux; chưa chạy giao diện cài đặt Windows. Payload ứng dụng giữ nguyên v46.2. EXE tại downloads/v46-installer-fix.
+
+## v46.4 — tải ảnh qua portal và composer lồng nhau
+
+Bổ sung nút icon add_2/add_circle, tìm composer nhỏ nhất có nút tạo thay vì lấy hàng prompt bên trong. Khi chính thao tác thêm/tải ảnh mở input ngoài composer, chỉ chọn input ảnh mới được tạo, không dùng input không liên quan đã tồn tại. Ngăn giao tệp đồng thời qua chooser và input. Chờ ảnh gắn tối đa 30 giây; thông báo phân biệt chưa giao tệp và đã giao nhưng chưa thấy preview. Không bỏ điều kiện ảnh gắn trước prompt. Chromium fixture kiểm tra các bố cục này đã đạt; chưa xác minh đường tải của tài khoản Google thật. EXE ở downloads/v46-upload-fix, phiên bản 2026.11.01.464 hợp lệ với System.Version.

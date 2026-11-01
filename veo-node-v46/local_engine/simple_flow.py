@@ -271,10 +271,16 @@ class SimpleFlow:
    settings=await prepare_settings(self.page)if automatic_mode else False
    before=await previews(self.page)if automatic_mode else []
    self.phase(rid,'uploading','Đang tải ảnh đầu lên Flow.')
-   delivered=await upload_reference(self.page,reference,lambda text:None)
+   upload_steps=[]
+   def upload_log(text):
+    upload_steps.append(text)
+    self.ledger.set_metadata(rid,{'upload_step':text})
+   delivered=await upload_reference(self.page,reference,upload_log)
    attached=await uploaded_preview(self.page,before)if automatic_mode and delivered else False
    if automatic_mode and not attached:
-    if background:raise SimpleStopped('Chưa xác nhận ảnh tham khảo đã gắn thành công trong Ingredients. Chưa điền prompt hoặc bấm Tạo; xem ảnh bước đang vướng trong node.')
+    if background:
+     detail='Đã giao tệp nhưng chưa thấy ảnh mới gắn trong vùng tạo.'if delivered else'Chưa giao được tệp vào Flow.'
+     raise SimpleStopped(detail+' '+(upload_steps[-1]if upload_steps else'')+' Chưa điền prompt hoặc bấm Tạo; xem ảnh bước đang vướng trong node.')
     await self.checkpoint('image','Chưa xác nhận ảnh tham khảo đã gắn thành công trong Ingredients. Kiểm tra đúng ảnh trên Flow rồi Tiếp tục; chưa điền prompt hoặc bấm Tạo.')
     attached=await uploaded_preview(self.page,before)
     if not attached:raise SimpleStopped('Chưa xác nhận ảnh tham khảo đã gắn thành công. Chưa điền prompt hoặc bấm Tạo.')

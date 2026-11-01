@@ -35,6 +35,15 @@ async def main():
     assert await uploaded_preview(page,before),kind
     assert await page.locator('#unrelated').evaluate('(e)=>e.files.length')==0
     assert await page.locator('textarea').input_value()==''
+   # Flow-style non-form composer: nested prompt row, icon-only add button,
+   # and a hidden image input mounted outside the composer by the menu action.
+   await page.set_content("""<input id=unrelated type=file accept="image/*"><div id=composer><button>Ingredients</button><img id=preview><div><textarea></textarea><button id=add type=button>add_2</button></div><button disabled>Generate</button></div>""")
+   await page.locator('#add').evaluate("""(e,src)=>e.onclick=()=>{const input=document.createElement('input');input.type='file';input.accept='image/*';input.id='portal';input.hidden=true;input.onchange=()=>document.querySelector('#preview').src=src;document.body.append(input)}""",src)
+   before=await previews(page)
+   assert await upload_reference(page,reference,lambda _:None)
+   assert await page.locator('#portal').evaluate('(e)=>e.files.length')==1
+   assert await page.locator('#unrelated').evaluate('(e)=>e.files.length')==0
+   assert await uploaded_preview(page,before)
    # File delivery, a library thumbnail, stale images and busy/error UI are not attachment proof.
    await page.set_content(base.replace('CONTENT','<input type=file accept="image/*">')+'<div role=dialog><img src="'+src+'"></div>')
    assert not await uploaded_preview(page,[],timeout=.3)

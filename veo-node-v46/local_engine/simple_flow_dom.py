@@ -10,7 +10,18 @@ async def composer(page):
  # Keep controls scoped to the composer, never to all historical result cards.
  scope=editor.locator('xpath=ancestor::form[1]')
  if await scope.count()!=1:
-  scope=editor.locator('xpath=ancestor::*[.//button][1]')
+  # Non-form Flow layouts keep image controls beside the inner prompt row.
+  # Choose the smallest composer containing Generate, not an arbitrary + row.
+  scope=None
+  for depth in range(1,8):
+   candidate=editor.locator('xpath=ancestor::*['+str(depth)+']')
+   if await candidate.count()!=1 or await candidate.evaluate('(e)=>["BODY","HTML"].includes(e.tagName)'):break
+   if await candidate.locator('article,video').count():break
+   named=candidate.get_by_role('button',name=CREATE).filter(visible=True)
+   icons=candidate.locator('button').filter(has_text=re.compile(r'^\s*arrow_forward\s*$')).filter(visible=True)
+   if await named.count()==1 or await icons.count()==1:
+    scope=candidate;break
+  if scope is None:return editor,None
  if await scope.count()!=1:return editor,None
  return editor,scope
 
@@ -94,7 +105,7 @@ async def previews(page):
  if scope is None:return []
  return await scope.locator('img').evaluate_all('xs=>xs.filter(e=>e.getClientRects().length&&e.complete&&e.naturalWidth>32&&e.naturalHeight>32).map(e=>e.currentSrc||e.src)')
 
-async def uploaded_preview(page,before,timeout=8):
+async def uploaded_preview(page,before,timeout=30):
  end=time.monotonic()+timeout
  while time.monotonic()<end:
   current=await previews(page)

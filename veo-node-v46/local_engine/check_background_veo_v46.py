@@ -78,18 +78,18 @@ async def main():
      assert not(root/'limited.partial').exists()
 
     await page.evaluate('encoded=>{const bytes=Uint8Array.from(atob(encoded),c=>c.charCodeAt(0));const src=URL.createObjectURL(new Blob([bytes],{type:"video/mp4"}));const a=document.querySelector("#clip");a.querySelector("[role=progressbar]").remove();const v=document.createElement("video");v.preload="none";v.src=src;a.append(v);const link=document.createElement("a");link.textContent="Download";link.download="clip.mp4";link.href=src;a.append(link)}',base64.b64encode(movie.read_bytes()).decode())
-    await asyncio.wait_for(s.task,20);r=s.lookup(b['request_id']);assert r['state']=='done',r
+    await asyncio.wait_for(s.task,40);r=s.lookup(b['request_id']);assert r['state']=='done',r
     assert r['result']['account_id']==aid and r['result']['room_id']=='room'and (s.root/r['result']['file']).read_bytes()==movie.read_bytes()
     assert page.is_closed()and s.account_session is None
     await s.submit(b);assert s.lookup(b['request_id'])['state']=='done'
    assert len(created)==1,'Same account/room must reuse one saved project'
-   state['kind']='unsafe';b=body();await s.submit(b);await asyncio.wait_for(s.task,20);r=s.lookup(b['request_id'])
+   state['kind']='unsafe';b=body();await s.submit(b);await asyncio.wait_for(s.task,40);r=s.lookup(b['request_id'])
    assert r['state']=='failed'and r['has_preview']and not ledger.metadata(b['request_id'])['clicked'],r
    assert (s.root/(b['request_id']+'.preview.png')).is_file()and s.pending is None
-   state['kind']='upload-failed';b=body();await s.submit(b);await asyncio.wait_for(s.task,20);r=s.lookup(b['request_id'])
+   state['kind']='upload-failed';b=body();await s.submit(b);await asyncio.wait_for(s.task,40);r=s.lookup(b['request_id'])
    assert r['state']=='failed'and r['has_preview']and s.pending is None,r
    assert not ledger.metadata(b['request_id'])['clicked']and 'thủ công'not in r['message']and 'Chưa điền prompt'in r['message'],r
-   state['kind']='wrong';b=body();await s.submit(b);await asyncio.wait_for(s.task,20)
+   state['kind']='wrong';b=body();await s.submit(b);await asyncio.wait_for(s.task,40)
    assert s.lookup(b['request_id'])['state']=='failed'and not ledger.metadata(b['request_id'])['clicked']
    await s.close()
   # Visible but unselected settings are never accepted as the current mode.
