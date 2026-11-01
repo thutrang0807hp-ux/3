@@ -21,6 +21,7 @@ class SimpleFlow:
   self.active=None;self.project=None;self.state='idle';self.message='Chưa kết nối Flow đơn giản.'
   self.gate=asyncio.Lock();self.download_waiter=None;self.download_task=None;self.observer=None;self.auto_download=None;self.download_item=None
   self.account_bridge=None;self.account_session=None;self.pinned_binding=None;self.pinned_account=None;self.pinned_room=None
+  self.upload_report=None
   binding=self.binding()
   if binding:self.channel=binding['browser'];self.token=binding['token'];self.message='Đã lưu dự án Flow; sẽ mở lại khi tạo clip.'
  def binding(self):
@@ -60,6 +61,67 @@ class SimpleFlow:
   if self.account_bridge:return self.account_bridge.selection().get('account_id')
   return 'flow-simple-'+hashlib.sha256(self.token.encode()).hexdigest()[:24] if self.connected or self.binding() else None
  def busy(self):return bool(self.task and not self.task.done())
+ async def start_upload_only(self,body):
+  ref=body.get('reference')or{}
+  try:
+   raw=base64.b64decode(ref.get('data',''),validate=True)
+   if not 0<len(raw)<=6*1024**2:raise ValueError()
+   from PIL import Image
+   with Image.open(io.BytesIO(raw))as image:
+    if image.width*image.height>40_000_000:raise ValueError()
+    image.verify();mime=Image.MIME.get(image.format)
+   if mime not in ('image/png','image/jpeg','image/webp')or mime!=ref.get('mime_type'):raise ValueError()
+  except Exception:raise HTTPException(400,'Ảnh không hợp lệ hoặc vượt 6 MB.')from None
+  if not isinstance(body.get('room_id'),str)or not body['room_id']:raise HTTPException(400,'Chưa có phòng để mở dự án Flow.')
+  async with self.gate:
+   if self.busy():raise HTTPException(409,'Đang có tác vụ Flow. Đợi hoàn tất hoặc dừng tác vụ trước.')
+   if not self.account_bridge:raise HTTPException(409,'Chọn tài khoản web tại tab Tài khoản.')
+   selection=self.account_bridge.selection()
+   if not selection['available']or body.get('selection_token')!=selection['token']:raise HTTPException(409,'Tài khoản đã đổi hoặc chưa sẵn sàng. Chọn lại tại tab Tài khoản.')
+   rid='flow-upload-'+secrets.token_hex(12)
+   self.upload_report={'request_id':rid,'state':'running','message':'Đang mở dự án để chỉ tải ảnh.','delivered':False,'has_preview':False,'reference_sha256':hashlib.sha256(raw).hexdigest(),'logs':[]}
+   self.active=rid;self.pinned_account=selection['account_id'];self.pinned_room=body['room_id'];self.sent=False
+   self.task=asyncio.create_task(self.run_upload_only(rid,raw,mime))
+   return dict(self.upload_report)
+ def upload_only_status(self,rid):
+  if not self.upload_report or self.upload_report['request_id']!=rid:raise HTTPException(404,'Không có lần thử tải ảnh này trong phiên đang mở.')
+  return dict(self.upload_report)
+ async def run_upload_only(self,rid,raw,mime):
+  reference=self.root/(rid+{'image/png':'.png','image/jpeg':'.jpg','image/webp':'.webp'}[mime])
+  report=self.upload_report;outcome='failed'
+  def log(text):report['logs'].append(text);report['message']=text
+  try:
+   reference.write_bytes(raw)
+   await self.disconnect_browser();await self.restore();await self.assert_ready()
+   # Only wait for an editor or file input. No Ingredients/settings/Generate check.
+   deadline=time.monotonic()+90
+   while time.monotonic()<deadline:
+    await self.assert_ready()
+    if await self.page.locator('input[type=file]').count()or await self.page.locator('textarea,[contenteditable="true"],[role="textbox"]').filter(visible=True).count():break
+    await asyncio.sleep(.25)
+   else:raise SimpleStopped('Flow vẫn chưa tải xong vùng thao tác; chưa giao tệp.')
+   await self.page.screenshot(path=str(self.root/(rid+'.before.png')),timeout=5000)
+   report['delivered']=await upload_reference(self.page,reference,log)
+   outcome='delivered_unverified'if report['delivered']else'failed'
+   report['message']=('Đã giao tệp ảnh cho Flow bằng nguyên hàm rtrtr4. Chưa xác minh ảnh đã lưu vào thư viện dự án; xem ảnh sau tải. Không điền prompt hoặc tạo video.'if report['delivered']else'Nguyên hàm rtrtr4 chưa tìm được đường giao ảnh trên trang này. Không điền prompt hoặc tạo video.')
+   if report['delivered']:await asyncio.sleep(3)
+  except BaseException as exc:
+   report['state']='failed';report['message']=str(exc)if isinstance(exc,SimpleStopped)else'Đã dừng thử tải ảnh: '+type(exc).__name__+'. Không tạo video.'
+   if isinstance(exc,asyncio.CancelledError):raise
+  finally:
+   try:
+    if self.page and not self.page.is_closed():
+     try:
+      await self.page.screenshot(path=str(self.root/(rid+'.preview.png')),timeout=5000);report['has_preview']=True
+     except Exception:report['preview_error']='Chưa chụp được ảnh sau tải.'
+    report['state']=outcome
+    (self.root/(rid+'.upload-report.json')).write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
+   finally:
+    self.active=None
+    # File delivery can precede Flow's network upload. Keep the source file and
+    # browser alive after delivery; closing here would cut off a slow upload.
+    if not report['delivered']:
+     reference.unlink(missing_ok=True);await self.disconnect_browser()
  async def checkpoint(self,kind,message):
   self.state='awaiting_user';self.message=message;self.reply=asyncio.get_running_loop().create_future()
   self.pending={'id':secrets.token_hex(16),'kind':kind,'message':message}
@@ -446,6 +508,19 @@ def install_simple_flow(app,data,vault,ledger,provider):
  service.account_bridge=AccountWebSession(data,provider.account_service,background=True)
  @app.post('/local-api/flow/simple/jobs')
  async def submit(body:dict):return await service.submit(body)
+ @app.post('/local-api/flow/simple/upload-only')
+ async def upload_only(body:dict):return await service.start_upload_only(body)
+ @app.get('/local-api/flow/simple/upload-only/{rid}')
+ async def upload_only_status(rid:str):return service.upload_only_status(rid)
+ @app.get('/local-api/flow/simple/upload-only/{rid}/preview')
+ async def upload_only_preview(rid:str):
+  report=service.upload_only_status(rid)
+  if service.page and not service.page.is_closed() and not service.busy():
+   try:
+    await service.page.screenshot(path=str(service.root/(rid+'.preview.png')),timeout=5000);report['has_preview']=True
+   except Exception:pass
+  if not report['has_preview']:raise HTTPException(404,'Chưa có ảnh sau tải.')
+  return FileResponse(service.root/(rid+'.preview.png'),media_type='image/png',headers={'Cache-Control':'no-store'})
  @app.get('/local-api/flow/simple/jobs/{rid}')
  async def lookup(rid:str):return service.lookup(rid)
  @app.get('/local-api/flow/simple/diagnostics/{rid}')

@@ -1,0 +1,11 @@
+{
+  "version": "2026.11.01.467",
+  "sha256": "5059c9f63e2ccb7d5e5787ab49260108c6a92a4f1d6cbe7a3d19d5fda650eef4",
+  "verified_files": 55,
+  "upload_function": "identical AST to rtrtr4 db5aa529",
+  "upstream_tests_passed": 5,
+  "upload_only_check": "exact bytes delivered; prompt empty; Generate untouched; no video ledger entry",
+  "windows_gui_tested": false,
+  "real_flow_upload_verified": false,
+  "notes": "Delivery alone is not claimed as confirmed project-library upload; browser and source file retained after delivery to allow Flow to finish."
+}
