@@ -288,6 +288,7 @@ class SimpleFlow:
   return {**report,'code':code,'message':message}
  @guarded_submission
  async def submit(self,body):
+  if getattr(self,'pair_trial_only',False):raise HTTPException(409,'Bản thử này chỉ tự đưa ảnh và prompt sang Flow; chưa mở gửi tạo video.')
   if not self.enabled():raise HTTPException(409,'Node Veo mới cần phiên Flow đơn giản. Bấm Kết nối Flow trước.')
   rid=body.get('request_id');self.valid_id(rid)
   prompt=body.get('prompt');refs=body.get('references')
@@ -527,6 +528,8 @@ def install_simple_flow(app,data,vault,ledger,provider):
  register_settings_routes(app,service)
  from .flow_prepare import register_prepare_routes
  register_prepare_routes(app,service)
+ from .flow_pair_trial import register_pair_routes
+ register_pair_routes(app,service)
  @app.post('/local-api/flow/simple/jobs')
  async def submit(body:dict):return await service.submit(body)
  @app.post('/local-api/flow/simple/upload-only')

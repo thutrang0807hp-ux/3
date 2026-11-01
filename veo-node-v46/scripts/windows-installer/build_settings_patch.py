@@ -9,8 +9,8 @@ import zipfile
 import dnfile
 
 ROOT = Path(__file__).resolve().parents[3]
-VERSION = '2026.11.02.4625'
-NAME = 'SceneForge-Update-20261102-v46.25-Replace-Reference.exe'
+VERSION = '2026.11.02.4626'
+NAME = 'SceneForge-Update-20261102-v46.26-Image-Prompt-Trial.exe'
 BASELINE = '8178af48a4db6180eb0fb3ef042b04ea21617c7380ca2e106d8e967990eb0c35'
 
 def main():
@@ -21,6 +21,7 @@ def main():
     sources = {
         'app/local_engine/simple_flow.py': ROOT/'veo-node-v46/local_engine/simple_flow.py',
         'app/local_engine/simple_flow_upload.py': ROOT/'veo-node-v46/local_engine/simple_flow_upload.py',
+        'app/local_engine/flow_pair_trial.py': ROOT/'veo-node-v46/local_engine/flow_pair_trial.py',
         'app/local_engine/flow_prepare.py': ROOT/'veo-node-v46/local_engine/flow_prepare.py',
         'app/local_engine/flow_settings.py': ROOT/'veo-node-v46/local_engine/flow_settings.py',
         'app/dist/web-demo/workflow.html': ROOT/'workflow.html',
@@ -63,7 +64,8 @@ def main():
     exe.with_suffix('.exe.sha256').write_text(digest+'  '+NAME+'\n')
     report = {'version': VERSION, 'file': NAME, 'bytes': len(data), 'sha256': digest, 'files': len(sources),
               'minimum_patch': manifest['minimum_patch'], 'embedded_files_verified': True,
-              'original_reference_read': True, 'approved_attachment_replacement': True, 'css_rendered_reference': True, 'small_composer_reference': True, 'create_disabled_reason': True, 'duplicate_reference_choice': True, 'scene_prompt_preparation': True, 'prepared_generation_receipt': True,
+              'image_prompt_trial': True, 'generation_disabled': True, 'preview_required': False,
+              'upload_timeout_seconds': 20, 'attachment_timeout_seconds': 10,
               'upload_implementation': 'project_upload_v46_19', 'uploader_byte_identical_to_v46_19': True,
               'uploader_sha256': upload19_sha256,
               'launcher_code_unchanged': True, 'live_flow_verified': False, 'windows_installer_tested': False}
