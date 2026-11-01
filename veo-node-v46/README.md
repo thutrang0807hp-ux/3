@@ -59,3 +59,7 @@ Bổ sung nút icon add_2/add_circle, tìm composer nhỏ nhất có nút tạo 
 ## v46.5 — đối chiếu rtrtr4
 
 Đã đọc repo thutrang0807hp-ux/rtrtr4 ở commit db5aa529c5203bee37cd05d4925b622419616b02. Khôi phục đường tìm input ảnh ẩn có sẵn trên toàn trang từ flow_engine.py: ưu tiên input trong vùng tạo, nếu không có thì dùng duy nhất một input ảnh toàn trang. Không bắt buộc input phải mới được tạo. Bước tìm nút + không phụ thuộc nút Generate. Adapter đã vượt qua cả 5 test_upload.py của repo tham chiếu khi thay hàm upload_reference bằng adapter v46.5. Xác nhận ảnh trước prompt vẫn tự động trong chế độ nền. Không tuyên bố đã chạy Google thật. EXE tại downloads/v46-simpleflow-upload.
+
+## v46.6 — tự kiểm tra lượt chạy
+
+GET /local-api/flow/simple/diagnostics/{rid} đối chiếu store_id đã lưu, bản ghi, transport và phòng với backend hiện tại, trả kết luận rõ ràng. Không tìm trong các thư mục khác, không tự khôi phục lịch sử, không khẳng định lượt chưa gửi và không tự retry. Node tự gọi khi đọc lượt trả 404; thêm nút Kiểm tra lỗi tự động và Tải báo cáo lỗi JSON (mã lượt/kho, đường dẫn dữ liệu, trạng thái, không xuất cookie/token/prompt). API kiểm thử các trường hợp đối chiếu và quyền truy cập đã đạt; UI Chromium kiểm tra tự chẩn đoán, tải JSON, giữ lịch sử và không phát sinh lượt mới. Giao diện Tài khoản giữ nguyên. EXE ở downloads/v46-diagnostics.

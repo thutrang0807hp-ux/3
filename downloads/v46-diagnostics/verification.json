@@ -1,0 +1,16 @@
+{
+  "version": "2026.11.01.466",
+  "sha256": "0af98ca4f8e6bb88b3bf92b11d7838dcfeacbd50c7c1eb42099127d88485b0b3",
+  "verified_files": 55,
+  "changed_from_46_5": [
+    "files/app/dist/web-demo/workflow.html",
+    "files/app/local_engine/simple_flow.py",
+    "patch-manifest.json"
+  ],
+  "checks": [
+    "diagnostics API: matching/mismatching/unknown stores, missing receipt, wrong room, authentication",
+    "Chromium UI: auto diagnostic after 404, manual button, JSON report download, no retry/deletion, Accounts regression"
+  ],
+  "windows_gui_tested": false,
+  "google_live_tested": false
+}

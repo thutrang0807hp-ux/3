@@ -41,7 +41,19 @@ def main():
    image=io.BytesIO();Image.new('RGB',(40,40),'green').save(image,format='PNG');(server.SIMPLE_FLOW.root/(rid+'.preview.png')).write_bytes(image.getvalue())
    response=client.get('/local-api/flow/simple/preview/'+rid)
    assert response.status_code==200 and response.content==image.getvalue()and response.headers.get('cache-control')=='no-store'
+   current=server.REQUESTS.store_id
+   base='/local-api/flow/simple/diagnostics/'
+   report=client.get(base+rid,params={'store_id':current}).json()
+   assert report['code']=='found'and report['record']['request_id']==rid and not report['can_retry']
+   report=client.get(base+rid,params={'store_id':'old-store'}).json()
+   assert report['code']=='different_store'and report['record']is None
+   missing='flow-missing-diagnostic-fixture'
+   assert client.get(base+missing,params={'store_id':current}).json()['code']=='missing_record'
+   assert client.get(base+missing).json()['code']=='unknown_store'
+   assert client.get(base+'invalid').status_code==400
+   assert client.get(base+rid,params={'room_id':'another-room'}).json()['code']=='different_room'
    client.cookies.clear();assert client.get('/local-api/flow/simple/preview/'+rid).status_code in (401,403)
+   assert client.get(base+rid).status_code in (401,403)
   for handler in list(server.RUNTIME_LOG.handlers):handler.close();server.RUNTIME_LOG.removeHandler(handler)
   server.LIBRARY._root_guard.instance.close()
  print('PASS v46 API: central selection equals Veo/provider selection, existing web-login route used, second SimpleFlow login rejected, login blocked during active generation, active receipt cannot be abandoned. No real browser/Google calls.')

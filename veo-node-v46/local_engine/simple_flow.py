@@ -207,6 +207,23 @@ class SimpleFlow:
  @staticmethod
  def valid_id(rid):
   if not isinstance(rid,str)or not re.fullmatch(r'flow-[a-zA-Z0-9-]{8,100}',rid):raise HTTPException(400,'Mã lượt Flow không hợp lệ.')
+ def diagnose(self,rid,store_id='',room_id=''):
+  self.valid_id(rid)
+  report={'request_id':rid,'current_store_id':self.ledger.store_id,'expected_store_id':store_id or None,'data_directory':str(self.data.resolve()),'checked_at':time.time(),'record':None,'can_retry':False}
+  with self.ledger.connect()as db:row=db.execute('SELECT state FROM request WHERE id=?',(rid,)).fetchone()
+  meta=self.ledger.metadata(rid)
+  if store_id and store_id!=self.ledger.store_id:
+   code='different_store';message='Ứng dụng đang dùng bộ dữ liệu khác với lúc tạo lượt này. Lượt cũ vẫn được giữ; chưa tự tạo lại.'
+  elif not row:
+   code='missing_record'if store_id else'unknown_store'
+   message='Không có bản ghi lượt này trong dữ liệu ứng dụng đang mở. Chưa đủ thông tin để biết lượt đã gửi lên Flow hay chưa; app giữ nguyên lịch sử.'
+  elif meta.get('transport')!='simple_flow':
+   code='different_service';message='Lượt này thuộc đường xử lý khác, không phải lượt Veo nền hiện tại. App giữ nguyên lịch sử.'
+  elif room_id and meta.get('room_id')!=room_id:
+   code='different_room';message='Lượt này thuộc phòng khác. App không nhập kết quả vào phòng đang mở.'
+  else:
+   code='found';message='Đã tìm thấy lượt trong dữ liệu hiện tại. App có thể đọc lại trạng thái.';report['record']=self.lookup(rid)
+  return {**report,'code':code,'message':message}
  @guarded_submission
  async def submit(self,body):
   if not self.enabled():raise HTTPException(409,'Node Veo mới cần phiên Flow đơn giản. Bấm Kết nối Flow trước.')
@@ -431,6 +448,8 @@ def install_simple_flow(app,data,vault,ledger,provider):
  async def submit(body:dict):return await service.submit(body)
  @app.get('/local-api/flow/simple/jobs/{rid}')
  async def lookup(rid:str):return service.lookup(rid)
+ @app.get('/local-api/flow/simple/diagnostics/{rid}')
+ async def diagnostics(rid:str,store_id:str='',room_id:str=''):return service.diagnose(rid,store_id,room_id)
  @app.get('/local-api/flow/simple/files/{rid}')
  async def file(rid:str):return service.file(rid)
  @app.get('/local-api/flow/simple/preview/{rid}')

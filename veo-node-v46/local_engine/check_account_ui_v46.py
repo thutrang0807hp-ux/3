@@ -68,6 +68,19 @@ def main():
     node.locator('summary').filter(has_text='Xem bước Flow đang vướng').click()
     workflow.wait_for_function("()=>[...document.querySelectorAll('#node-videos img')].some(e=>e.alt==='Ảnh bước Flow của lượt này'&&e.naturalWidth>0)")
     workflow.screenshot(path='/workspace/veo-v46-node.png')
+    # A missing receipt diagnoses the store automatically; no retry or data deletion.
+    workflow.route('**/local-api/flow/simple/jobs/*',lambda r:r.fulfill(status=404,json={'detail':'Missing fixture'}))
+    workflow.evaluate('()=>SFVeoNode.sync(project.cloudJobs.at(-1).id)')
+    expect(node.locator('.vnDiagnostic')).to_contain_text('bộ dữ liệu khác')
+    assert workflow.evaluate('project.cloudJobs.at(-1).state')=='missing'
+    assert len(posted)==1
+    node.locator('[data-vn=diagnose]').click()
+    expect(node.locator('.vnDiagnostic')).to_contain_text('bộ dữ liệu khác')
+    with workflow.expect_download()as download:
+     node.locator('[data-vn=diagnostic-report]').click()
+    report=__import__('json').loads(Path(download.value.path()).read_text())
+    assert report['report']['code']=='different_store'and 'prompt'not in report['report']
+    assert len(posted)==1 and workflow.evaluate('project.cloudJobs.length')==1
     assert not errors,errors;browser.close()
    print('PASS v46 UI: original dashboard graph/table restored, existing account-tab web-login route, no node connection button even empty, selected account automatically updates across windows and is used in the next job token; no separate login. Real local status API, intercepted login/job execution only.')
   finally:
