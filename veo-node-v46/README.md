@@ -71,3 +71,7 @@ Thân hàm upload_reference được sao chép nguyên văn từ flow_engine.py 
 ## v46.8 — nút thêm trên thanh dự án
 
 Ảnh người dùng cho thấy nút + trên toolbar dự án, không có + cạnh prompt. Wrapper upload_to_project chọn duy nhất nút Add có nhãn rõ ràng trên hàng đầu phía phải, mở menu rồi gọi upload_reference giữ nguyên; nếu không xác định duy nhất thì không đoán nút. Không bấm + Library/sidebar hoặc Start/End. Trường hợp toolbar mở filechooser trực tiếp cũng nhận ảnh. Báo cáo ghi vị trí/nhãn các nút Add tìm thấy. Kiểm thử Chromium bố cục toolbar/sidebar/composer đã đạt; chưa kiểm chứng Google thật. EXE là delta 2 file, yêu cầu v46.7 (2026.11.01.467) trở lên, tại downloads/v46-project-upload. Giữ giao diện bản thử chỉ tải ảnh, không tạo video.
+
+## v46.9 — đối chiếu báo cáo nút thêm ảnh
+
+Hai báo cáo người dùng có delivered=false và cùng reference_sha256; báo cáo v46.8 có add_controls=[] nên bộ lọc chưa nhận ra nút. Wrapper phân tích nhãn aria/title/text riêng và icon thay vì ghép mọi nhãn rồi regex; ghi toàn bộ toolbar_controls. Với nút không nhãn, desktop >=1000px, chỉ xét nút nhỏ duy nhất trong vùng nút + đã thấy ở screenshot (tâm x 72–78%, hàng trên), không bấm nút có tên khác hoặc nhiều ứng viên. Kiểm thử SVG không nhãn và không chạm + sidebar đã đạt. Giữ nguyên upload_reference gốc; thêm Tải báo cáo thử ảnh trong node. Chưa chứng minh upload trên Google thật. Delta 3 file yêu cầu v46.7+, EXE ở downloads/v46-toolbar-upload.

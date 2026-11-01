@@ -85,17 +85,27 @@ async def upload_to_project(page,reference,log,report):
     images=page.locator('input[type=file][accept*="image"]')
     if await images.count()==1:
         return await upload_reference(page,reference,log)
-    candidates=await page.locator('button,[role=button]').evaluate_all(r'''xs=>xs.map((e,i)=>{
-      const r=e.getBoundingClientRect();const label=[e.getAttribute('aria-label'),e.getAttribute('title'),e.textContent].filter(Boolean).join(' ').trim();
-      const add=/^(?:\+|add|add_2|add_circle|add_photo_alternate|add to project|thêm|thêm vào dự án)(?:\s+(?:add|add_2|\+))?$/i.test(label);
-      if(!add||!r.width||!r.height)return null;
-      return {index:i,label:label.slice(0,100),top:r.top,left:r.left,toolbar:r.top>=0&&r.top<Math.min(100,innerHeight*.2)&&r.left>innerWidth*.5&&r.left<innerWidth*.9};
-    }).filter(Boolean)''')
+    controls=await page.locator('button,[role=button]').evaluate_all(r"""xs=>xs.map((e,i)=>{
+      const r=e.getBoundingClientRect();if(!r.width||!r.height)return null;
+      const labels=[e.getAttribute('aria-label'),e.getAttribute('title'),e.innerText].filter(Boolean).map(x=>x.trim());
+      const icons=[...e.querySelectorAll('i,[class*=symbol],[class*=material]')].map(x=>x.textContent.trim());
+      const add=[...labels,...icons].some(x=>/^(?:\+|add|add_2|add_circle|add_photo_alternate|add to project|add media|add image|upload|upload media|thêm|thêm vào dự án)$/i.test(x));
+      const toolbar=r.top>=0&&r.top<Math.min(100,innerHeight*.2)&&r.left>innerWidth*.5&&r.left<innerWidth*.9;
+      const symbolic=labels.every(x=>/^[\s\uE000-\uF8FF+]*$/.test(x));
+      const screenshotSlot=innerWidth>=1000&&toolbar&&(r.left+r.width/2)/innerWidth>.72&&(r.left+r.width/2)/innerWidth<.78&&r.width<=64&&r.height<=64&&symbolic;
+      return {index:i,labels:labels.map(x=>x.slice(0,100)),icons:icons.map(x=>x.slice(0,50)),top:r.top,left:r.left,width:r.width,height:r.height,toolbar,add,screenshotSlot,enabled:!e.disabled};
+    }).filter(Boolean)""")
+    report['toolbar_controls']=[x for x in controls if x['toolbar']]
+    candidates=[x for x in controls if x['add']]
     report['add_controls']=candidates
-    toolbar=[x for x in candidates if x['toolbar']]
+    toolbar=[x for x in candidates if x['toolbar']and x['enabled']]
+    if len(toolbar)==0:
+        toolbar=[x for x in controls if x['screenshotSlot']and x['enabled']]
+        if len(toolbar)==1:report['selection_method']='unlabelled_button_in_supplied_screenshot_slot'
     if len(toolbar)!=1:
-        log('Chưa xác định duy nhất nút thêm ảnh ở thanh trên dự án.')
+        log('Chưa xác định duy nhất nút thêm ảnh; đã ghi danh sách nút thanh công cụ vào báo cáo.')
         return await upload_reference(page,reference,log)
+    report['selected_control']=toolbar[0]
     delivered=asyncio.Event();tasks=set()
     async def choose(chooser):
         await chooser.set_files(str(Path(reference).resolve()));delivered.set()
@@ -106,6 +116,9 @@ async def upload_to_project(page,reference,log,report):
         await page.locator('button,[role=button]').nth(toolbar[0]['index']).click(timeout=5000)
         log('Đã mở nút + ở thanh trên của dự án, không phải cạnh prompt.')
         await asyncio.sleep(.2)
+        try:
+            await page.screenshot(path=str(Path(reference).with_suffix('.menu.png')),timeout=5000)
+        except Exception:pass
         if tasks:
             await asyncio.gather(*tasks)
         if delivered.is_set():return True

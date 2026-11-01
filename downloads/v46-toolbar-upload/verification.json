@@ -1,0 +1,15 @@
+{
+  "version": "2026.11.01.469",
+  "minimum_patch": "2026.11.01.467",
+  "sha256": "8966173c497ce873c43af3e5b24837fda81f50b8883a97f0f7b340d04ce5ef72",
+  "verified_files": 3,
+  "evidence": "Both supplied reports have delivered=false and identical reference SHA; v46.8 add_controls=[]",
+  "checks": [
+    "Chromium: label-free SVG toolbar Add at screenshot position opens Upload; sidebar untouched; no prompt/Generate",
+    "Chromium: upload report JSON download from node",
+    "PowerShell version checks"
+  ],
+  "original_upload_function_unchanged": true,
+  "real_flow_upload_verified": false,
+  "windows_gui_tested": false
+}

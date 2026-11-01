@@ -37,6 +37,14 @@ async def main():
    assert len([x for x in report['add_controls']if x['toolbar']])==1
    assert await page.locator('input[type=file]').evaluate('(e)=>e.files.length')==1
    assert not await page.evaluate('!!window.wrong')and await page.locator('textarea').input_value()==''
+   # Reproduce reports with no recognized add_controls: an unnamed SVG icon,
+   # positioned exactly in the desktop screenshot's project Add slot.
+   await page.locator('input[type=file]').evaluate('(e)=>e.remove()')
+   await page.locator('#top').evaluate("(e)=>{e.removeAttribute('aria-label');e.innerHTML='<svg width=20 height=20><path d=\"M10 3v14M3 10h14\"></path></svg>'}")
+   report={};assert await upload_to_project(page,image,lambda _:None,report)
+   assert report['selection_method']=='unlabelled_button_in_supplied_screenshot_slot'
+   assert report['toolbar_controls']and report['selected_control']['index']==0
+   assert not await page.evaluate('!!window.wrong')
    await browser.close()
  print('PASS upload-only: exact image bytes delivered using upstream function, no prompt/generation/settings, no video ledger entry, screenshot/report retained; delivery is not claimed as library success.')
 if __name__=='__main__':asyncio.run(main())

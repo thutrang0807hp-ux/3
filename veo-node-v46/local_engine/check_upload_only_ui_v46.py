@@ -60,6 +60,10 @@ def main():
     expect(node.locator('[data-vn=create]')).to_be_disabled()
     node.locator('[data-vn=upload-only]').click()
     expect(node.locator('[data-vn-upload-state]')).to_contain_text('chưa xác minh thư viện')
+    with workflow.expect_download()as download:
+     node.locator('[data-vn=upload-report]').click()
+    report=__import__('json').loads(Path(download.value.path()).read_text())
+    assert report['report']['request_id']=='flow-upload-fixture123'
     assert len(posted)==1 and 'prompt'not in posted[0]and posted[0]['room_id']=='shared-account-room'
     assert workflow.evaluate('(project.cloudJobs||[]).length')==0
     assert not errors,errors;browser.close()
