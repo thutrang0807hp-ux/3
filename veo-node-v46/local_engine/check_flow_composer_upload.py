@@ -4,6 +4,7 @@ from pathlib import Path
 from unittest.mock import AsyncMock,patch
 from types import SimpleNamespace
 from .flow_pair_trial import run_pair
+from .add_to_prompt import click_add_to_prompt,wait_for_composer_attachment
 from playwright.async_api import async_playwright
 from .flow_composer_upload import upload_into_composer_and_fill
 
@@ -30,6 +31,28 @@ async def main():
    report=await upload_into_composer_and_fill(page,image,'Second prompt',AsyncMock())
    assert not report['delivered'] and not report['image_attached'] and report['prompt_verified'],report
    assert await page.evaluate('window.files')==0 and await page.evaluate('window.sent')==0
+   # Flow variant: upload opens a confirmation instead of attaching immediately.
+   await page.set_content(HTML)
+   await page.evaluate("""() => {
+    const dialog=document.createElement('div');dialog.setAttribute('role','dialog');dialog.hidden=true;
+    dialog.innerHTML='<img width=50 height=50 src=uploaded><button>Thêm vào câu lệnh</button>';
+    dialog.querySelector('button').onclick=()=>{window.confirmed=(window.confirmed||0)+1;document.querySelector('#chips').innerHTML='<img width=40 height=40 src=attached>';dialog.hidden=true};
+    document.body.append(dialog);
+    document.querySelector('#file').onchange=()=>{window.files++;document.querySelector('#menu').hidden=true;dialog.hidden=false};
+   }""")
+   report=await upload_into_composer_and_fill(page,image,'Confirm prompt',AsyncMock())
+   assert report['add_to_prompt_clicked'] and report['image_attached'] and report['prompt_verified'],report
+   assert await page.evaluate('window.confirmed')==1 and await page.evaluate('window.sent')==0
+   # Clicking alone is not evidence: no chip must reach timeout.
+   await page.set_content('<form><textarea></textarea><button>Generate</button></form>')
+   try:
+    await asyncio.wait_for(wait_for_composer_attachment(page,AsyncMock()),.05)
+    raise AssertionError('Missing chip reported as attached')
+   except asyncio.TimeoutError:pass
+   # Ambiguous resource picker and unrelated global buttons are never clicked.
+   await page.set_content('<div role=dialog><img src=a><img src=b><button onclick="window.wrong=1">Add to prompt</button></div><button onclick="window.wrong=1">Add to prompt</button>')
+   assert not await click_add_to_prompt(page,lambda x:None,AsyncMock(),{})
+   assert not await page.evaluate('!!window.wrong')
    # Exercise the actual orchestrator, not just the upload helper.
    await page.set_content(HTML)
    selection={'available':True,'account_id':'account','token':'token'}

@@ -9,8 +9,8 @@ import zipfile
 import dnfile
 
 ROOT = Path(__file__).resolve().parents[3]
-VERSION = '2026.11.02.4630'
-NAME = 'SceneForge-Update-20261102-v46.30-Composer-Hotfix.exe'
+VERSION = '2026.11.02.4631'
+NAME = 'SceneForge-Update-20261102-v46.31-Add-To-Prompt.exe'
 BASELINE = '8178af48a4db6180eb0fb3ef042b04ea21617c7380ca2e106d8e967990eb0c35'
 
 def main():
@@ -21,6 +21,7 @@ def main():
     sources = {
         'app/local_engine/simple_flow.py': ROOT/'veo-node-v46/local_engine/simple_flow.py',
         'app/local_engine/simple_flow_upload.py': ROOT/'veo-node-v46/local_engine/simple_flow_upload.py',
+        'app/local_engine/add_to_prompt.py': ROOT/'veo-node-v46/local_engine/add_to_prompt.py',
         'app/local_engine/flow_composer_upload.py': ROOT/'veo-node-v46/local_engine/flow_composer_upload.py',
         'app/local_engine/flow_pair_trial.py': ROOT/'veo-node-v46/local_engine/flow_pair_trial.py',
         'app/local_engine/flow_prepare.py': ROOT/'veo-node-v46/local_engine/flow_prepare.py',
@@ -67,8 +68,8 @@ def main():
               'minimum_patch': manifest['minimum_patch'], 'embedded_files_verified': True,
               'prompt_filled_separate_from_verified': True, 'prompt_readback_required': False,
               'image_prompt_trial': True, 'generation_disabled': True, 'preview_required': False,
-              'composer_upload_timeout_seconds': 25, 'prompt_timeout_seconds': 12,
-              'upload_implementation': 'composer_filechooser_v46_29', 'uploader_byte_identical_to_v46_19': True,
+              'composer_upload_timeout_seconds': 45, 'prompt_timeout_seconds': 12,
+              'upload_implementation': 'composer_filechooser_v46_31', 'uploader_byte_identical_to_v46_19': True,
               'uploader_sha256': upload19_sha256,
               'launcher_code_unchanged': True, 'live_flow_verified': False, 'windows_installer_tested': False}
     (output/'patch-build.json').write_text(json.dumps(report, indent=2)+'\n')
