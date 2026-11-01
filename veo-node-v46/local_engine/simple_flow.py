@@ -305,6 +305,8 @@ class SimpleFlow:
    if fmt not in ('image/png','image/jpeg','image/webp')or fmt!=ref.get('mime_type'):raise ValueError()
   except Exception:raise HTTPException(400,'Ảnh đầu không hợp lệ hoặc vượt 6 MB.')from None
   payload={'kind':'video','model':MODEL,'prompt':prompt,'references':refs,'room_id':str(body.get('room_id',''))[:100],'scene_id':str(body.get('scene_id',''))[:100],'part':str(body.get('part',''))[:40],'account_id':self.account_id(),'transport':'simple_flow'}
+  if body.get('prepared_request_id'):
+   payload['prepared_request_id']=body['prepared_request_id']
   async with self.gate:
    # Existing IDs are read before readiness checks so a lost browser never resubmits them.
    with self.ledger.connect()as db:exists=db.execute('SELECT 1 FROM request WHERE id=?',(rid,)).fetchone()
@@ -326,6 +328,10 @@ class SimpleFlow:
      try:await self.assert_ready()
      except SimpleStopped as exc:raise HTTPException(409,str(exc))from None
    if self.unresolved():raise HTTPException(409,'Có lượt SimpleFlow chưa rõ kết quả; kiểm tra trên Flow trước khi tạo lượt khác.')
+   if payload.get('prepared_request_id'):
+    from .flow_prepare import validate_prepared,PrepareStopped
+    try:await validate_prepared(self,payload,raw)
+    except PrepareStopped as exc:raise HTTPException(409,str(exc))from None
    try:self.ledger.claim(rid,payload)
    except (ValueError,RequestConflict)as exc:raise HTTPException(409,str(exc))from None
    digest=hashlib.sha256(json.dumps({k:v for k,v in payload.items()if k!='account_id'},sort_keys=True).encode()).hexdigest()
@@ -343,52 +349,63 @@ class SimpleFlow:
    self.phase(rid,'opening','Đang mở phiên Flow nền từ tài khoản đã chọn.'if background else'Đang kiểm tra phiên Flow.')
    if not self.connected:await self.restore()
    await self.assert_ready()
-   if automatic_mode:
-    self.phase(rid,'loading','Đang chờ Flow tải xong vùng tạo Ingredients; chưa tải ảnh hoặc điền prompt.')
-    if not await wait_composer(self.page,self.assert_ready):raise SimpleStopped('Flow chưa tải xong vùng tạo sau 90 giây (Loading hoặc chưa có ô nhập). Chưa tải ảnh, điền prompt hoặc bấm Tạo; xem ảnh chẩn đoán trong node.')
-   if not automatic_mode:await self.checkpoint('project','Cảnh '+payload['scene_id']+': chọn chế độ tạo video từ ảnh trong dự án đang mở rồi Tiếp tục.')
-   settings=await prepare_settings(self.page)if automatic_mode else False
-   before=await previews(self.page)if automatic_mode else []
-   self.phase(rid,'uploading','Đang tải ảnh đầu lên Flow.')
-   upload_steps=[]
-   def upload_log(text):
-    upload_steps.append(text)
-    self.ledger.set_metadata(rid,{'upload_step':text})
-   delivered=await upload_reference(self.page,reference,upload_log)
-   attached=await uploaded_preview(self.page,before)if automatic_mode and delivered else False
-   if automatic_mode and not attached:
-    if background:
-     detail='Đã giao tệp nhưng chưa thấy ảnh mới gắn trong vùng tạo.'if delivered else'Chưa giao được tệp vào Flow.'
-     raise SimpleStopped(detail+' '+(upload_steps[-1]if upload_steps else'')+' Chưa điền prompt hoặc bấm Tạo; xem ảnh bước đang vướng trong node.')
-    await self.checkpoint('image','Chưa xác nhận ảnh tham khảo đã gắn thành công trong Ingredients. Kiểm tra đúng ảnh trên Flow rồi Tiếp tục; chưa điền prompt hoặc bấm Tạo.')
-    attached=await uploaded_preview(self.page,before)
-    if not attached:raise SimpleStopped('Chưa xác nhận ảnh tham khảo đã gắn thành công. Chưa điền prompt hoặc bấm Tạo.')
-   if not automatic_mode:
-    await self.checkpoint('image','Kiểm tra ảnh đầu đã gắn đúng trong ô tạo Flow. '+('Đã gửi tệp.'if delivered else'Chưa tự tải được: tải ảnh thủ công từ '+str(reference))+' Tiếp tục chỉ khi đã nhìn thấy đúng ảnh; bấm Dừng nếu chưa đúng.')
-   await self.assert_ready()
-   editors=self.page.locator('textarea,[contenteditable="true"],[role="textbox"]').filter(visible=True)
-   filled=await editors.count()==1
-   if filled:await editors.fill(payload['prompt'])
-   elif not automatic_mode:await self.checkpoint('prompt','Không nhận diện duy nhất ô prompt. Chép prompt từ node vào Flow rồi Tiếp tục.')
-   if automatic_mode:
-    # One fallback checkpoint for the specific unverified inputs, not three routine steps.
-    missing=[]
-    if self.email is None:missing.append('đúng tài khoản Flow')
-    if not settings:missing.append('Veo Lite, 8 giây, 9:16, x1, Ingredients')
-    if not attached:missing.append('ảnh tham khảo đã gắn thành công trong Ingredients')
-    if not filled:missing.append('prompt từ node đã được dán đúng')
-    if missing and background:raise SimpleStopped('Chưa tự xác minh được '+', '.join(missing)+'. Chưa bấm Tạo; xem ảnh bước đang vướng trong node.')
-    if missing:await self.checkpoint('review','Chưa tự xác minh được: '+', '.join(missing)+'. Kiểm tra trên Flow rồi Tiếp tục để tạo một lần; có thể tốn credit.')
-    elif not await settings_ready(self.page):raise SimpleStopped('Cài đặt Flow đã đổi trước khi gửi. Chưa bấm Tạo.')
-    if not await uploaded_preview(self.page,before,timeout=1):raise SimpleStopped('Ảnh tham khảo không còn được xác nhận trong Ingredients trước khi gửi. Chưa bấm Tạo.')
-   else:await self.checkpoint('submit','Cảnh '+payload['scene_id']+': kiểm tra đúng ảnh, prompt, Veo Lite, 8 giây, 9:16 và x1 trên Flow. Tiếp tục cho phép bấm Tạo một lần, có thể tốn credit.')
+   if payload.get('prepared_request_id'):
+    from .flow_prepare import validate_prepared,PrepareStopped
+    self.phase(rid,'checking_prepared','Đang đọc lại đúng ảnh, prompt và cấu hình đã chuẩn bị; chưa gửi tạo.')
+    try:await validate_prepared(self,payload,raw)
+    except PrepareStopped as exc:raise SimpleStopped(str(exc))from None
+   else:
+    if automatic_mode:
+     self.phase(rid,'loading','Đang chờ Flow tải xong vùng tạo Ingredients; chưa tải ảnh hoặc điền prompt.')
+     if not await wait_composer(self.page,self.assert_ready):raise SimpleStopped('Flow chưa tải xong vùng tạo sau 90 giây (Loading hoặc chưa có ô nhập). Chưa tải ảnh, điền prompt hoặc bấm Tạo; xem ảnh chẩn đoán trong node.')
+    if not automatic_mode:await self.checkpoint('project','Cảnh '+payload['scene_id']+': chọn chế độ tạo video từ ảnh trong dự án đang mở rồi Tiếp tục.')
+    settings=await prepare_settings(self.page)if automatic_mode else False
+    before=await previews(self.page)if automatic_mode else []
+    self.phase(rid,'uploading','Đang tải ảnh đầu lên Flow.')
+    upload_steps=[]
+    def upload_log(text):
+     upload_steps.append(text)
+     self.ledger.set_metadata(rid,{'upload_step':text})
+    delivered=await upload_reference(self.page,reference,upload_log)
+    attached=await uploaded_preview(self.page,before)if automatic_mode and delivered else False
+    if automatic_mode and not attached:
+     if background:
+      detail='Đã giao tệp nhưng chưa thấy ảnh mới gắn trong vùng tạo.'if delivered else'Chưa giao được tệp vào Flow.'
+      raise SimpleStopped(detail+' '+(upload_steps[-1]if upload_steps else'')+' Chưa điền prompt hoặc bấm Tạo; xem ảnh bước đang vướng trong node.')
+     await self.checkpoint('image','Chưa xác nhận ảnh tham khảo đã gắn thành công trong Ingredients. Kiểm tra đúng ảnh trên Flow rồi Tiếp tục; chưa điền prompt hoặc bấm Tạo.')
+     attached=await uploaded_preview(self.page,before)
+     if not attached:raise SimpleStopped('Chưa xác nhận ảnh tham khảo đã gắn thành công. Chưa điền prompt hoặc bấm Tạo.')
+    if not automatic_mode:
+     await self.checkpoint('image','Kiểm tra ảnh đầu đã gắn đúng trong ô tạo Flow. '+('Đã gửi tệp.'if delivered else'Chưa tự tải được: tải ảnh thủ công từ '+str(reference))+' Tiếp tục chỉ khi đã nhìn thấy đúng ảnh; bấm Dừng nếu chưa đúng.')
+    await self.assert_ready()
+    editors=self.page.locator('textarea,[contenteditable="true"],[role="textbox"]').filter(visible=True)
+    filled=await editors.count()==1
+    if filled:await editors.fill(payload['prompt'])
+    elif not automatic_mode:await self.checkpoint('prompt','Không nhận diện duy nhất ô prompt. Chép prompt từ node vào Flow rồi Tiếp tục.')
+    if automatic_mode:
+     # One fallback checkpoint for the specific unverified inputs, not three routine steps.
+     missing=[]
+     if self.email is None:missing.append('đúng tài khoản Flow')
+     if not settings:missing.append('Veo Lite, 8 giây, 9:16, x1, Ingredients')
+     if not attached:missing.append('ảnh tham khảo đã gắn thành công trong Ingredients')
+     if not filled:missing.append('prompt từ node đã được dán đúng')
+     if missing and background:raise SimpleStopped('Chưa tự xác minh được '+', '.join(missing)+'. Chưa bấm Tạo; xem ảnh bước đang vướng trong node.')
+     if missing:await self.checkpoint('review','Chưa tự xác minh được: '+', '.join(missing)+'. Kiểm tra trên Flow rồi Tiếp tục để tạo một lần; có thể tốn credit.')
+     elif not await settings_ready(self.page):raise SimpleStopped('Cài đặt Flow đã đổi trước khi gửi. Chưa bấm Tạo.')
+     if not await uploaded_preview(self.page,before,timeout=1):raise SimpleStopped('Ảnh tham khảo không còn được xác nhận trong Ingredients trước khi gửi. Chưa bấm Tạo.')
+    else:await self.checkpoint('submit','Cảnh '+payload['scene_id']+': kiểm tra đúng ảnh, prompt, Veo Lite, 8 giây, 9:16 và x1 trên Flow. Tiếp tục cho phép bấm Tạo một lần, có thể tốn credit.')
+    await self.assert_ready()
    await self.assert_ready()
    button=await create_button(self.page)
    if button is None and background:raise SimpleStopped('Chưa nhận diện được nút tạo trong phiên Flow nền. Chưa gửi video; xem ảnh bước đang vướng trong node.')
    self.download_waiter=asyncio.get_running_loop().create_future()
    if not background:self.page.on('download',self.on_download)
    observer=ResultObserver(self.page,payload['prompt']);await observer.baseline();self.observer=observer
+   if payload.get('prepared_request_id'):
+    try:await validate_prepared(self,payload,raw)
+    except PrepareStopped as exc:raise SimpleStopped(str(exc))from None
    self.ledger.set_metadata(rid,{'clicked':button is not None,'manual_submit_allowed':button is None});self.sent=True
+   if payload.get('prepared_request_id'):self.prepare_report['state']='submitted'
    self.phase(rid,'submitting','Đang gửi một lượt tạo trên Flow.')
    if button is not None:await button.click(timeout=15000)
    else:await self.checkpoint('manual-submit','Chưa nhận diện duy nhất nút tạo. Bấm Tạo trên Flow MỘT lần rồi Tiếp tục. App không bấm lại.')
@@ -508,6 +525,8 @@ def install_simple_flow(app,data,vault,ledger,provider):
  service.account_bridge=AccountWebSession(data,provider.account_service,background=True)
  from .flow_settings import register_settings_routes
  register_settings_routes(app,service)
+ from .flow_prepare import register_prepare_routes
+ register_prepare_routes(app,service)
  @app.post('/local-api/flow/simple/jobs')
  async def submit(body:dict):return await service.submit(body)
  @app.post('/local-api/flow/simple/upload-only')

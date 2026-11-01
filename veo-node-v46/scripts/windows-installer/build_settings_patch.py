@@ -1,4 +1,4 @@
-"""Build settings plus the user-confirmed v46.19 uploader on v46.7 or later using the existing unchanged unsigned launcher."""
+"""Build scene-prompt preparation with the unchanged v46.19 uploader using the existing unchanged unsigned launcher."""
 import hashlib
 import io
 import json
@@ -9,8 +9,8 @@ import zipfile
 import dnfile
 
 ROOT = Path(__file__).resolve().parents[3]
-VERSION = '2026.11.02.4620'
-NAME = 'SceneForge-Update-20261102-v46.20-Upload19-Settings.exe'
+VERSION = '2026.11.02.4621'
+NAME = 'SceneForge-Update-20261102-v46.21-Scene-Prompt.exe'
 BASELINE = '8178af48a4db6180eb0fb3ef042b04ea21617c7380ca2e106d8e967990eb0c35'
 
 def main():
@@ -21,14 +21,13 @@ def main():
     sources = {
         'app/local_engine/simple_flow.py': ROOT/'veo-node-v46/local_engine/simple_flow.py',
         'app/local_engine/simple_flow_upload.py': ROOT/'veo-node-v46/local_engine/simple_flow_upload.py',
+        'app/local_engine/flow_prepare.py': ROOT/'veo-node-v46/local_engine/flow_prepare.py',
         'app/local_engine/flow_settings.py': ROOT/'veo-node-v46/local_engine/flow_settings.py',
         'app/dist/web-demo/workflow.html': ROOT/'workflow.html',
     }
     # User supplied and confirmed .19. Never downgrade its uploader again.
     upload19_sha256 = '342e1bde247a0ca3612efe7c363cb0d741c84a1b014a71c35a402d1e6aba5869'
     assert hashlib.sha256(sources['app/local_engine/simple_flow_upload.py'].read_bytes()).hexdigest() == upload19_sha256, 'Uploader differs from user-confirmed v46.19'
-    service19 = sources['app/local_engine/simple_flow.py'].read_bytes().replace(b' from .flow_settings import register_settings_routes\n register_settings_routes(app,service)\n', b'')
-    assert hashlib.sha256(service19).hexdigest() == '1e8bfbaf44b8af36edccbd4b859f308c20b1c6746b71a5ebc006745ed4346e20', 'Service differs from v46.19 beyond settings route registration'
     manifest = {'version': VERSION, 'supported_payloads': [BASELINE], 'minimum_patch': '2026.11.01.467',
                 'files': [{'path': name, 'bytes': path.stat().st_size,
                            'sha256': hashlib.sha256(path.read_bytes()).hexdigest()} for name,path in sources.items()]}
@@ -64,6 +63,7 @@ def main():
     exe.with_suffix('.exe.sha256').write_text(digest+'  '+NAME+'\n')
     report = {'version': VERSION, 'file': NAME, 'bytes': len(data), 'sha256': digest, 'files': len(sources),
               'minimum_patch': manifest['minimum_patch'], 'embedded_files_verified': True,
+              'scene_prompt_preparation': True, 'prepared_generation_receipt': True,
               'upload_implementation': 'project_upload_v46_19', 'uploader_byte_identical_to_v46_19': True,
               'uploader_sha256': upload19_sha256,
               'launcher_code_unchanged': True, 'live_flow_verified': False, 'windows_installer_tested': False}

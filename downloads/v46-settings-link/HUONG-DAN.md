@@ -1,27 +1,26 @@
-# v46.20 — giữ upload .19 và sửa liên kết setting
+# v46.21 — gắn ảnh của cảnh, điền prompt và gửi một lượt
 
-Tải `SceneForge-Update-20261102-v46.20-Upload19-Settings.exe`. Đóng SceneForge, chọn thư mục có SceneForge.exe và install-settings.json, bấm Cập nhật rồi mở lại. Cài trực tiếp trên v46.7 trở lên của bộ cài v2, bao gồm .19; không cần cài lại .16 hoặc .18. Updater kiểm baseline, checksum và sao lưu file như trước.
+Đóng SceneForge, chạy `SceneForge-Update-20261102-v46.21-Scene-Prompt.exe`, chọn thư mục có SceneForge.exe và install-settings.json, bấm Cập nhật rồi mở lại. Cài trên v46.7 trở lên của bộ cài v2. Giữ nguyên hàm upload .19, tài khoản, profile và dữ liệu.
 
-## Upload
+## Thử một cảnh
 
-Gói .18 setting từng kèm hàm upload cũ nên làm lùi bản .19 đã chạy được. Gói này giữ **nguyên byte** `simple_flow_upload.py` từ EXE .19 người dùng gửi và xác nhận thành công:
+1. Duyệt đúng ảnh đầu của cảnh và rà prompt chuyển động ở node Video Veo.
+2. Giữ cấu hình **Video · Thành phần (Ingredients) · Veo 3.1 Lite · 9:16 · x1** cho bước thử tạo một clip. Chưa thêm cài đặt thời lượng; luồng nhận clip hiện vẫn kiểm 8 giây và dọc 9:16 như trước.
+3. Bấm **Chỉ tải ảnh lên dự án Flow**, chờ hoàn tất bằng đường upload .19 đã chạy được.
+4. Bấm **Gắn ảnh + điền prompt**. Phần mềm đối chiếu thumbnail với ảnh gốc của lượt upload trong cùng phòng/tài khoản, mở menu ⋮ của ảnh khớp duy nhất, chọn Add to prompt (Image nếu có submenu), rồi điền và đọc lại prompt của đúng cảnh. Bước này chưa gửi tạo video.
+5. Xem **ảnh kiểm tra trên Flow**. Nếu đúng ảnh/prompt/cấu hình, bấm **Tạo 1 video trên Flow** và xác nhận cho phép gửi; có thể tốn credit. Backend kiểm lại ảnh, prompt, tài khoản, phòng và setting trước khi gửi một lần.
+6. Lượt tạo dùng bộ theo dõi và nhận video hiện có. Nếu chưa rõ kết quả, giữ để kiểm tra, không tự gửi lại. Chưa có hàng đợi nhiều cảnh hoặc chạy đồng thời.
 
-`342e1bde247a0ca3612efe7c363cb0d741c84a1b014a71c35a402d1e6aba5869`
+## Khi chưa gắn được
 
-Vẫn là Add media menu ở thanh trên → Upload → giao ảnh; không quay về dò dấu + cạnh prompt. Bản kết hợp không tự thêm Ingredients, prompt hoặc tạo video. Upload và setting là hai thao tác riêng. Thử nút Chỉ tải ảnh lên dự án Flow trước, sau đó thử Áp dụng lên Flow trong cùng phòng.
+Bấm **Tải báo cáo ảnh/prompt**, gửi JSON và ảnh kiểm tra trong chat. Báo cáo có phase, hash ảnh/prompt, các thumbnail ứng viên và kết quả đối chiếu; không lưu URL media có chữ ký. Không tự gửi báo cáo đi.
 
-## Setting
+Nếu ảnh trùng nhiều bản, thư viện quá lớn, không khớp thumbnail, menu khác, hoặc ô tạo đang chứa ảnh/prompt khác: dừng để người dùng kiểm tra, không chọn bừa hoặc ghi đè. Không dùng Animate. Nếu đổi ảnh, prompt, cảnh, phòng hoặc setting sau chuẩn bị, cần chuẩn bị lại. Nhãn sẵn sàng thuộc lần kiểm tra đó; backend đọc lại ngay trước lúc gửi.
 
-Trong node Veo có mục **Cấu hình Flow · bản thử .20**. Chọn Video, Khung hình/Thành phần, tỉ lệ, model và số kết quả; bấm Áp dụng lên Flow. Chưa thêm thời lượng hoặc chất lượng tải; x2–x4 không phải số luồng.
+Đối chiếu thumbnail hỗ trợ ảnh đổi kích thước/nén nhẹ và đòi duy nhất một ứng viên; đây không phải bằng chứng media ID từ API. Người dùng cần xem ảnh kiểm tra trước khi xác nhận gửi ở lượt thử trên Flow thật.
 
-Sửa dò nhãn có icon Material, đọc lại các mục sau khi Flow cập nhật DOM, thử các mục còn lại khi Flow không cung cấp trạng thái lựa chọn. Chỉ báo khớp khi đọc lại đủ trạng thái đúng. Nếu chỉ bấm được nhưng chưa xác minh trạng thái: báo chưa xác minh, không coi là thành công. Model không có thì dừng, không đổi Lite thành Fast. Đây là áp dụng một chiều theo yêu cầu, không theo dõi hai chiều liên tục.
+## Kiểm chứng
 
-Khi chưa khớp: tải **báo cáo cài đặt**, không phải báo cáo upload, và xem ảnh bảng setting. Báo cáo có phase, field_results, observed và nhãn/thuộc tính trạng thái các nút; lưu cục bộ, không tự gửi đi. Có thể một số mục đã đổi trước khi lỗi.
+Người dùng đã xác nhận upload .19 và setting .20 hoạt động trên máy của mình. Phần mới của .21 **chưa được xác nhận trên Flow thật**, chưa chạy updater trên Windows. Đã kiểm Chromium với ảnh và trang mô phỏng: đúng ảnh, Add to prompt, prompt nguyên nội dung, không chọn ảnh trùng, không ghi đè prompt khác, chặn ảnh/prompt/cảnh đổi; route chuẩn bị có ảnh kiểm tra; ledger thật gửi đúng một lần và không gửi lại khi kết quả chưa rõ. Giao diện khóa tạo trước khi có receipt và khi prompt đổi. Bộ hồi quy upload .19 đạt.
 
-## Kiểm chứng và phạm vi
-
-Đã đối chiếu nguyên byte uploader với EXE .19, checksum từng file trong ZIP nhúng, giữ nguyên launcher. Đã kiểm Chromium mô phỏng đường menu Upload/hộp chọn tệp chậm và setting trên cùng trang; giao diện SceneForge gửi đúng cấu hình; model thiếu, nhãn có icon, trạng thái không xác minh, tài khoản đổi và tác vụ đồng thời đều có kiểm tra. Kiểm hồi quy upload giao đúng byte ảnh, không chạm prompt hoặc Generate.
-
-**Upload .19 đã được người dùng xác nhận trên Flow thật; bản kết hợp .20 và setting mới chưa được xác nhận trên Flow thật. Chưa chạy updater trên Windows.** Giữ tài khoản, profile, dữ liệu và giao diện Tài khoản. Nút tạo video vẫn khóa.
-
-Gói thay 4 file: simple_flow.py (nền .19, chỉ thêm đăng ký route setting), simple_flow_upload.py (nguyên byte .19), flow_settings.py và workflow.html.
+Hàm upload giữ nguyên SHA-256 `342e1bde247a0ca3612efe7c363cb0d741c84a1b014a71c35a402d1e6aba5869`. Gói có 5 file: simple_flow.py, simple_flow_upload.py, flow_settings.py, flow_prepare.py và workflow.html; kiểm SHA-256 từng file và giữ nguyên mã launcher.
