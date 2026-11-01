@@ -126,3 +126,59 @@ async def upload_to_project(page,reference,log,report):
         page.remove_listener('filechooser',on_chooser)
     # Menu Upload/image input is now open; source function remains untouched.
     return await upload_reference(page,reference,log)
+
+async def library_images(page):
+    """Read image identities from the project library, excluding upload dialogs/composers."""
+    import hashlib
+    rows=await page.locator('img').evaluate_all(r'''xs=>xs.map((e,i)=>{
+      const r=e.getBoundingClientRect();if(!r.width||!r.height||e.closest('form,[role=dialog]'))return null;
+      const editor=e.closest('[data-testid*=composer]');if(editor)return null;
+      const card=e.closest('[data-media-id],[data-asset-id],article,[role=listitem]')||e.parentElement;
+      const id=card?.getAttribute('data-media-id')||card?.getAttribute('data-asset-id')||'';
+      const src=e.currentSrc||e.src||'';
+      const visible=x=>!!x.getClientRects().length;
+      const busy=card?.getAttribute('aria-busy')==='true'||/^(uploading|loading|pending)$/.test(card?.getAttribute('data-state')||'')||[...(card?.querySelectorAll('[role=progressbar],[aria-busy=true]')||[])].some(visible);
+      e.setAttribute('data-sf-upload-image',String(i));
+      return {token:String(i),id,src,name:[e.alt,e.title,card?.getAttribute('title')].filter(Boolean).join(' '),loaded:e.complete&&e.naturalWidth>32&&e.naturalHeight>32,busy,width:e.naturalWidth,height:e.naturalHeight};
+    }).filter(Boolean)''')
+    from urllib.parse import urlsplit,urlunsplit
+    for row in rows:
+        src=urlsplit(row['src'])
+        canonical=urlunsplit((src.scheme,src.netloc,src.path,'',''))if src.scheme in ('http','https')else row['src']
+        row['key']=hashlib.sha256((row['id']or canonical).encode()).hexdigest()
+    return rows
+
+async def wait_uploaded_image(page,before,reference,check,report,timeout=60):
+    """Confirm one NEW loaded library image matching the submitted picture; never pick an old tile."""
+    import time,io
+    from PIL import Image,ImageOps,ImageChops,ImageStat
+    with Image.open(reference)as original:
+        expected=ImageOps.fit(ImageOps.exif_transpose(original).convert('RGB'),(64,64))
+    baseline={row['key']for row in before};deadline=time.monotonic()+timeout
+    stable_key=None;stable_since=None
+    while time.monotonic()<deadline:
+        await check()
+        rows=await library_images(page);matches=[]
+        report['image_check']={'visible_images':len(rows),'new_images':len([x for x in rows if x['key']not in baseline]),'matching_images':0}
+        for row in rows:
+            if row['key']in baseline or not row['loaded']or row['busy']:continue
+            # A local upload preview alone is not evidence of a completed library asset.
+            if not row['id']and not row['src'].startswith(('https://','http://')):continue
+            item=page.locator('img[data-sf-upload-image="'+row['token']+'"]')
+            try:
+                screenshot=await item.screenshot(timeout=1500)
+                with Image.open(io.BytesIO(screenshot))as thumbnail:
+                    actual=ImageOps.fit(thumbnail.convert('RGB'),(64,64))
+                error=sum(ImageStat.Stat(ImageChops.difference(expected,actual)).mean)/(3*255)
+            except Exception:continue
+            if error<=.035:matches.append({**row,'visual_difference':round(error,5)})
+        matches=list({row['key']:row for row in matches}.values())
+        report['image_check']['matching_images']=len(matches)
+        if len(matches)==1:
+            match=matches[0]
+            if stable_key!=match['key']:stable_key=match['key'];stable_since=time.monotonic()
+            elif time.monotonic()-stable_since>=.75:
+                return {'key':match['key'],'media_id':match['id']or None,'name':match['name'][:160],'width':match['width'],'height':match['height'],'visual_difference':match['visual_difference']}
+        else:stable_key=None;stable_since=None
+        await asyncio.sleep(.25)
+    return None

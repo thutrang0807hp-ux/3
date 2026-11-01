@@ -1948,7 +1948,7 @@ async function uploadOnly(row){
  const status=await workflowLocalRequest('flow/simple/status');assertRoom(room);
  if(!status.selection?.available)throw Error('Chọn tài khoản đã đăng nhập ở tab Tài khoản.');
  const blob=await(await fetch(input.image)).blob();const data=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result.split(',')[1]);reader.onerror=reject;reader.readAsDataURL(blob);});assertRoom(room);
- const report=await workflowLocalRequest('flow/simple/upload-only',{reference:{mime_type:blob.type,data},room_id:room,selection_token:status.selection.token});assertRoom(room);state().uploadTrial=report;await storeProject();paint();
+ const report=await workflowLocalRequest('flow/simple/upload-only',{reference:{mime_type:blob.type,data},room_id:room,scene_id:row.s.id,part:row.p.id,selection_token:status.selection.token});assertRoom(room);state().uploadTrial=report;await storeProject();paint();
  async function poll(){if(project.id!==room)return;try{const report=await workflowLocalRequest('flow/simple/upload-only/'+encodeURIComponent(state().uploadTrial.request_id));assertRoom(room);state().uploadTrial=report;paint();if(report.state==='running')setTimeout(poll,1000);else await storeProject();}catch(e){if(project.id===room){state().uploadTrial={...state().uploadTrial,state:'failed',message:e.message};paint();}}}
  setTimeout(poll,1000);
 }

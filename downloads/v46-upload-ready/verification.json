@@ -1,0 +1,17 @@
+{
+  "version": "2026.11.01.4610",
+  "sha256": "5e3164aab3aecec0adf60a80d857a547bd5fda2d009575c699403ffa09c06f72",
+  "verified_files": 3,
+  "upload_path_preserved": true,
+  "completion_check": "unique new loaded library asset, no known uploading indicators, visual thumbnail match, stable identity; UI readiness only, not a server-persistence guarantee",
+  "timeout_seconds": 60,
+  "checks": [
+    "worker waits beyond 3 seconds for new asset; no prompt/Generate",
+    "old identical, wrong, busy, ambiguous, dialog and URL-token-refresh images rejected",
+    "duplicate views of same asset deduplicated",
+    "Accounts/upload UI regression",
+    "PowerShell version checks"
+  ],
+  "real_flow_verified": false,
+  "windows_gui_tested": false
+}

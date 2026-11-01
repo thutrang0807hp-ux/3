@@ -5,7 +5,7 @@ from fastapi import HTTPException
 from fastapi.responses import FileResponse
 from .request_ledger import NO_RESULT,RequestConflict
 from .admission import guarded_submission
-from .simple_flow_upload import upload_reference,upload_to_project
+from .simple_flow_upload import upload_reference,upload_to_project,library_images,wait_uploaded_image
 from .simple_flow_dom import ResultObserver,create_button,wait_composer,prepare_settings,settings_ready,previews,uploaded_preview
 
 MODEL='veo-3.1-lite-i2v-8s-portrait'
@@ -79,7 +79,7 @@ class SimpleFlow:
    selection=self.account_bridge.selection()
    if not selection['available']or body.get('selection_token')!=selection['token']:raise HTTPException(409,'Tài khoản đã đổi hoặc chưa sẵn sàng. Chọn lại tại tab Tài khoản.')
    rid='flow-upload-'+secrets.token_hex(12)
-   self.upload_report={'request_id':rid,'state':'running','message':'Đang mở dự án để chỉ tải ảnh.','delivered':False,'has_preview':False,'reference_sha256':hashlib.sha256(raw).hexdigest(),'logs':[]}
+   self.upload_report={'request_id':rid,'room_id':body['room_id'],'scene_id':str(body.get('scene_id',''))[:100],'part':str(body.get('part',''))[:40],'state':'running','message':'Đang mở dự án để chỉ tải ảnh.','delivered':False,'has_preview':False,'reference_sha256':hashlib.sha256(raw).hexdigest(),'logs':[]}
    self.active=rid;self.pinned_account=selection['account_id'];self.pinned_room=body['room_id'];self.sent=False
    self.task=asyncio.create_task(self.run_upload_only(rid,raw,mime))
    return dict(self.upload_report)
@@ -101,10 +101,17 @@ class SimpleFlow:
     await asyncio.sleep(.25)
    else:raise SimpleStopped('Flow vẫn chưa tải xong vùng thao tác; chưa giao tệp.')
    await self.page.screenshot(path=str(self.root/(rid+'.before.png')),timeout=5000)
+   before=await library_images(self.page)
    report['delivered']=await upload_to_project(self.page,reference,log,report)
    outcome='delivered_unverified'if report['delivered']else'failed'
    report['message']=('Đã giao tệp ảnh cho Flow bằng nguyên hàm rtrtr4. Chưa xác minh ảnh đã lưu vào thư viện dự án; xem ảnh sau tải. Không điền prompt hoặc tạo video.'if report['delivered']else'Chưa giao được ảnh vào dự án qua nút + thanh trên và hàm rtrtr4. Không điền prompt hoặc tạo video.')
-   if report['delivered']:await asyncio.sleep(3)
+   if report['delivered']:
+    log('Đã giao tệp; đang chờ đúng ảnh mới tải xong trong thư viện Flow.')
+    asset=await wait_uploaded_image(self.page,before,reference,self.assert_ready,report)
+    report['uploaded_asset']=asset
+    if asset:
+     outcome='image_ready';report['message']='Đã nhận diện đúng ảnh mới trong thư viện: ảnh đã hiển thị và không còn trạng thái tải. Đã ghi nhận ảnh cho cảnh này; chưa điền prompt hoặc tạo video.'
+    else:report['message']='Đã giao tệp nhưng chưa xác nhận duy nhất ảnh mới tải xong sau 60 giây. Giữ ảnh và phiên Flow; chưa điền prompt hoặc chọn ảnh cũ.'
   except BaseException as exc:
    report['state']='failed';report['message']=str(exc)if isinstance(exc,SimpleStopped)else'Đã dừng thử tải ảnh: '+type(exc).__name__+'. Không tạo video.'
    if isinstance(exc,asyncio.CancelledError):raise
