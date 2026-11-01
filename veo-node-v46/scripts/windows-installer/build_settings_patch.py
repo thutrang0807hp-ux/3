@@ -9,8 +9,8 @@ import zipfile
 import dnfile
 
 ROOT = Path(__file__).resolve().parents[3]
-VERSION = '2026.11.02.4626'
-NAME = 'SceneForge-Update-20261102-v46.26-Image-Prompt-Trial.exe'
+VERSION = '2026.11.02.4627'
+NAME = 'SceneForge-Update-20261102-v46.27-Image-Prompt-Trace.exe'
 BASELINE = '8178af48a4db6180eb0fb3ef042b04ea21617c7380ca2e106d8e967990eb0c35'
 
 def main():

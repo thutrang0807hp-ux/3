@@ -65,4 +65,19 @@ class PairTrialTests(unittest.IsolatedAsyncioTestCase):
                 await m.trace_uploaded_media(None,{},'unique-file',AsyncMock(),report,timeout=.01)
         self.assertNotIn('method',report['upload_provenance'])
 
+    async def test_original_bytes_select_correct_asset_among_two_new_ids(self):
+        import hashlib
+        report={'upload_provenance':{},'reference_sha256':hashlib.sha256(b'correct-image').hexdigest()}
+        after={key:{'ready':True,'filename_match':False,'sources':[key]} for key in ('wrong','correct')}
+        async def read(page,url,probe):return b'correct-image' if url=='correct' else b'other-image'
+        with patch.object(m,'library_snapshot',AsyncMock(return_value=after)),patch.object(m,'original_reference_pixels',read):
+            selected=await m.trace_uploaded_media(None,{},'hidden-filename',AsyncMock(),report,timeout=1)
+        self.assertEqual(selected,'correct')
+        self.assertEqual(report['upload_provenance']['method'],'source_sha256_of_new_asset')
+
+    async def test_whitespace_comparison_preserves_words_and_punctuation(self):
+        self.assertEqual(m.comparable_prompt('A\n\nB\u00a0C'),m.comparable_prompt('A B C'))
+        self.assertNotEqual(m.comparable_prompt('A B!'),m.comparable_prompt('A B?'))
+        self.assertNotEqual(m.comparable_prompt('A B C'),m.comparable_prompt('A C'))
+
 if __name__=='__main__': unittest.main()

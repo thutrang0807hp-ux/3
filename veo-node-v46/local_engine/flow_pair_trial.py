@@ -6,7 +6,7 @@ from fastapi.responses import FileResponse
 from PIL import Image
 from .simple_flow_upload import upload_to_project
 from .flow_settings import DEFAULTS,apply_settings,validate_settings,control,exact
-from .flow_prepare import reference_scope,editor_text,prompt_text,current_attachment,remove_approved_attachment
+from .flow_prepare import reference_scope,editor_text,prompt_text,current_attachment,remove_approved_attachment,original_reference_pixels
 
 class PairStopped(RuntimeError):pass
 
@@ -25,42 +25,81 @@ async def library_snapshot(page,stem):
         const labels=[e.getAttribute('data-filename'),e.getAttribute('data-name'),e.getAttribute('aria-label'),e.getAttribute('title'),clone.textContent,...images.flatMap(i=>[i.alt,i.title])].filter(Boolean).join(' ');
         const busy=[...e.querySelectorAll('[role=progressbar],[aria-busy=true]')].some(x=>x.getClientRects().length);
         const ready=!busy; // Metadata/action readiness, never decoded preview pixels.
-        return {id,ready,filename_match:labels.includes(stem)};
+        return {id,ready,filename_match:labels.includes(stem),sources:images.map(i=>i.currentSrc||i.src).filter(Boolean)};
       }).filter(x=>x.id)};
     }''',stem)
     if data['truncated']:raise PairStopped('Thư viện có quá nhiều phần tử để theo dấu lượt upload đầy đủ.')
     records={}
     for item in data['records']:
-        previous=records.setdefault(item['id'],{'ready':False,'filename_match':False})
+        previous=records.setdefault(item['id'],{'ready':False,'filename_match':False,'sources':[]})
         previous['ready']|=item['ready'];previous['filename_match']|=item['filename_match']
+        previous['sources']=sorted(set(previous['sources']+item.get('sources',[])))
     return records
 
-async def write_prompt(page,prompt,replace=False):
+def comparable_prompt(value):
+    # Rich-text editors may render paragraph breaks and NBSP differently.
+    # Only whitespace is normalized; no words, punctuation or case are discarded.
+    return re.sub(r'\s+', ' ', prompt_text(value)).strip()
+
+async def write_prompt(page,prompt,replace=False,probe=None):
     editor,_=await reference_scope(page)
     if editor is None:raise PairStopped('Chưa tìm được duy nhất ô prompt trên Flow.')
-    current=prompt_text(await editor_text(editor))
-    if current!=prompt_text(prompt):
+    expected=comparable_prompt(prompt)
+    current=comparable_prompt(await editor_text(editor))
+    if current!=expected:
         inline=await editor.locator('img,[data-media-id],[data-asset-id]').count()
         if inline and not replace:
             if current:raise PairStopped('Prompt đổi sau khi gắn ảnh; chưa sửa nội dung inline làm mất ảnh.')
             await editor.focus();await editor.press('Control+End');await page.keyboard.insert_text(prompt)
         else:
             await editor.fill(prompt,timeout=10000)
-    readback=prompt_text(await editor_text(editor))
-    if readback!=prompt_text(prompt):raise PairStopped('Prompt đọc lại từ Flow không khớp nội dung của cảnh.')
-    return hashlib.sha256(readback.encode()).hexdigest()
+    for attempt in range(8):
+        readback=prompt_text(await editor_text(editor))
+        observed=comparable_prompt(readback)
+        if probe is not None:
+            probe.update(expected_length=len(prompt),observed_length=len(readback),
+                         observed_sha256=hashlib.sha256(readback.encode()).hexdigest(),
+                         comparison='whitespace_normalized',attempts=attempt+1)
+        if observed==expected:
+            return hashlib.sha256(readback.encode()).hexdigest()
+        await asyncio.sleep(.15)
+    raise PairStopped('Prompt đọc lại khác nội dung của cảnh sau khi chuẩn hóa khoảng trắng. Xem prompt_probe.')
 
 async def trace_uploaded_media(page,before,stem,check,report,timeout=30):
     deadline=asyncio.get_running_loop().time()+timeout
+    inspected={}
+    provenance=report['upload_provenance']
     while asyncio.get_running_loop().time()<deadline:
         await check();after=await library_snapshot(page,stem)
         named=[key for key,value in after.items()if key not in before and value['ready']and value['filename_match']]
         new=[key for key,value in after.items()if key not in before and value['ready']]
-        report['upload_provenance'].update(new_ids=new,filename_match_ids=named)
+        provenance.update(new_ids=new,filename_match_ids=named,stage='identify_uploaded_asset')
         if len(named)==1:
-            report['upload_provenance']['method']='unique_upload_filename';return named[0]
+            provenance['method']='unique_upload_filename';return named[0]
+        # Some Flow cards never expose the filename. Inspect only NEW assets;
+        # match downloaded original bytes to the source SHA, never thumbnail pixels.
+        exact_ids=[]
+        for media_id in new[:8]:
+            for url in after[media_id].get('sources',[])[:2]:
+                await check()
+                key=(media_id,hashlib.sha256(url.encode()).hexdigest())
+                if key not in inspected:
+                    remaining=deadline-asyncio.get_running_loop().time()
+                    if remaining<=0:break
+                    probe={}
+                    try:
+                        raw=await asyncio.wait_for(original_reference_pixels(page,url,probe), min(2,remaining))
+                        inspected[key]=bool(raw and hashlib.sha256(raw).hexdigest()==report.get('reference_sha256'))
+                    except asyncio.TimeoutError:
+                        probe['original_read']='timeout'
+                    provenance.setdefault('original_byte_checks',[]).append({'media_id':media_id,**probe})
+                if inspected.get(key):exact_ids.append(media_id);break
+        exact_ids=sorted(set(exact_ids))
+        provenance['exact_original_ids']=exact_ids
+        if len(exact_ids)==1:
+            provenance['method']='source_sha256_of_new_asset';return exact_ids[0]
         await asyncio.sleep(.25)
-    raise PairStopped('Chưa xác định duy nhất media ID của chính lượt upload này. Prompt vẫn được xử lý riêng; không chọn thumbnail thủ công hoặc đoán ảnh.')
+    raise PairStopped('Không xác định được duy nhất ảnh mới bằng tên tệp hoặc SHA-256 ảnh gốc. Không đoán ảnh từ thứ tự hay thumbnail.')
 
 async def media_image(page,media_id):
     marker='data-sf-pair-'+secrets.token_hex(8)
@@ -87,6 +126,7 @@ async def composer_state(page):
     return {'count':len(photos),'ids':sorted({x for x in photos if x})}
 
 async def attach_traced_media(page,media_id,check,report):
+    report['attachment_stage']='locate_media_menu'
     await page.keyboard.press('Escape')
     image,more=await media_image(page,media_id)
     existing=await composer_state(page)
@@ -97,13 +137,15 @@ async def attach_traced_media(page,media_id,check,report):
         await remove_approved_attachment(page,current['fingerprint'],check,report)
     # Removing an old chip can rerender controls. Reacquire the same asset ID.
     image,more=await media_image(page,media_id);await check();await more.click(timeout=5000)
+    report['attachment_stage']='find_add_to_prompt'
     action=None
     for _ in range(30):
         action=await control(page,exact(r'Add to prompt|Thêm vào câu lệnh|Thêm vào lời nhắc|Thêm vào prompt'))
         if await action.count()==1:break
         await asyncio.sleep(.1)
     if action is None or await action.count()!=1:raise PairStopped('Menu ảnh vừa upload chưa có duy nhất Add to prompt.')
-    await check();await action.click(timeout=5000)
+    await check();report['attachment_stage']='click_add_to_prompt';await action.click(timeout=5000)
+    report['attachment_stage']='observe_composer_attachment'
     for _ in range(40):
         await check();state=await composer_state(page)
         if state['count']==1:
@@ -147,7 +189,7 @@ async def upload_and_fill_prompt(
         log(step + ': ' + detail)
     async def fill(replace):
         report['prompt_verified'] = False
-        digest = await asyncio.wait_for(write_prompt(page, prompt, replace=replace), prompt_timeout)
+        digest = await asyncio.wait_for(write_prompt(page, prompt, replace=replace, probe=report.setdefault('prompt_probe',{})), prompt_timeout)
         report.update(prompt_verified=True, prompt_readback_sha256=digest)
         report['errors'].pop('prompt', None)
         log('Đã điền và đọc lại đúng prompt.')
@@ -196,6 +238,7 @@ async def upload_and_fill_prompt(
         if attempt_attachment and report['delivered'] and before is not None:
             attempted = True
             phase('attach_image', 'Đang thử gắn đúng ảnh vừa tải; prompt được xử lý riêng.')
+            report['attachment_stage']='identify_uploaded_asset'
             async def attach():
                 await check()
                 media_id = await trace_uploaded_media(page, before, reference.stem, check, report, timeout=attachment_timeout)
