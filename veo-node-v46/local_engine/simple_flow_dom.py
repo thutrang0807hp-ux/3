@@ -23,6 +23,20 @@ async def create_button(page):
   if await icons.count()==1 and await icons.is_enabled():return icons
  return None
 
+async def wait_composer(page,check,timeout=90):
+ """DOM navigation and an account marker do not mean the Flow app has loaded."""
+ end=time.monotonic()+timeout
+ while time.monotonic()<end:
+  await check()
+  editor,scope=await composer(page)
+  if editor is not None and scope is not None and await editor.is_editable():
+   # Generate may remain disabled until image/prompt are supplied.
+   buttons=scope.get_by_role('button',name=CREATE).filter(visible=True)
+   icons=scope.locator('button').filter(has_text=re.compile(r'^\s*arrow_forward\s*$')).filter(visible=True)
+   if await buttons.count()==1 or await icons.count()==1:return True
+  await asyncio.sleep(.25)
+ return False
+
 async def settings_ready(page):
  _,scope=await composer(page)
  if scope is None:return False

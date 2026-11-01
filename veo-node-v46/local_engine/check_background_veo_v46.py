@@ -42,10 +42,12 @@ async def main():
     if '/fixture-video/'in r.request.url:return await r.fulfill(content_type='video/mp4',headers={'Content-Disposition':'attachment; filename=clip.mp4'},body=movie.read_bytes())
     email='other@invalid'if state['kind']=='wrong'else'fixture@invalid'
     html="<script>window.WIZ_global_data={oPEP7c:'"+email+"'};window.sent=0;</script>"
-    if '/project/'in r.request.url:html+=form
+    if '/project/'in r.request.url:
+     if state['kind']=='loading':html+='<p>Loading...</p><script>setTimeout(()=>{document.body.innerHTML='+__import__('json').dumps(form)+'},1200)</script>'
+     else:html+=form
     else:
      from html import escape
-     html+='<button id=new type=button>New project</button><script>document.querySelector("#new").onclick=()=>{history.pushState({},"","/project/fixture-project");document.body.innerHTML='+__import__('json').dumps(form)+';fetch("/fixture-created")}</script>'
+     html+='<button id=new type=button>New project</button><script>document.querySelector("#new").onclick=()=>{history.pushState({},"","/project/fixture-project");document.body.innerHTML='+__import__('json').dumps('<p>Loading...</p>')+';setTimeout(()=>{document.body.innerHTML='+__import__('json').dumps(form)+'},1200);fetch("/fixture-created")}</script>'
     if '/fixture-created'in r.request.url:created.append(True);return await r.fulfill(body='ok')
     await r.fulfill(content_type='text/html; charset=utf-8',body=html)
    await ctx.route('**/*',route)
@@ -58,7 +60,7 @@ async def main():
   def body():return {'request_id':'flow-'+str(uuid.uuid4()),'kind':'video','model':MODEL,'prompt':'Smile and wave.','references':[{'mime_type':'image/png','data':image64}],'room_id':'room','scene_id':'scene','part':'a','confirm_send':True,'automatic':True,'selection_token':pool.status()['token']}
   with patch('local_engine.flow_background_session.launch_background',launch),patch('local_engine.flow_browser_probe.probe_flow_browser',side_effect=AssertionError('Must not depend on visible/CDP endpoint')):
    for i in range(2):
-    state['kind']='normal'if i==0 else'upload-delayed'
+    state['kind']='loading'if i==0 else'upload-delayed'
     b=body();await s.submit(b);await until(lambda:s.lookup(b['request_id']).get('progress')==37)
     page=pages[-1];assert await page.evaluate('window.sent')==1 and s.pending is None
     assert not await page.evaluate('!!window.earlyPrompt'), 'Prompt filled before image attached'

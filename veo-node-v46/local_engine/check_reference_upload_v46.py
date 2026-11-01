@@ -4,7 +4,7 @@ from pathlib import Path
 from PIL import Image
 from playwright.async_api import async_playwright
 from .simple_flow_upload import upload_reference
-from .simple_flow_dom import previews,uploaded_preview,prepare_settings,settings_ready
+from .simple_flow_dom import previews,uploaded_preview,prepare_settings,settings_ready,wait_composer
 
 async def main():
  with tempfile.TemporaryDirectory() as tmp:
@@ -15,6 +15,12 @@ async def main():
    browser=await pw.chromium.launch(executable_path='/usr/bin/chromium',args=['--no-sandbox'])
    page=await browser.new_page()
    await page.route('**/*',lambda r:r.abort())
+   async def check():pass
+   await page.set_content('<p>Loading...</p>')
+   assert not await wait_composer(page,check,timeout=.3)
+   assert await page.locator('textarea').count()==0
+   await page.evaluate("""()=>setTimeout(()=>document.body.innerHTML='<form><textarea></textarea><button disabled>Generate</button></form>',400)""")
+   assert await wait_composer(page,check,timeout=2)
    # An unrelated input outside the composer must never receive the reference.
    base='''<input id=unrelated type=file accept="image/*"><form onsubmit="return false"><button type=button>Ingredients</button><button type=button>Veo Lite · 8s · 9:16 · x1</button><textarea></textarea><img id=preview>CONTENT<button type=button>Generate</button></form>'''
    changed="document.querySelector('#preview').src='"+src+"'"

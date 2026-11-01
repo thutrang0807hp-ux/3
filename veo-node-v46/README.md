@@ -43,3 +43,7 @@ Giữ chế độ Ingredients (không ép Frames). Worker chỉ điền prompt s
 Ở chế độ nền, không xác nhận được ảnh thì dừng trước prompt/Tạo, lưu ảnh chẩn đoán tại node và không yêu cầu tải thủ công. Kiểm tra lại ảnh và cấu hình ngay trước gửi; giao diện Tài khoản giữ nguyên.
 
 Kiểm thử trên bản nguồn đầy đủ (ZIP v46 giải nén, chép đè các file local_engine v46 đã sửa): `python3 -m local_engine.check_reference_upload_v46`, `python3 -m local_engine.check_background_veo_v46`, `python3 -m local_engine.check_simple_flow_v44`, `python3 -m local_engine.check_account_api_v46`. Dùng Chromium và fixture, không chứng nhận Google thật. Bản EXE cập nhật 2026.11.01.46.1 đã đóng gói tại downloads/v46-ingredients-fix; gói source ZIP và EXE v46 cũ giữ nguyên.
+
+## v46.2 — chờ vùng tạo Flow tải xong
+
+Ảnh chẩn đoán người dùng cho thấy dự án vẫn ở Loading. Worker chờ tối đa 90 giây cho ô nhập có thể sửa và nút tạo xuất hiện (nút có thể chưa bật); trong thời gian này vẫn kiểm tra tài khoản và hủy tác vụ, chưa tải ảnh hoặc điền prompt. Hết hạn báo lỗi tải trang riêng, giữ ảnh chẩn đoán. Không tự reload hoặc gửi lại. Đã kiểm thử Loading kéo dài, trang tải xong trễ, nút tạo chưa bật và luồng nền tạo/nhận clip bằng fixture Chromium. EXE v46.2 ở downloads/v46-loading-fix; chưa kiểm thử Windows hoặc Google thật.

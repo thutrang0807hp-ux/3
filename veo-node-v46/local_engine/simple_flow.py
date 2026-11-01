@@ -6,7 +6,7 @@ from fastapi.responses import FileResponse
 from .request_ledger import NO_RESULT,RequestConflict
 from .admission import guarded_submission
 from .simple_flow_upload import upload_reference
-from .simple_flow_dom import ResultObserver,create_button,prepare_settings,settings_ready,previews,uploaded_preview
+from .simple_flow_dom import ResultObserver,create_button,wait_composer,prepare_settings,settings_ready,previews,uploaded_preview
 
 MODEL='veo-3.1-lite-i2v-8s-portrait'
 class SimpleStopped(RuntimeError):pass
@@ -264,6 +264,9 @@ class SimpleFlow:
    self.phase(rid,'opening','Đang mở phiên Flow nền từ tài khoản đã chọn.'if background else'Đang kiểm tra phiên Flow.')
    if not self.connected:await self.restore()
    await self.assert_ready()
+   if automatic_mode:
+    self.phase(rid,'loading','Đang chờ Flow tải xong vùng tạo Ingredients; chưa tải ảnh hoặc điền prompt.')
+    if not await wait_composer(self.page,self.assert_ready):raise SimpleStopped('Flow chưa tải xong vùng tạo sau 90 giây (Loading hoặc chưa có ô nhập). Chưa tải ảnh, điền prompt hoặc bấm Tạo; xem ảnh chẩn đoán trong node.')
    if not automatic_mode:await self.checkpoint('project','Cảnh '+payload['scene_id']+': chọn chế độ tạo video từ ảnh trong dự án đang mở rồi Tiếp tục.')
    settings=await prepare_settings(self.page)if automatic_mode else False
    before=await previews(self.page)if automatic_mode else []
