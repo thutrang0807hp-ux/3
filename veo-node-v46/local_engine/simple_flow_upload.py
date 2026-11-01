@@ -31,9 +31,7 @@ async def upload_reference(page, reference, log):
         if await dialogs.count() > 1:
             return False
         target = dialogs if await dialogs.count() == 1 else scope
-        if target is None:
-            return False
-        inputs = target.locator('input[type="file"]')
+        inputs = (target or page).locator('input[type="file"]')
         candidates = []
         explicit_images = []
         for index in range(await inputs.count()):
@@ -44,9 +42,18 @@ async def upload_reference(page, reference, log):
                 if accept:
                     explicit_images.append(item)
         selected = explicit_images if explicit_images else candidates
+        # Match the working rtrtr4 flow_engine.py path: Flow may already have
+        # its hidden upload input outside the composer before + is clicked.
+        if not selected:
+            images = []
+            for item in await page.locator('input[type="file"]').all():
+                accept = (await item.get_attribute('accept') or '').lower()
+                if ('image' in accept or any(ext in accept for ext in ('.png','.jpg','.jpeg','.webp'))) and await item.is_enabled():
+                    images.append(item)
+            selected = images
         # Flow can mount its hidden input in a portal outside the composer.
         # Only inputs created by our own upload action are eligible here.
-        if not selected and opened_upload:
+        if len(selected)!=1 and opened_upload:
             portal = []
             for item in await page.locator('input[type="file"]').all():
                 token = await item.get_attribute('data-sf-upload-id')
@@ -71,7 +78,14 @@ async def upload_reference(page, reference, log):
         from .simple_flow_dom import composer
         _, scope = await composer(page)
         if scope is None:
-            return False
+            # Upload can be available before the full Generate composer.
+            # Keep rtrtr4's narrow + lookup independent of submit controls.
+            editors = page.locator('textarea,[contenteditable="true"],[role="textbox"]').filter(visible=True)
+            scope = page
+            if await editors.count()==1:
+                nearby = editors.locator('xpath=ancestor::*[.//button][1]')
+                if await nearby.count()==1:
+                    scope = nearby
         add_name = re.compile(r'^(\+|add|add image|add media|add reference|attach|attach file|upload|upload image|upload media|thêm|thêm ảnh|tải ảnh lên|tải lên)$', re.I)
         buttons = scope.get_by_role('button', name=add_name).filter(visible=True)
         if await buttons.count() != 1:

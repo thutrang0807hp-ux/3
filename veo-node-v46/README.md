@@ -55,3 +55,7 @@ Hai bản hotfix trước ghi phiên bản 5 phần không hợp lệ với Syst
 ## v46.4 — tải ảnh qua portal và composer lồng nhau
 
 Bổ sung nút icon add_2/add_circle, tìm composer nhỏ nhất có nút tạo thay vì lấy hàng prompt bên trong. Khi chính thao tác thêm/tải ảnh mở input ngoài composer, chỉ chọn input ảnh mới được tạo, không dùng input không liên quan đã tồn tại. Ngăn giao tệp đồng thời qua chooser và input. Chờ ảnh gắn tối đa 30 giây; thông báo phân biệt chưa giao tệp và đã giao nhưng chưa thấy preview. Không bỏ điều kiện ảnh gắn trước prompt. Chromium fixture kiểm tra các bố cục này đã đạt; chưa xác minh đường tải của tài khoản Google thật. EXE ở downloads/v46-upload-fix, phiên bản 2026.11.01.464 hợp lệ với System.Version.
+
+## v46.5 — đối chiếu rtrtr4
+
+Đã đọc repo thutrang0807hp-ux/rtrtr4 ở commit db5aa529c5203bee37cd05d4925b622419616b02. Khôi phục đường tìm input ảnh ẩn có sẵn trên toàn trang từ flow_engine.py: ưu tiên input trong vùng tạo, nếu không có thì dùng duy nhất một input ảnh toàn trang. Không bắt buộc input phải mới được tạo. Bước tìm nút + không phụ thuộc nút Generate. Adapter đã vượt qua cả 5 test_upload.py của repo tham chiếu khi thay hàm upload_reference bằng adapter v46.5. Xác nhận ảnh trước prompt vẫn tự động trong chế độ nền. Không tuyên bố đã chạy Google thật. EXE tại downloads/v46-simpleflow-upload.

@@ -22,7 +22,7 @@ async def main():
    await page.evaluate("""()=>setTimeout(()=>document.body.innerHTML='<form><textarea></textarea><button disabled>Generate</button></form>',400)""")
    assert await wait_composer(page,check,timeout=2)
    # An unrelated input outside the composer must never receive the reference.
-   base='''<input id=unrelated type=file accept="image/*"><form onsubmit="return false"><button type=button>Ingredients</button><button type=button>Veo Lite · 8s · 9:16 · x1</button><textarea></textarea><img id=preview>CONTENT<button type=button>Generate</button></form>'''
+   base='''<input id=unrelated type=file accept="video/*"><form onsubmit="return false"><button type=button>Ingredients</button><button type=button>Veo Lite · 8s · 9:16 · x1</button><textarea></textarea><img id=preview>CONTENT<button type=button>Generate</button></form>'''
    changed="document.querySelector('#preview').src='"+src+"'"
    for kind in ['direct','lazy','chooser']:
     if kind=='direct':content='<input id=upload type=file accept="image/*" onchange="'+changed+'">'
@@ -37,13 +37,23 @@ async def main():
     assert await page.locator('textarea').input_value()==''
    # Flow-style non-form composer: nested prompt row, icon-only add button,
    # and a hidden image input mounted outside the composer by the menu action.
-   await page.set_content("""<input id=unrelated type=file accept="image/*"><div id=composer><button>Ingredients</button><img id=preview><div><textarea></textarea><button id=add type=button>add_2</button></div><button disabled>Generate</button></div>""")
+   await page.set_content("""<input id=unrelated type=file accept="video/*"><div id=composer><button>Ingredients</button><img id=preview><div><textarea></textarea><button id=add type=button>add_2</button></div><button disabled>Generate</button></div>""")
    await page.locator('#add').evaluate("""(e,src)=>e.onclick=()=>{const input=document.createElement('input');input.type='file';input.accept='image/*';input.id='portal';input.hidden=true;input.onchange=()=>document.querySelector('#preview').src=src;document.body.append(input)}""",src)
    before=await previews(page)
    assert await upload_reference(page,reference,lambda _:None)
    assert await page.locator('#portal').evaluate('(e)=>e.files.length')==1
    assert await page.locator('#unrelated').evaluate('(e)=>e.files.length')==0
    assert await uploaded_preview(page,before)
+   # Exact rtrtr4 regression: a pre-existing hidden image input is global,
+   # outside the composer; it must work without opening + or confirmation.
+   await page.set_content('<input type=file accept="video/*"><input id=global-upload type=file accept="image/*" hidden><form><textarea></textarea><img id=preview><button disabled>Generate</button></form>')
+   await page.locator('#global-upload').evaluate('(e,src)=>e.onchange=()=>document.querySelector("#preview").src=src',src)
+   before=await previews(page)
+   assert await upload_reference(page,reference,lambda _:None)
+   assert await uploaded_preview(page,before)
+   await page.set_content('<input type=file accept="image/*"><input type=file accept="image/*">')
+   assert not await upload_reference(page,reference,lambda _:None)
+   assert await page.locator('input').evaluate_all('(xs)=>xs.reduce((n,e)=>n+e.files.length,0)')==0
    # File delivery, a library thumbnail, stale images and busy/error UI are not attachment proof.
    await page.set_content(base.replace('CONTENT','<input type=file accept="image/*">')+'<div role=dialog><img src="'+src+'"></div>')
    assert not await uploaded_preview(page,[],timeout=.3)

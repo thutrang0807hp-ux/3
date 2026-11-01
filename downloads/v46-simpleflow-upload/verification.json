@@ -1,0 +1,14 @@
+{
+  "version": "2026.11.01.465",
+  "sha256": "a87f4535240a1c0d2bef63dd7d5df27977cfa61754e34e0bff8dc22fc4f5dfaf",
+  "verified_files": 55,
+  "changed_from_46_4": [
+    "files/app/local_engine/simple_flow_upload.py",
+    "patch-manifest.json"
+  ],
+  "reference_repository": "thutrang0807hp-ux/rtrtr4",
+  "reference_commit": "db5aa529c5203bee37cd05d4925b622419616b02",
+  "upstream_upload_tests_passed": 5,
+  "google_live_tested": false,
+  "windows_gui_tested": false
+}
