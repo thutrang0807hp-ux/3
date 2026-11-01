@@ -2,16 +2,16 @@
 <html lang="vi">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>SceneForge v46.28 · Mô phỏng đồng bộ Flow</title>
+<title>SceneForge v46.29 · Mô phỏng đồng bộ Flow</title>
 <style>
 :root{color-scheme:dark;font-family:system-ui,sans-serif;color:#edf0f5;background:#0c0e12}*{box-sizing:border-box}body{margin:0;padding:40px 20px}main{max-width:980px;margin:auto}.tag{color:#d4f53c;font-size:12px;letter-spacing:.12em}h1{font-size:clamp(28px,5vw,44px);line-height:1.15;margin:16px 0}p{color:#aeb8c6;line-height:1.7}.grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin:30px 0}.card{background:#171b22;border:1px solid #303844;border-radius:20px;padding:24px}h2{margin:0 0 20px;font-size:19px}label{display:grid;gap:8px;color:#b8c2d0;font-size:13px;margin:16px 0}select{font:inherit;color:#f2f4f7;background:#242a34;border:1px solid #465164;border-radius:9px;padding:12px;width:100%}button,.download{display:block;text-align:center;border:0;border-radius:10px;padding:14px 20px;font:inherit;font-weight:700;cursor:pointer;background:#d4f53c;color:#142000;text-decoration:none;width:100%}button:hover,.download:hover{background:#e6ff81}button:focus-visible,a:focus-visible,select:focus-visible{outline:3px solid #9dbeff;outline-offset:4px}.flow{background:#111;border-radius:18px;padding:12px;display:grid;gap:7px}.row{display:flex;gap:4px;background:#202222;border-radius:12px;padding:4px}.chip{flex:1;text-align:center;padding:12px 7px;color:#bbb;font-size:13px;border-radius:10px}.chip.on{background:#e9ebed;color:#141719}.model{padding:14px;background:#2b2d30;border-radius:10px;font-size:14px}.note{font-size:12px;color:#9ca8ba;line-height:1.7}.status{min-height:48px;border-left:3px solid #738095;padding-left:12px;font-size:13px;line-height:1.6;color:#c4cfdd}.status.ok{border-color:#d4f53c;color:#d4f53c}.download{margin-top:22px}.meta{font-size:12px;text-align:center}.warning{background:#30291b;border:1px solid #665332;color:#e6cc94;padding:15px;border-radius:12px;font-size:13px;line-height:1.7}a{color:#d4f53c}li{color:#b9c3d2;margin:10px 0;line-height:1.6}code{overflow-wrap:anywhere;font-size:12px}footer{padding:20px 0;font-size:12px;color:#8390a2}@media(max-width:680px){body{padding:24px 14px}.grid{grid-template-columns:1fr}.card{padding:20px}}
 </style>
 </head>
 <body><main>
-<div class="tag">SCENEFORGE · BẢN THỬ v46.28</div>
+<div class="tag">SCENEFORGE · BẢN THỬ v46.29</div>
 <h1>Chọn trong SceneForge.<br>Áp dụng sang Flow.</h1>
 <p>Thử thao tác cấu hình bên dưới để xem cách đồng bộ hoạt động. Tải bản cập nhật Windows để kiểm tra trên phần mềm của bạn.</p>
-<div class="warning">Bản thử v46.28 tách trạng thái đã điền prompt và đọc lại khớp. Readback khác không chặn kết quả giao tệp + điền prompt; xem nội dung thực tế trong báo cáo. Không bắt buộc preview. Giữ uploader .19. Chưa gửi tạo video, chưa xác minh trên Flow thật hoặc chạy bộ cập nhật trên Windows.</div>
+<div class="warning">Bản thử v46.29 dùng dấu + trong composer → Upload media → giao ảnh → điền prompt. Không tìm lại ảnh trong thư viện. Composer cần chưa có ảnh; chưa tự thay ảnh cũ. Chưa kiểm chứng trên Flow thật hoặc chạy installer trên Windows. Chưa tạo video.</div>
 <div class="grid">
 <section class="card" aria-labelledby="appTitle"><h2 id="appTitle">Cấu hình trong SceneForge</h2>
 <form id="settings">
@@ -33,12 +33,12 @@
 </div>
 <p id="status" class="status" role="status" aria-live="polite">Chưa áp dụng lựa chọn từ SceneForge sang bảng mô phỏng.</p>
 <p class="note">Bản thật mở Settings trigger, chọn từng mục rồi đọc lại trạng thái. Nếu chưa xác minh được, phần mềm báo chưa khớp. Không tự đổi model hoặc gửi tạo video.</p>
-<a class="download" href="SceneForge-Update-20261102-v46.28-Replace-Reference.exe" download>Tải bản thử v46.28 · Windows EXE ↓</a>
+<a class="download" href="SceneForge-Update-20261102-v46.29-Replace-Reference.exe" download>Tải bản thử v46.29 · Windows EXE ↓</a>
 <p class="meta">3,8 MiB · Cập nhật trực tiếp từ v46.7 trở lên</p>
-<p class="meta"><a href="HUONG-DAN.md">Hướng dẫn chi tiết</a> · <a href="SceneForge-Update-20261102-v46.28-Replace-Reference.exe.sha256" download>SHA-256</a></p>
+<p class="meta"><a href="HUONG-DAN.md">Hướng dẫn chi tiết</a> · <a href="SceneForge-Update-20261102-v46.29-Replace-Reference.exe.sha256" download>SHA-256</a></p>
 </section></div>
 <section class="card"><h2>Cách thử trên máy của bạn</h2><ol><li>Đóng SceneForge, chạy EXE và chọn thư mục có <b>SceneForge.exe</b> cùng <b>install-settings.json</b>. Bấm <b>Cập nhật</b> rồi mở lại.</li><li>Trong node Veo, chọn ảnh của cảnh và nhập prompt.</li><li>Bấm <b>Thử ảnh + prompt trên Flow</b>. Settings, upload và prompt được thực hiện trong cùng lượt. Không cần bấm từng nút riêng.</li><li>Xem kết quả giao tệp, prompt và gắn ảnh; tải báo cáo nếu có lỗi. Preview chỉ xem khi cần. Bản này chưa bật tạo video.</li></ol><p class="note">Giữ giao diện Tài khoản, profile và dữ liệu. Timeout upload 20 giây; bước gắn ảnh 10 giây. Không tự upload lại khi kết quả chưa rõ.</p></section>
-<footer>v46.28 · Đồng bộ theo yêu cầu từ SceneForge sang Flow và đọc lại kết quả; chưa đồng bộ hai chiều liên tục.</footer>
+<footer>v46.29 · Đồng bộ theo yêu cầu từ SceneForge sang Flow và đọc lại kết quả; chưa đồng bộ hai chiều liên tục.</footer>
 </main><script>
 const form=document.querySelector('#settings'),status=document.querySelector('#status');
 form.addEventListener('change',()=>{status.classList.remove('ok');status.textContent='Lựa chọn đã đổi. Bấm Áp dụng để cập nhật bảng Flow mô phỏng.';});

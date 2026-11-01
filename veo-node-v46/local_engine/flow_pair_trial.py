@@ -295,7 +295,17 @@ async def run_pair(service,report,raw,mime,prompt,settings,token):
             if editor is not None:break
             await asyncio.sleep(.25)
         else:raise PairStopped('Flow chưa tải xong ô nhập sau 90 giây.')
-        await upload_and_fill_prompt(service.page,reference,prompt,settings,check,report)
+        # Direct composer trial; the library uploader remains unchanged for diagnostics.
+        report.update(logs=[],errors={},settings_verified=False)
+        try:
+            report['settings_verified']=bool(await asyncio.wait_for(apply_settings(service.page,settings,check,report.setdefault('settings_report',{})),15))
+        except Exception as exc:
+            report['errors']['settings']={'type':type(exc).__name__,'message':str(exc)}
+            report['logs'].append('Cấu hình chưa hoàn tất; vẫn tiếp tục ảnh và prompt.')
+        await check()
+        await service.page.keyboard.press('Escape',timeout=2000)
+        from .flow_composer_upload import upload_into_composer_and_fill
+        await upload_into_composer_and_fill(service.page,reference,prompt,check,report=report)
     except asyncio.CancelledError:
         report.update(state='failed',message='Đã dừng lượt thử; chưa gửi tạo video.');raise
     except Exception as error:
