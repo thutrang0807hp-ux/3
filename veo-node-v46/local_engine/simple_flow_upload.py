@@ -82,7 +82,7 @@ async def upload_reference(page, reference, log):
 
 async def upload_to_project(page,reference,log,report):
     """One project upload path; never reopen the composer's Add menu."""
-    report.update(upload_implementation='project_upload_v46_18',phase='inspect_file_input',steps=[])
+    report.update(upload_implementation='project_upload_v46_19',phase='inspect_file_input',steps=[])
     tasks=[];delivered=asyncio.Event();chooser_seen=asyncio.Event()
     def phase(name):
         report['phase']=name;report['steps'].append(name)
