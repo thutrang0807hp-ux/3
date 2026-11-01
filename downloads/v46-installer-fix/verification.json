@@ -1,0 +1,11 @@
+{
+  "version": "2026.11.01.463",
+  "sha256": "372fea5782c73e3797676c4524acf04e2efe1e29a433eda98ce6db063dbb839f",
+  "verified_files": 55,
+  "changed_from_46_2": [
+    "apply_update.ps1",
+    "patch-manifest.json"
+  ],
+  "powershell_version_regression": "passed on PowerShell 7.4.6 Linux",
+  "windows_gui_tested": false
+}

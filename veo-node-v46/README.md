@@ -47,3 +47,7 @@ Kiểm thử trên bản nguồn đầy đủ (ZIP v46 giải nén, chép đè c
 ## v46.2 — chờ vùng tạo Flow tải xong
 
 Ảnh chẩn đoán người dùng cho thấy dự án vẫn ở Loading. Worker chờ tối đa 90 giây cho ô nhập có thể sửa và nút tạo xuất hiện (nút có thể chưa bật); trong thời gian này vẫn kiểm tra tài khoản và hủy tác vụ, chưa tải ảnh hoặc điền prompt. Hết hạn báo lỗi tải trang riêng, giữ ảnh chẩn đoán. Không tự reload hoặc gửi lại. Đã kiểm thử Loading kéo dài, trang tải xong trễ, nút tạo chưa bật và luồng nền tạo/nhận clip bằng fixture Chromium. EXE v46.2 ở downloads/v46-loading-fix; chưa kiểm thử Windows hoặc Google thật.
+
+## v46.3 — sửa trình cập nhật
+
+Hai bản hotfix trước ghi phiên bản 5 phần không hợp lệ với System.Version. Bản mới dùng 2026.11.01.463 (4 phần); updater chấp nhận metadata 5 phần cũ chỉ trong phép kiểm tra baseline tối thiểu, vẫn chặn bản thấp hơn v14. Kiểm thử check_patch_versions.ps1 đạt bằng PowerShell 7.4.6 trên Linux; chưa chạy giao diện cài đặt Windows. Payload ứng dụng giữ nguyên v46.2. EXE tại downloads/v46-installer-fix.

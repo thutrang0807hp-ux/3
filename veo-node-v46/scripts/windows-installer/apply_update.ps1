@@ -14,6 +14,12 @@ $cancel=New-Object Windows.Forms.Button;$cancel.Text='Đóng';$cancel.SetBounds(
 $known=Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\SceneForge-*' -ErrorAction SilentlyContinue|Select-Object -First 1
 if($known){$releases=Join-Path $known.InstallLocation 'releases';if(Test-Path $releases){$candidate=Get-ChildItem $releases -Directory|Where-Object {Test-Path (Join-Path $_.FullName 'SceneForge.exe')}|Sort-Object Name -Descending|Select-Object -First 1;if($candidate){$path.Text=$candidate.FullName}}}
 function Inside([string]$file,[string]$parent){return $file.StartsWith($parent.TrimEnd('\')+'\',[StringComparison]::OrdinalIgnoreCase)}
+function MinimumPatchVersion([string]$text){
+ # v46.1/v46.2 accidentally wrote five components; the fifth was a hotfix.
+ # This conversion is only for the minimum baseline check, not update ordering.
+ if($text -match '^([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)\.[0-9]+$'){$text=$Matches[1]}
+ return [version]$text
+}
 function ApplyUpdate {
  $script:working=$true;$go.Enabled=$false;$pick.Enabled=$false
  $backup=$null;$changes=@();$root=$null
@@ -26,7 +32,7 @@ function ApplyUpdate {
    $buildPath=Join-Path $root 'app-build.json'
    if(!(Test-Path -LiteralPath $buildPath)){throw 'Cần cài bản cập nhật v14 trước bản vá I2V này. Chưa thay đổi tệp nào.'}
    $installed=Get-Content -LiteralPath $buildPath -Encoding UTF8 -Raw|ConvertFrom-Json
-   if([version]$installed.version -lt [version]$manifest.minimum_patch){throw 'Cần cài bản cập nhật v14 trước bản vá I2V này. Chưa thay đổi tệp nào.'}
+   if((MinimumPatchVersion $installed.version) -lt (MinimumPatchVersion $manifest.minimum_patch)){throw 'Cần cài bản cập nhật v14 trước bản vá I2V này. Chưa thay đổi tệp nào.'}
   }
   $busy=@(Get-CimInstance Win32_Process|Where-Object {$_.ExecutablePath -and(Inside $_.ExecutablePath $root)})
   if($busy.Count){
