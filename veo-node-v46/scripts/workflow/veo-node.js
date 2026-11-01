@@ -29,7 +29,7 @@ function settingsView(){
  const running=report?.state==='running',locked=busy||active()||running||state().uploadTrial?.state==='running';
  const same=report?.state==='verified'&&report.room_id===project.id&&report.account_id===remote?.selection?.account_id&&JSON.stringify(report.requested)===JSON.stringify(cfg);
  const field=(key,title,values)=>'<label>'+title+'<select data-vn-setting="'+key+'" '+(locked?'disabled':'')+'>'+values.map(([value,label])=>'<option value="'+value+'" '+(String(cfg[key])===String(value)?'selected':'')+'>'+label+'</option>').join('')+'</select></label>';
- return '<section data-vn-settings><b>Cấu hình Flow · bản thử .23</b><small>Video · áp dụng từ SceneForge sang dự án Flow của phòng này.</small>'+
+ return '<section data-vn-settings><b>Cấu hình Flow · bản thử .24</b><small>Video · áp dụng từ SceneForge sang dự án Flow của phòng này.</small>'+
  field('mode','Chế độ',[['frames','Khung hình'],['ingredients','Thành phần (Ingredients)']])+
  field('ratio','Tỉ lệ',[['9:16','9:16 · Dọc'],['16:9','16:9 · Ngang']])+
  field('model','Model',[['lite','Veo 3.1 · Lite'],['fast','Veo 3.1 · Fast'],['quality','Veo 3.1 · Quality']])+

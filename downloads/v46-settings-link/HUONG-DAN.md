@@ -1,6 +1,6 @@
-# v46.23 — gắn ảnh của cảnh, điền prompt và gửi một lượt
+# v46.24 — gắn ảnh của cảnh, điền prompt và gửi một lượt
 
-Đóng SceneForge, chạy `SceneForge-Update-20261102-v46.23-Composer-Preview.exe`, chọn thư mục có SceneForge.exe và install-settings.json, bấm Cập nhật rồi mở lại. Cài trên v46.7 trở lên của bộ cài v2. Giữ nguyên hàm upload .19, tài khoản, profile và dữ liệu.
+Đóng SceneForge, chạy `SceneForge-Update-20261102-v46.24-Thumbnail-Crop.exe`, chọn thư mục có SceneForge.exe và install-settings.json, bấm Cập nhật rồi mở lại. Cài trên v46.7 trở lên của bộ cài v2. Giữ nguyên hàm upload .19, tài khoản, profile và dữ liệu.
 
 ## Thử một cảnh
 
@@ -40,3 +40,11 @@ Ngay khi bấm Gắn ảnh + điền prompt, trạng thái hiện trong node; kh
 Đã kiểm Chromium với thumbnail 24px bị crop, chip phía trên form nhập, chip CSS, ảnh sai và trường hợp chỉ có ảnh thư viện; kiểm phản hồi lỗi API vẫn hiện trong node và lý do khóa nút. Đây là kiểm thử mô phỏng, chưa xác nhận phần mới trên Flow thật hoặc updater Windows.
 
 Nếu ảnh là thành phần inline trong editor, .23 chèn chữ mà không Select All hoặc phát phím Enter, để giữ ảnh đã gắn và tránh gửi sớm. Đã kiểm ảnh inline còn nguyên, prompt đúng và Generate chưa được bấm.
+
+## .24 — so thumbnail theo cách Flow hiển thị
+
+Báo cáo .23 ghi nhận scope composer 600×160 có đúng một img đã tải, natural 670×1200 hiển thị 50×50, sai số đối chiếu 18.272. Setting vẫn đúng. Mã cũ dùng crop giữa mặc định khi đối chiếu thumbnail nhỏ; báo cáo chưa ghi cách lấy pixel hoặc CSS nên chưa thể khẳng định ảnh sai hay phép so sánh sai.
+
+.24 giữ cách đọc canvas ảnh gốc nếu được phép. Nếu CORS chặn canvas và phải chụp img hiển thị, bộ so sánh dựng đúng object-fit, object-position, padding/viền và chỉ loại pixel góc bo/viền không chứa ảnh. Ngưỡng xác minh vẫn là 4, ảnh sai tiếp tục bị chặn. Báo cáo ghi capture_method (canvas/screenshot), object_fit, object_position, border_radius và kích thước ảnh để xác định chính xác nếu vẫn chưa khớp. Không lưu URL ảnh.
+
+Đã tái hiện Chromium với ảnh 670×1200 hiển thị 50×50 khác origin, canvas bị chặn: cách crop giữa cũ báo sai lớn; đối chiếu theo CSS nhận đúng cover/top, cover/center, fill và contain. Ảnh màu khác bị từ chối; prompt chỉ điền khi ảnh được xác nhận, không bấm Generate trong chuẩn bị. Phần mới chưa xác nhận trên Flow thật và chưa chạy updater Windows.

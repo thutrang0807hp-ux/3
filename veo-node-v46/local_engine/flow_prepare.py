@@ -5,13 +5,14 @@ import copy
 import hashlib
 import io
 import json
+import math
 import secrets
 from pathlib import Path
 import re
 
 from fastapi import HTTPException
 from fastapi.responses import FileResponse
-from PIL import Image, ImageChops, ImageOps, ImageStat
+from PIL import Image, ImageChops, ImageDraw, ImageOps, ImageStat
 
 from .flow_settings import DEFAULTS, apply_settings, settings_panel, read_settings, control, exact, validate_settings
 from .simple_flow_dom import composer
@@ -35,9 +36,55 @@ async def editor_text(editor):
     return await editor.evaluate("e=>e.matches('input,textarea')?e.value:e.innerText")
 
 
-def image_error(raw, expected, crop=False, small=False):
+def rendered_reference_error(image, expected, render):
+    """Reproduce the img content box and CSS crop when canvas reads are blocked."""
+    scale_x=image.width/max(1,render['width']);scale_y=image.height/max(1,render['height'])
+    insets=render.get('insets',[0,0,0,0])
+    content=(math.ceil(insets[0]*scale_x),math.ceil(insets[1]*scale_y),
+             image.width-math.ceil(insets[2]*scale_x),image.height-math.ceil(insets[3]*scale_y))
+    if content[2]<=content[0] or content[3]<=content[1]:return 255.0
+    image=image.crop(content);width,height=image.size
+    nw,nh=render['natural_width'],render['natural_height'];fit=render['object_fit']
+    if fit=='fill':draw_w,draw_h=width,height
+    else:
+        factor=max(width/nw,height/nh) if fit=='cover' else min(width/nw,height/nh)
+        if fit=='none':factor=(scale_x+scale_y)/2
+        if fit=='scale-down':factor=min((scale_x+scale_y)/2,factor)
+        draw_w,draw_h=nw*factor,nh*factor
+    positions=render['object_position'].split()
+    if len(positions)!=2:positions=['50%','50%']
+    def offset(value,free,pixel_scale):
+        try:
+            if value.endswith('%'):return float(value[:-1])*free/100
+            if value.endswith('px'):return float(value[:-2])*pixel_scale
+        except ValueError:pass
+        return {'left':0,'top':0,'right':free,'bottom':free,'center':free/2}.get(value,free/2)
+    x=offset(positions[0],width-draw_w,scale_x);y=offset(positions[1],height-draw_h,scale_y)
+    visible=(max(0,math.ceil(x)),max(0,math.ceil(y)),min(width,math.floor(x+draw_w)),min(height,math.floor(y+draw_h)))
+    if visible[2]-visible[0]<8 or visible[3]-visible[1]<8:return 255.0
+    source_box=(max(0,(visible[0]-x)*expected.width/draw_w),max(0,(visible[1]-y)*expected.height/draw_h),
+                min(expected.width,(visible[2]-x)*expected.width/draw_w),min(expected.height,(visible[3]-y)*expected.height/draw_h))
+    mask=Image.new('L',(width,height),0)
+    radii=re.findall(r'\d+(?:\.\d+)?(?:px|%)?',render.get('border_radius','0'))
+    radius=max([float(x[:-1])*min(width,height)/100 if x.endswith('%') else float(x.removesuffix('px'))*(scale_x+scale_y)/2 for x in radii]or[0])
+    radius=min(min(width,height)/2,max(0,radius))
+    ImageDraw.Draw(mask).rounded_rectangle((1,1,width-2,height-2),radius=max(0,radius-1),fill=255)
+    mask=mask.crop(visible)
+    image=image.crop(visible)
+    source=expected.resize(image.size,Image.Resampling.LANCZOS,box=source_box)
+    # Exclude only borders and clipped corners, retaining the visible edge detail.
+    size=(min(48,image.width),min(48,image.height))
+    left=source.resize(size,Image.Resampling.LANCZOS)
+    right=image.resize(size,Image.Resampling.LANCZOS)
+    mask=mask.resize(size,Image.Resampling.NEAREST)
+    if not mask.getbbox():return 255.0
+    return sum(ImageStat.Stat(ImageChops.difference(left,right),mask=mask).mean)/3
+
+
+def image_error(raw, expected, crop=False, small=False, render=None):
     with Image.open(io.BytesIO(raw)) as image:
         image = ImageOps.exif_transpose(image).convert('RGB')
+        if render is not None:return rendered_reference_error(image,expected,render)
         source = ImageOps.fit(expected, image.size) if crop else expected
         size=(min(48,image.width),min(48,image.height)) if small else (48,48)
         left = source.resize(size, Image.Resampling.LANCZOS)
@@ -53,18 +100,23 @@ async def reference_images(scope, expected, report=None, small=False):
     for index in range(await images.count()):
         item=await images.nth(index).element_handle()
         if item is None:continue
-        details=await item.evaluate('''(e,small)=>({ready:e.complete&&e.naturalWidth>=(small?8:33)&&e.naturalHeight>=(small?8:33)&&(!small||(e.getBoundingClientRect().width>=20&&e.getBoundingClientRect().height>=20)),
+        details=await item.evaluate('''(e,small)=>{const r=e.getBoundingClientRect(),s=getComputedStyle(e),n=k=>parseFloat(s[k])||0;return {ready:e.complete&&e.naturalWidth>=(small?8:33)&&e.naturalHeight>=(small?8:33)&&(!small||(r.width>=20&&r.height>=20)),
             composer:!!e.closest('[data-sf-flow-composer]'),src:e.currentSrc||e.src,
-            media:e.closest('[data-media-id],[data-asset-id]')?.getAttribute('data-media-id')||e.closest('[data-asset-id]')?.getAttribute('data-asset-id')||null})''',small)
+            width:r.width,height:r.height,natural_width:e.naturalWidth,natural_height:e.naturalHeight,
+            object_fit:s.objectFit,object_position:s.objectPosition,border_radius:s.borderRadius,
+            insets:[n('borderLeftWidth')+n('paddingLeft'),n('borderTopWidth')+n('paddingTop'),n('borderRightWidth')+n('paddingRight'),n('borderBottomWidth')+n('paddingBottom')],
+            media:e.closest('[data-media-id],[data-asset-id]')?.getAttribute('data-media-id')||e.closest('[data-asset-id]')?.getAttribute('data-asset-id')||null}}''',small)
         if not details['ready']:continue
         try:
             encoded=await item.evaluate('''e=>{try{const c=document.createElement('canvas'),scale=Math.min(1,256/Math.max(e.naturalWidth,e.naturalHeight));c.width=Math.max(1,Math.round(e.naturalWidth*scale));c.height=Math.max(1,Math.round(e.naturalHeight*scale));c.getContext('2d').drawImage(e,0,0,c.width,c.height);return c.toDataURL('image/png').split(',')[1]}catch{return null}}''')
             raw=base64.b64decode(encoded) if encoded else await item.screenshot(timeout=3000)
-            score=image_error(raw,expected,crop=small or not bool(encoded),small=small)
+            score=image_error(raw,expected,crop=small or not bool(encoded),small=small,render=details if small and not encoded else None)
         except Exception:
             continue
         candidates.append({'index':index,'error':round(score,3),'composer':details['composer'],
-                           'media_id':details['media'],'source_hash':hashlib.sha256(details['src'].encode()).hexdigest()})
+                           'media_id':details['media'],'source_hash':hashlib.sha256(details['src'].encode()).hexdigest(),
+                           'capture_method':'canvas' if encoded else 'screenshot',
+                           **{k:details[k] for k in ('object_fit','object_position','border_radius','natural_width','natural_height','width','height')}})
         if score <= 4:
             marker='data-sf-reference-'+secrets.token_hex(10)
             stable=await item.evaluate('''(e,{src,marker})=>{
