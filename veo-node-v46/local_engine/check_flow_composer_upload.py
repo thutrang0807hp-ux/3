@@ -43,6 +43,25 @@ async def main():
    report=await upload_into_composer_and_fill(page,image,'Confirm prompt',AsyncMock())
    assert report['add_to_prompt_clicked'] and report['image_attached'] and report['prompt_verified'],report
    assert await page.evaluate('window.confirmed')==1 and await page.evaluate('window.sent')==0
+   # No role=dialog: a positioned one-image detail with a close control.
+   await page.set_content(HTML)
+   await page.evaluate("""() => {
+    const detail=document.createElement('section');detail.style.position='fixed';detail.hidden=true;
+    detail.innerHTML='<button aria-label="Close">×</button><img width=50 height=50 src=uploaded><button>Add to prompt</button>';
+    detail.querySelectorAll('button')[1].onclick=()=>{window.confirmed=1;document.querySelector('#chips').innerHTML='<img width=40 height=40 src=attached>';detail.hidden=true};
+    document.body.append(detail);
+    document.querySelector('#file').onchange=()=>{window.files++;document.querySelector('#menu').hidden=true;detail.hidden=false};
+   }""")
+   report=await upload_into_composer_and_fill(page,image,'No dialog prompt',AsyncMock())
+   assert report['add_to_prompt_clicked'] and report['image_attached'] and report['prompt_verified'],report
+   assert report['qualified_detail_region_count']==1 and await page.evaluate('window.sent')==0
+   # A normal library card with one image/action has no detail boundary.
+   await page.set_content('<article><img width=50 height=50 src=a><button onclick="window.wrong=1">Add to prompt</button></article>')
+   assert not await click_add_to_prompt(page,lambda x:None,AsyncMock(),{})
+   assert not await page.evaluate('!!window.wrong')
+   # Two valid detail regions are ambiguous: neither can be clicked.
+   await page.set_content('<section style="position:fixed"><button aria-label="Close">×</button><img width=40 height=40 src=a><button>Add to prompt</button></section><section style="position:absolute"><button aria-label="Close">×</button><img width=40 height=40 src=b><button>Add to prompt</button></section>')
+   assert not await click_add_to_prompt(page,lambda x:None,AsyncMock(),{})
    # Clicking alone is not evidence: no chip must reach timeout.
    await page.set_content('<form><textarea></textarea><button>Generate</button></form>')
    try:

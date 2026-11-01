@@ -1,8 +1,8 @@
 {
-  "version": "2026.11.02.4631",
-  "file": "SceneForge-Update-20261102-v46.31-Add-To-Prompt.exe",
+  "version": "2026.11.02.4632",
+  "file": "SceneForge-Update-20261102-v46.32-Detail-Region.exe",
   "bytes": 3986944,
-  "sha256": "25bd53b61ff4a27b9e29687dcece306a88a0be4bbab631a8b66f49ae7655b4ac",
+  "sha256": "c2b79fd54b64c33dfdd1896fb2b044e2f148e3afdc9bb6a64c316cc4f0d858d5",
   "files": 8,
   "minimum_patch": "2026.11.01.467",
   "embedded_files_verified": true,
