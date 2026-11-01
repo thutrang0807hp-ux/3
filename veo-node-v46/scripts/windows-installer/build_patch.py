@@ -2,11 +2,11 @@
 from pathlib import Path
 import argparse,hashlib,json,os,shutil,subprocess,tempfile,zipfile
 HERE=Path(__file__).resolve().parent;ROOT=HERE.parents[1]
-VERSION='2026.11.01.467'
+VERSION='2026.11.01.468'
 BASELINE='8178af48a4db6180eb0fb3ef042b04ea21617c7380ca2e106d8e967990eb0c35'
 def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
 def main():
- ap=argparse.ArgumentParser();ap.add_argument('--desktop',type=Path,required=True);ap.add_argument('--launcher-template',type=Path,help='Reuse the generic managed launcher from a prior update; requires dnfile');ap.add_argument('--output',type=Path,required=True);args=ap.parse_args();args.output.mkdir(parents=True,exist_ok=True)
+ ap=argparse.ArgumentParser();ap.add_argument('--desktop',type=Path,required=True);ap.add_argument('--launcher-template',type=Path,help='Reuse the generic managed launcher from a prior update; requires dnfile');ap.add_argument('--output',type=Path,required=True);ap.add_argument('--upload-fix-delta',action='store_true',help='Only update uploader/service on top of v46.7');args=ap.parse_args();args.output.mkdir(parents=True,exist_ok=True)
  with tempfile.TemporaryDirectory(prefix='sf-patch-')as tmp:
   stage=Path(tmp);files=stage/'files';files.mkdir()
   for p in args.desktop.iterdir():
@@ -21,13 +21,17 @@ def main():
    if p.is_file():
     target=files/'app/scripts/browser-extension'/p.name;target.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(p,target)
   target=files/'app/scripts/browser-extension-package.zip';shutil.copy2(ROOT/'scripts/browser-extension-package.zip',target)
-  manifest={'version':VERSION,'supported_payloads':[BASELINE],'minimum_patch':'2026.10.29.14','files':[{'path':p.relative_to(files).as_posix(),'bytes':p.stat().st_size,'sha256':sha(p)}for p in sorted(files.rglob('*'))if p.is_file()]}
+  if args.upload_fix_delta:
+   keep={'app/local_engine/simple_flow.py','app/local_engine/simple_flow_upload.py'}
+   for p in files.rglob('*'):
+    if p.is_file()and p.relative_to(files).as_posix()not in keep:p.unlink()
+  manifest={'version':VERSION,'supported_payloads':[BASELINE],'minimum_patch':'2026.11.01.467'if args.upload_fix_delta else'2026.10.29.14','files':[{'path':p.relative_to(files).as_posix(),'bytes':p.stat().st_size,'sha256':sha(p)}for p in sorted(files.rglob('*'))if p.is_file()]}
   (stage/'patch-manifest.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding='utf-8');shutil.copy2(HERE/'apply_update.ps1',stage/'apply_update.ps1')
   archive=args.output/'SceneForge-update-payload.zip'
   with zipfile.ZipFile(archive,'w',zipfile.ZIP_DEFLATED,compresslevel=9)as z:
    for p in sorted(stage.rglob('*')):
     if p.is_file():z.write(p,p.relative_to(stage).as_posix())
-  exe=args.output/'SceneForge-Update-20261101-v46.7-Upload-Only.exe'
+  exe=args.output/'SceneForge-Update-20261101-v46.8-Project-Upload.exe'
   if args.launcher_template:
    import dnfile,struct
    original=args.launcher_template.read_bytes();pe=dnfile.dnPE(data=original)

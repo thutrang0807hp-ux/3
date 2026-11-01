@@ -5,7 +5,7 @@ from fastapi import HTTPException
 from fastapi.responses import FileResponse
 from .request_ledger import NO_RESULT,RequestConflict
 from .admission import guarded_submission
-from .simple_flow_upload import upload_reference
+from .simple_flow_upload import upload_reference,upload_to_project
 from .simple_flow_dom import ResultObserver,create_button,wait_composer,prepare_settings,settings_ready,previews,uploaded_preview
 
 MODEL='veo-3.1-lite-i2v-8s-portrait'
@@ -101,9 +101,9 @@ class SimpleFlow:
     await asyncio.sleep(.25)
    else:raise SimpleStopped('Flow vẫn chưa tải xong vùng thao tác; chưa giao tệp.')
    await self.page.screenshot(path=str(self.root/(rid+'.before.png')),timeout=5000)
-   report['delivered']=await upload_reference(self.page,reference,log)
+   report['delivered']=await upload_to_project(self.page,reference,log,report)
    outcome='delivered_unverified'if report['delivered']else'failed'
-   report['message']=('Đã giao tệp ảnh cho Flow bằng nguyên hàm rtrtr4. Chưa xác minh ảnh đã lưu vào thư viện dự án; xem ảnh sau tải. Không điền prompt hoặc tạo video.'if report['delivered']else'Nguyên hàm rtrtr4 chưa tìm được đường giao ảnh trên trang này. Không điền prompt hoặc tạo video.')
+   report['message']=('Đã giao tệp ảnh cho Flow bằng nguyên hàm rtrtr4. Chưa xác minh ảnh đã lưu vào thư viện dự án; xem ảnh sau tải. Không điền prompt hoặc tạo video.'if report['delivered']else'Chưa giao được ảnh vào dự án qua nút + thanh trên và hàm rtrtr4. Không điền prompt hoặc tạo video.')
    if report['delivered']:await asyncio.sleep(3)
   except BaseException as exc:
    report['state']='failed';report['message']=str(exc)if isinstance(exc,SimpleStopped)else'Đã dừng thử tải ảnh: '+type(exc).__name__+'. Không tạo video.'

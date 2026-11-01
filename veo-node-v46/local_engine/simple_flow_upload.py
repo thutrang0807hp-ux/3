@@ -79,3 +79,37 @@ async def upload_reference(page, reference, log):
         if chooser_tasks:
             await asyncio.gather(*list(chooser_tasks), return_exceptions=True)
 
+
+async def upload_to_project(page,reference,log,report):
+    """Open the project toolbar's Add menu before calling the unchanged uploader."""
+    images=page.locator('input[type=file][accept*="image"]')
+    if await images.count()==1:
+        return await upload_reference(page,reference,log)
+    candidates=await page.locator('button,[role=button]').evaluate_all(r'''xs=>xs.map((e,i)=>{
+      const r=e.getBoundingClientRect();const label=[e.getAttribute('aria-label'),e.getAttribute('title'),e.textContent].filter(Boolean).join(' ').trim();
+      const add=/^(?:\+|add|add_2|add_circle|add_photo_alternate|add to project|thêm|thêm vào dự án)(?:\s+(?:add|add_2|\+))?$/i.test(label);
+      if(!add||!r.width||!r.height)return null;
+      return {index:i,label:label.slice(0,100),top:r.top,left:r.left,toolbar:r.top>=0&&r.top<Math.min(100,innerHeight*.2)&&r.left>innerWidth*.5&&r.left<innerWidth*.9};
+    }).filter(Boolean)''')
+    report['add_controls']=candidates
+    toolbar=[x for x in candidates if x['toolbar']]
+    if len(toolbar)!=1:
+        log('Chưa xác định duy nhất nút thêm ảnh ở thanh trên dự án.')
+        return await upload_reference(page,reference,log)
+    delivered=asyncio.Event();tasks=set()
+    async def choose(chooser):
+        await chooser.set_files(str(Path(reference).resolve()));delivered.set()
+    def on_chooser(chooser):
+        task=asyncio.create_task(choose(chooser));tasks.add(task)
+    page.on('filechooser',on_chooser)
+    try:
+        await page.locator('button,[role=button]').nth(toolbar[0]['index']).click(timeout=5000)
+        log('Đã mở nút + ở thanh trên của dự án, không phải cạnh prompt.')
+        await asyncio.sleep(.2)
+        if tasks:
+            await asyncio.gather(*tasks)
+        if delivered.is_set():return True
+    finally:
+        page.remove_listener('filechooser',on_chooser)
+    # Menu Upload/image input is now open; source function remains untouched.
+    return await upload_reference(page,reference,log)

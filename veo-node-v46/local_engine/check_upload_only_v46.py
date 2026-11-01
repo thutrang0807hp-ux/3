@@ -30,6 +30,13 @@ async def main():
    assert ledger.recent()==[]and s.active is None
    assert (s.root/(receipt['request_id']+'.upload-report.json')).is_file()
    assert not list(s.root.glob('*.png'))==[], 'Screenshot retained'
+   from .simple_flow_upload import upload_to_project
+   await page.set_viewport_size({'width':1280,'height':720})
+   await page.set_content("""<button id=top style='position:absolute;top:20px;left:960px' onclick="document.querySelector('#menu').hidden=false">add</button><button style='position:absolute;top:375px;left:200px' onclick='window.wrong=true'>add</button><div id=menu hidden><button role=menuitem onclick="let f=document.createElement('input');f.type='file';f.accept='image/*';f.hidden=true;document.body.append(f);f.click()">Upload image</button></div><form style='position:absolute;top:520px'><button>Start</button><button>End</button><textarea></textarea><button>Generate</button></form>""")
+   report={};assert await upload_to_project(page,image,lambda _:None,report)
+   assert len([x for x in report['add_controls']if x['toolbar']])==1
+   assert await page.locator('input[type=file]').evaluate('(e)=>e.files.length')==1
+   assert not await page.evaluate('!!window.wrong')and await page.locator('textarea').input_value()==''
    await browser.close()
  print('PASS upload-only: exact image bytes delivered using upstream function, no prompt/generation/settings, no video ledger entry, screenshot/report retained; delivery is not claimed as library success.')
 if __name__=='__main__':asyncio.run(main())

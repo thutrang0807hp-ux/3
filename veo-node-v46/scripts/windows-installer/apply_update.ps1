@@ -30,9 +30,9 @@ function ApplyUpdate {
   if($owner.app_id -ne 'SceneForge' -or $owner.payload_sha256 -notin $manifest.supported_payloads){throw 'Bản vá dành cho bộ cài v2 đã phát hành. Chưa thay đổi tệp nào.'}
   if($manifest.minimum_patch){
    $buildPath=Join-Path $root 'app-build.json'
-   if(!(Test-Path -LiteralPath $buildPath)){throw 'Cần cài bản cập nhật v14 trước bản vá I2V này. Chưa thay đổi tệp nào.'}
+   if(!(Test-Path -LiteralPath $buildPath)){throw ('Bản cập nhật này yêu cầu phiên bản '+$manifest.minimum_patch+' trở lên. Chưa thay đổi tệp nào.')}
    $installed=Get-Content -LiteralPath $buildPath -Encoding UTF8 -Raw|ConvertFrom-Json
-   if((MinimumPatchVersion $installed.version) -lt (MinimumPatchVersion $manifest.minimum_patch)){throw 'Cần cài bản cập nhật v14 trước bản vá I2V này. Chưa thay đổi tệp nào.'}
+   if((MinimumPatchVersion $installed.version) -lt (MinimumPatchVersion $manifest.minimum_patch)){throw ('Bản cập nhật này yêu cầu phiên bản '+$manifest.minimum_patch+' trở lên. Chưa thay đổi tệp nào.')}
   }
   $busy=@(Get-CimInstance Win32_Process|Where-Object {$_.ExecutablePath -and(Inside $_.ExecutablePath $root)})
   if($busy.Count){
