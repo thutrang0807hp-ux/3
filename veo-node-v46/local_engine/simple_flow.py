@@ -122,6 +122,14 @@ class SimpleFlow:
     else:report['message']='Đã giao tệp nhưng chưa xác nhận duy nhất ảnh mới tải xong sau 60 giây. Giữ ảnh và phiên Flow; chưa điền prompt hoặc chọn ảnh cũ.'
   except BaseException as exc:
    report['state']='failed';report['message']=str(exc)if isinstance(exc,SimpleStopped)else'Đã dừng thử tải ảnh: '+type(exc).__name__+'. Không tạo video.'
+   report['error_stage']=report.get('preparation_stage','upload');report['error_type']=type(exc).__name__
+   if type(exc).__name__=='TimeoutError':
+    detail=str(exc)
+    if prompt:detail=detail.replace(prompt,'[prompt]')
+    report['timeout_detail']=('Hết thời gian chờ thao tác prompt; đã lược nội dung văn bản.'if report['error_stage']in ('fill_prompt','verify_prompt')else detail[:6000])
+    names={'close_upload_overlay':'đóng menu tải ảnh','find_composer':'tìm vùng prompt','open_mode_menu':'mở menu chọn chế độ','find_ingredients_option':'tìm lựa chọn Ingredients','choose_ingredients':'chọn Ingredients','verify_ingredients':'xác nhận Ingredients','find_uploaded_asset':'tìm ảnh mới đã ghi nhận','open_asset_menu':'mở menu ảnh mới','attach_asset':'gắn ảnh vào Ingredients','fill_prompt':'điền prompt','verify_prompt':'kiểm tra prompt'}
+    stage=names.get(report['error_stage'],report['error_stage'])
+    report['message']=('Ảnh đã tải xong. 'if report.get('uploaded_asset')else'')+'Hết thời gian chờ tại bước '+stage+'. Chưa tạo video; báo cáo đã ghi chi tiết thao tác.'
    if isinstance(exc,asyncio.CancelledError):raise
   finally:
    try:

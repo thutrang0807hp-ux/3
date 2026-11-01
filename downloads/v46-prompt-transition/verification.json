@@ -1,0 +1,21 @@
+{
+  "version": "2026.11.01.4612",
+  "sha256": "9adbe0cb3c523ceb5e5b3e9d92cf5cf78ef5f12ec0f643a08e13c63f2cd403c5",
+  "verified_files": 3,
+  "user_evidence": "image_ready with one new matching media asset; TimeoutError before ingredients stage; exact failed action not present in old report",
+  "changes": [
+    "Escape dismisses upload overlay after asset ready",
+    "live semantic mode locator, no saved nth button handles",
+    "one DOM read for selected-mode state",
+    "stage/control diagnostics and bounded timeout call log; prompt text redacted"
+  ],
+  "checks": [
+    "Chromium: dismissable overlay and React button replacement succeed",
+    "Chromium: non-dismissable overlay times out at open_mode_menu, asset remains ready, no forced click/prompt/Generate",
+    "preparation success and wrong asset/reference/prompt guard regression",
+    "PowerShell version checks"
+  ],
+  "original_upload_function_unchanged": true,
+  "real_flow_verified": false,
+  "windows_gui_tested": false
+}

@@ -208,30 +208,31 @@ async def prepare_uploaded_prompt(page,asset,reference,prompt,check,report,timeo
     async def ready_mode(scope):
         if scope is None:return False
         controls=scope.get_by_role('button',name=ingredients).or_(scope.get_by_role('tab',name=ingredients)).filter(visible=True)
-        for control in await controls.all():
-            selected=await control.get_attribute('aria-selected')
-            role=await control.get_attribute('role')
-            pressed=await control.get_attribute('aria-pressed')
-            if selected=='false'or pressed=='false':continue
-            if role=='tab'and selected!='true'and await control.get_attribute('data-state')not in ('active','checked'):continue
-            return True
+        selected=await controls.evaluate_all("""xs=>xs.some(e=>{
+          if(e.closest('[role=menu],[role=listbox]'))return false;
+          if(['aria-selected','aria-pressed','aria-checked'].some(a=>e.getAttribute(a)==='false'))return false;
+          if(e.getAttribute('role')==='tab')return e.getAttribute('aria-selected')==='true'||['active','checked'].includes(e.getAttribute('data-state'));
+          return true;
+        })""")
+        if selected:return True
         labels=scope.get_by_text(ingredients).filter(visible=True)
-        if await labels.count()==1:
-            return await labels.evaluate("e=>!e.closest('[aria-selected=false],[aria-pressed=false],[aria-checked=false]')&&!e.closest('[role=menu],[role=listbox]')")
-        return False
+        return await labels.evaluate_all("xs=>xs.length===1&&!xs[0].closest('[aria-selected=false],[aria-pressed=false],[aria-checked=false],[role=menu],[role=listbox]')")
+    report['preparation_stage']='close_upload_overlay'
     await check()
+    await page.keyboard.press('Escape')
+    report['preparation_stage']='find_composer'
     editor,scope=await prompt_composer(page)
     if scope is None:return await fail('Chưa xác định duy nhất vùng nhập prompt. Ảnh đã tải vẫn được giữ.')
     if not await ready_mode(scope):
         # Only explicit mode controls and Ingredients choices are eligible.
-        triggers=scope.get_by_role('button',name=re.compile(r'^(Video|Videos|Text to Video|Frames to Video|Frames|Start|End)(?:\s|[·•]|$)',re.I)).filter(visible=True)
-        # Start/End are image slots, never mode switches.
-        valid=[]
-        for item in await triggers.all():
-            text=(await item.inner_text()).strip()
-            if not re.fullmatch(r'Start|End',text,re.I):valid.append(item)
-        if len(valid)!=1:return await fail('Chưa nhận diện duy nhất nút chọn chế độ Ingredients; chưa gắn ảnh hoặc điền prompt.')
-        await valid[0].click(timeout=3000)
+        triggers=scope.get_by_role('button',name=re.compile(r'^(Video|Videos|Text to Video|Frames to Video|Frames)(?:\s|[·•]|$)',re.I)).filter(visible=True)
+        report['composer_controls']=await scope.locator('button,[role=tab],[role=combobox]').filter(visible=True).evaluate_all("xs=>xs.map(e=>({role:e.getAttribute('role'),name:e.getAttribute('aria-label'),text:(e.innerText||'').slice(0,160),selected:e.getAttribute('aria-selected'),pressed:e.getAttribute('aria-pressed')}))")
+        if await triggers.count()!=1:return await fail('Chưa nhận diện duy nhất nút chọn chế độ Ingredients; chưa gắn ảnh hoặc điền prompt.')
+        report['preparation_stage']='open_mode_menu'
+        report['mode_trigger']=await triggers.evaluate("e=>({name:e.getAttribute('aria-label'),text:(e.innerText||'').slice(0,160)})",timeout=2000)
+        # Re-query the live locator; React may replace controls after uploading.
+        await triggers.click(timeout=5000)
+        report['preparation_stage']='find_ingredients_option'
         options=page.get_by_role('option',name=ingredients).or_(page.get_by_role('menuitem',name=ingredients)).or_(page.get_by_role('tab',name=ingredients)).or_(page.get_by_role('button',name=ingredients)).filter(visible=True)
         try:await options.first.wait_for(state='visible',timeout=2500)
         except Exception:
@@ -239,7 +240,9 @@ async def prepare_uploaded_prompt(page,asset,reference,prompt,check,report,timeo
             return await fail('Menu chưa có lựa chọn Ingredients rõ ràng; chưa dùng Frames thay thế.')
         report['mode_options']=await options.all_text_contents()
         if await options.count()!=1:return await fail('Có nhiều lựa chọn Ingredients; chưa tự chọn bừa.')
+        report['preparation_stage']='choose_ingredients'
         await options.click(timeout=3000)
+        report['preparation_stage']='verify_ingredients'
         mode_deadline=time.monotonic()+3
         while time.monotonic()<mode_deadline:
             editor,scope=await prompt_composer(page)
@@ -252,9 +255,11 @@ async def prepare_uploaded_prompt(page,asset,reference,prompt,check,report,timeo
     if await existing.count():return await fail('Ô tạo đang có ảnh tham khảo khác. Chưa thay ảnh hoặc ghi đè prompt.')
     old_text=await editor.evaluate('(e)=>e.value??e.innerText??""')
     if old_text.strip()and old_text.strip()!=prompt.strip():return await fail('Ô Flow đã có prompt khác; chưa tự ghi đè.')
+    report['preparation_stage']='find_uploaded_asset'
     rows=[row for row in await library_images(page)if row['key']==asset['key']and row['loaded']and not row['busy']]
     if len(rows)!=1:return await fail('Ảnh vừa upload không còn nhận diện duy nhất trong dự án; chưa chọn ảnh cũ.')
     image=page.locator('img[data-sf-upload-image="'+rows[0]['token']+'"]')
+    report['preparation_stage']='open_asset_menu'
     await check();await image.click(button='right',timeout=3000)
     actions=page.get_by_role('menuitem',name=re.compile(r'^(Add to prompt|Use in prompt|Use as ingredient|Add as ingredient|Add to ingredients|Thêm vào prompt|Dùng làm thành phần|Thêm vào thành phần)$',re.I)).filter(visible=True)
     try:await actions.first.wait_for(state='visible',timeout=2500)
@@ -262,6 +267,7 @@ async def prepare_uploaded_prompt(page,asset,reference,prompt,check,report,timeo
         report['image_menu']=await page.get_by_role('menuitem').filter(visible=True).all_text_contents()
         return await fail('Đã chọn đúng ảnh mới nhưng chưa nhận diện nút đưa ảnh vào Ingredients; chưa điền prompt.')
     if await actions.count()!=1:return await fail('Không xác định duy nhất thao tác gắn ảnh vào Ingredients.')
+    report['preparation_stage']='attach_asset'
     await actions.click(timeout=3000)
     report['preparation_stage']='attaching'
     with Image.open(reference)as original:expected=ImageOps.fit(ImageOps.exif_transpose(original).convert('RGB'),(64,64))
@@ -283,7 +289,9 @@ async def prepare_uploaded_prompt(page,asset,reference,prompt,check,report,timeo
     if not await ready_mode(scope):return await fail('Chế độ tạo đã thay đổi; chưa điền prompt.')
     current=await editor.evaluate('(e)=>e.value??e.innerText??""')
     if current.strip()and current.strip()!=prompt.strip():return await fail('Prompt trên Flow đã đổi; chưa ghi đè.')
-    await editor.fill(prompt)
+    report['preparation_stage']='fill_prompt'
+    await editor.fill(prompt,timeout=5000)
+    report['preparation_stage']='verify_prompt'
     actual=await editor.evaluate('(e)=>e.value??e.innerText??""')
     if actual.strip()!=prompt.strip():return await fail('Chưa xác nhận nội dung prompt sau khi điền.')
     report['attached_asset_key']=asset['key'];report['prompt_sha256']=__import__('hashlib').sha256(prompt.encode()).hexdigest()

@@ -19,10 +19,12 @@ async def main():
    <form onsubmit="return false"><button type=button id=mode onclick="document.querySelector('#modes').hidden=false">Video · 720p · 8s · x2</button><div id=refs></div><textarea oninput="window.early=!document.querySelector('#refs img')?.complete"></textarea><button type=button onclick="window.sent++">Generate</button></form>
    <div id=modes role=menu hidden><button role=option onclick="document.querySelector('#mode').textContent='Ingredients';document.querySelector('#modes').hidden=true">Ingredients</button></div>
    <div role=menu id=actions hidden><button role=menuitem onclick="document.querySelector('#refs').innerHTML='<img src=https://media.fixture/new.png>';document.querySelector('#actions').hidden=true">Add to prompt</button></div>'''
-   for case in ['success','plain_label','wrong_attached','old_reference','old_prompt','missing_asset','unknown_action']:
+   for case in ['success','overlay','plain_label','wrong_attached','old_reference','old_prompt','missing_asset','unknown_action']:
     await page.set_content(html)
     await page.wait_for_function('Array.from(document.images).every(e=>e.complete)')
     asset=next(x for x in await library_images(page)if x['id']=='new')
+    if case=='overlay':
+     await page.evaluate("""()=>{const overlay=document.createElement('div');overlay.id='upload-overlay';overlay.style='position:fixed;inset:0;z-index:99999';document.body.append(overlay);document.addEventListener('keydown',e=>{if(e.key==='Escape'){overlay.remove();const b=document.querySelector('#mode');b.outerHTML=b.outerHTML}},{once:true})}""")
     if case=='plain_label':await page.locator('#mode').evaluate("e=>e.outerHTML='<span id=mode>Ingredients</span>'")
     if case=='wrong_attached':await page.locator('#actions button').evaluate("e=>e.onclick=()=>{document.querySelector('#refs').innerHTML='<img src=https://media.fixture/wrong.png>';document.querySelector('#actions').hidden=true}")
     if case=='old_reference':await page.locator('#refs').evaluate("e=>e.innerHTML='<img src=https://media.fixture/old.png>'")
@@ -31,7 +33,7 @@ async def main():
     if case=='unknown_action':await page.locator('#actions button').evaluate("e=>e.textContent='Generate now'")
     report={};ok=await prepare_uploaded_prompt(page,asset,reference,'Prompt for this new image',check,report,timeout=.7)
     assert await page.evaluate('window.sent')==0,(case,report)
-    if case in ('success','plain_label'):
+    if case in ('success','overlay','plain_label'):
      assert ok and report['attached_asset_key']==asset['key'],report
      assert await page.evaluate('window.chosen')=='new'and not await page.evaluate('window.early')
      assert await page.locator('textarea').input_value()=='Prompt for this new image'
