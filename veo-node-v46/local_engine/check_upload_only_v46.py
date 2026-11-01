@@ -16,17 +16,13 @@ async def main():
   s.account_bridge=SimpleNamespace(selection=lambda:{'available':True,'token':'fixture','account_id':'account'})
   async with async_playwright()as pw:
    browser=await pw.chromium.launch(executable_path='/usr/bin/chromium',args=['--no-sandbox']);page=await browser.new_page()
-   await page.route('https://media.fixture/**',lambda r:r.fulfill(body=raw,content_type='image/png'))
-   await page.set_content('''<div data-media-id=old><img src=https://media.fixture/old.png></div><input type=file accept="image/*" hidden onchange="const card=document.createElement('article');card.dataset.mediaId='new';card.setAttribute('aria-busy','true');card.innerHTML='<img src=https://media.fixture/new.png>';document.body.append(card);setTimeout(()=>card.removeAttribute('aria-busy'),4200)"><textarea></textarea><button onclick="window.sent=true">Generate</button>''')
-   await page.wait_for_function('document.querySelector("img").complete')
+   await page.set_content('<input type=file accept="image/*" hidden><textarea></textarea><button onclick="window.sent=true">Generate</button>')
    async def restore():s.page=page
    s.restore=restore;s.assert_ready=AsyncMock();s.disconnect_browser=AsyncMock()
    receipt=await s.start_upload_only({'reference':{'mime_type':'image/png','data':base64.b64encode(raw).decode()},'room_id':'room','selection_token':'fixture'})
    await asyncio.wait_for(s.task,15)
    report=s.upload_only_status(receipt['request_id'])
-   assert report['state']=='image_ready'and report['delivered']and report['has_preview'],report
-   assert report['uploaded_asset']['media_id']=='new',report
-   assert report['image_check']['matching_images']==1
+   assert report['state']=='delivered_unverified'and report['delivered']and report['has_preview'],report
    assert await page.locator('input').evaluate('(e)=>e.files.length')==1
    actual=await page.locator('input').evaluate('async e=>Array.from(new Uint8Array(await e.files[0].arrayBuffer()))')
    assert bytes(actual)==raw
@@ -50,5 +46,5 @@ async def main():
    assert report['toolbar_controls']and report['selected_control']['index']==0
    assert not await page.evaluate('!!window.wrong')
    await browser.close()
- print('PASS upload-only: exact image bytes delivered using upstream function, no prompt/generation/settings, no video ledger entry, screenshot/report retained; new loaded asset identified after delayed busy state, old identical image excluded.')
+ print('PASS upload-only: exact image bytes delivered using upstream function, no prompt/generation/settings, no video ledger entry, screenshot/report retained; delivery is not claimed as library success.')
 if __name__=='__main__':asyncio.run(main())

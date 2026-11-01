@@ -10,8 +10,6 @@ def main():
   from . import server
   with TestClient(server.app)as client:
    client.get('/');headers={'X-SceneForge-Local':'1'}
-   assert client.post('/local-api/flow/simple/upload-only',headers=headers,json={'prepare_prompt':True,'prompt':''}).status_code==400
-   assert client.post('/local-api/flow/simple/upload-only',headers=headers,json={'prepare_prompt':True,'prompt':123}).status_code==400
    state=client.get('/local-api/flow/simple/status').json()
    assert state['shared_accounts']and state['background']and not state['selection']['available']
    server.VAULT.set_secret('flow-transport-v2',{'mode':'legacy'})

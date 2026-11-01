@@ -5,8 +5,7 @@ from fastapi import HTTPException
 from fastapi.responses import FileResponse
 from .request_ledger import NO_RESULT,RequestConflict
 from .admission import guarded_submission
-from .simple_flow_settings import prepare_scene_prompt
-from .simple_flow_upload import upload_reference,upload_to_project,library_images,wait_uploaded_image,prepare_uploaded_prompt
+from .simple_flow_upload import upload_reference,upload_to_project
 from .simple_flow_dom import ResultObserver,create_button,wait_composer,prepare_settings,settings_ready,previews,uploaded_preview
 
 MODEL='veo-3.1-lite-i2v-8s-portrait'
@@ -63,9 +62,6 @@ class SimpleFlow:
   return 'flow-simple-'+hashlib.sha256(self.token.encode()).hexdigest()[:24] if self.connected or self.binding() else None
  def busy(self):return bool(self.task and not self.task.done())
  async def start_upload_only(self,body):
-  prepare=body.get('prepare_prompt')is True
-  prompt=body.get('prompt','')
-  if prepare and (not isinstance(prompt,str)or not prompt.strip()or len(prompt)>20000):raise HTTPException(400,'Prompt trống hoặc quá dài.')
   ref=body.get('reference')or{}
   try:
    raw=base64.b64decode(ref.get('data',''),validate=True)
@@ -83,21 +79,20 @@ class SimpleFlow:
    selection=self.account_bridge.selection()
    if not selection['available']or body.get('selection_token')!=selection['token']:raise HTTPException(409,'Tài khoản đã đổi hoặc chưa sẵn sàng. Chọn lại tại tab Tài khoản.')
    rid='flow-upload-'+secrets.token_hex(12)
-   self.upload_report={'request_id':rid,'room_id':body['room_id'],'scene_id':str(body.get('scene_id',''))[:100],'part':str(body.get('part',''))[:40],'state':'running','message':'Đang mở dự án để chỉ tải ảnh.','delivered':False,'has_preview':False,'reference_sha256':hashlib.sha256(raw).hexdigest(),'logs':[]}
+   self.upload_report={'request_id':rid,'state':'running','message':'Đang mở dự án để chỉ tải ảnh.','delivered':False,'has_preview':False,'reference_sha256':hashlib.sha256(raw).hexdigest(),'logs':[]}
    self.active=rid;self.pinned_account=selection['account_id'];self.pinned_room=body['room_id'];self.sent=False
-   self.task=asyncio.create_task(self.run_upload_only(rid,raw,mime,prompt if prepare else None))
+   self.task=asyncio.create_task(self.run_upload_only(rid,raw,mime))
    return dict(self.upload_report)
  def upload_only_status(self,rid):
   if not self.upload_report or self.upload_report['request_id']!=rid:raise HTTPException(404,'Không có lần thử tải ảnh này trong phiên đang mở.')
   return dict(self.upload_report)
- async def run_upload_only(self,rid,raw,mime,prompt=None):
+ async def run_upload_only(self,rid,raw,mime):
   reference=self.root/(rid+{'image/png':'.png','image/jpeg':'.jpg','image/webp':'.webp'}[mime])
   report=self.upload_report;outcome='failed'
   def log(text):report['logs'].append(text);report['message']=text
   try:
    reference.write_bytes(raw)
    await self.disconnect_browser();await self.restore();await self.assert_ready()
-   report['project_url']=self.project
    # Only wait for an editor or file input. No Ingredients/settings/Generate check.
    deadline=time.monotonic()+90
    while time.monotonic()<deadline:
@@ -106,32 +101,12 @@ class SimpleFlow:
     await asyncio.sleep(.25)
    else:raise SimpleStopped('Flow vẫn chưa tải xong vùng thao tác; chưa giao tệp.')
    await self.page.screenshot(path=str(self.root/(rid+'.before.png')),timeout=5000)
-   before=await library_images(self.page)
    report['delivered']=await upload_to_project(self.page,reference,log,report)
    outcome='delivered_unverified'if report['delivered']else'failed'
    report['message']=('Đã giao tệp ảnh cho Flow bằng nguyên hàm rtrtr4. Chưa xác minh ảnh đã lưu vào thư viện dự án; xem ảnh sau tải. Không điền prompt hoặc tạo video.'if report['delivered']else'Chưa giao được ảnh vào dự án qua nút + thanh trên và hàm rtrtr4. Không điền prompt hoặc tạo video.')
-   if report['delivered']:
-    log('Đã giao tệp; đang chờ đúng ảnh mới tải xong trong thư viện Flow.')
-    asset=await wait_uploaded_image(self.page,before,reference,self.assert_ready,report)
-    report['uploaded_asset']=asset
-    if asset:
-     outcome='image_ready';report['message']='Đã nhận diện đúng ảnh mới trong thư viện: ảnh đã hiển thị và không còn trạng thái tải. Đã ghi nhận ảnh cho cảnh này; chưa điền prompt hoặc tạo video.'
-     if prompt is not None:
-      log('Ảnh đã sẵn sàng; đang gắn đúng ảnh vào Ingredients rồi điền prompt.')
-      if await prepare_scene_prompt(self.page,asset,reference,prompt,self.assert_ready,report):
-       outcome='prompt_ready';report['message']='Đã kiểm tra Video · Ingredients · 9:16 · Veo 3.1 Lite · x1 · 8 giây, gắn đúng ảnh mới và điền prompt của cảnh này. Đã dừng trước nút Tạo video.'
-      else:report['message']='Ảnh đã upload xong. '+report.get('preparation_error','Chưa hoàn tất ghép ảnh và prompt.')
-    else:report['message']='Đã giao tệp nhưng chưa xác nhận duy nhất ảnh mới tải xong sau 60 giây. Giữ ảnh và phiên Flow; chưa điền prompt hoặc chọn ảnh cũ.'
+   if report['delivered']:await asyncio.sleep(3)
   except BaseException as exc:
    report['state']='failed';report['message']=str(exc)if isinstance(exc,SimpleStopped)else'Đã dừng thử tải ảnh: '+type(exc).__name__+'. Không tạo video.'
-   report['error_stage']=report.get('preparation_stage','upload');report['error_type']=type(exc).__name__
-   if type(exc).__name__=='TimeoutError':
-    detail=str(exc)
-    if prompt:detail=detail.replace(prompt,'[prompt]')
-    report['timeout_detail']=('Hết thời gian chờ thao tác prompt; đã lược nội dung văn bản.'if report['error_stage']in ('fill_prompt','verify_prompt')else detail[:6000])
-    names={'open_settings_panel':'mở bảng cài đặt Flow','set_video':'chọn Video','set_ingredients':'chọn Ingredients','set_ratio':'chọn 9:16','set_outputs':'chọn x1','set_model':'chọn Veo 3.1 Lite','select_picker_asset':'chọn đúng ảnh trong hộp tài nguyên','confirm_picker_asset':'xác nhận ảnh trong hộp tài nguyên','close_upload_overlay':'đóng menu tải ảnh','find_composer':'tìm vùng prompt','open_mode_menu':'mở menu chọn chế độ','find_ingredients_option':'tìm lựa chọn Ingredients','choose_ingredients':'chọn Ingredients','verify_ingredients':'xác nhận Ingredients','find_uploaded_asset':'tìm ảnh mới đã ghi nhận','open_asset_menu':'mở menu ảnh mới','attach_asset':'gắn ảnh vào Ingredients','fill_prompt':'điền prompt','verify_prompt':'kiểm tra prompt'}
-    stage=names.get(report['error_stage'],report['error_stage'])
-    report['message']=('Ảnh đã tải xong. 'if report.get('uploaded_asset')else'')+'Hết thời gian chờ tại bước '+stage+'. Chưa tạo video; báo cáo đã ghi chi tiết thao tác.'
    if isinstance(exc,asyncio.CancelledError):raise
   finally:
    try:

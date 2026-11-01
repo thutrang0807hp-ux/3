@@ -1,0 +1,11 @@
+{
+  "version": "2026.11.01.4616",
+  "file": "SceneForge-Update-20261101-v46.16-Restore-Upload.exe",
+  "bytes": 3986944,
+  "sha256": "bafffdae8ce99fbf43caf8a2fb02a3406843e5d61b669cedef301f9a0b56f838",
+  "files": 3,
+  "restored_from": "v46.9 / commit 2fe880d",
+  "restored_files_byte_identical": true,
+  "models_included": false,
+  "baseline_payload_sha256": "8178af48a4db6180eb0fb3ef042b04ea21617c7380ca2e106d8e967990eb0c35"
+}
