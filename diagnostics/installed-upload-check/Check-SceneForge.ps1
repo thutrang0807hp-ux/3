@@ -50,7 +50,12 @@ $releases=@()
 foreach($root in $roots){
  try{
   $release=Get-ReleaseInfo $root $expected
-  $release.running_processes=@($processes|Where-Object {$_.executable -and $_.executable.StartsWith($root.TrimEnd('\')+'\',[StringComparison]::OrdinalIgnoreCase) -or $_.bootstrap_script -and $_.bootstrap_script.StartsWith($root.TrimEnd('\')+'\',[StringComparison]::OrdinalIgnoreCase)})
+  $release.running_processes=@($processes|Where-Object {
+   $prefix=$root.TrimEnd('\')+'\'
+   if($_.executable){if($_.executable.StartsWith($prefix,[StringComparison]::OrdinalIgnoreCase)){return $true}}
+   if($_.bootstrap_script){if($_.bootstrap_script.StartsWith($prefix,[StringComparison]::OrdinalIgnoreCase)){return $true}}
+   return $false
+  })
   if($release.data_directory){
    $instance=Read-JsonFile (Join-Path $release.data_directory 'instance.json')
    if($instance){$release.instance=@{pid=$instance.pid;port=$instance.port}}
@@ -58,7 +63,7 @@ foreach($root in $roots){
   $releases+=$release
  }catch{$errors+='Cannot inspect '+$root+': '+$_.Exception.Message}
 }
-$report=@{tool='SceneForge installed upload check';tool_version=1;checked_at=[DateTime]::UtcNow.ToString('o');processes=$processes;releases=$releases;errors=$errors;notes=@('Read-only inspection: no app files, projects, credentials or caches were modified.','No cookies, passwords, tokens, environment dumps or arbitrary process command lines collected.','Disk hashes prove file contents, not Python modules already loaded in memory.','The same error message alone does not identify the running patch version.')}
+$report=@{tool='SceneForge installed upload check';tool_version=2;checked_at=[DateTime]::UtcNow.ToString('o');processes=$processes;releases=$releases;errors=$errors;notes=@('Read-only inspection: no app files, projects, credentials or caches were modified.','No cookies, passwords, tokens, environment dumps or arbitrary process command lines collected.','Disk hashes prove file contents, not Python modules already loaded in memory.','The same error message alone does not identify the running patch version.')}
 $destination=Join-Path $base 'SceneForge-installed-check.json'
 $report|ConvertTo-Json -Depth 10|Set-Content -LiteralPath $destination -Encoding UTF8
 Write-Host ''
