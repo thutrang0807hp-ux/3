@@ -194,7 +194,7 @@ async def prompt_composer(page):
     for depth in range(1,9):
         scope=editor.locator('xpath=ancestor::*['+str(depth)+']')
         if await scope.count()!=1 or await scope.evaluate('(e)=>["BODY","HTML"].includes(e.tagName)'):break
-        modes=scope.get_by_role('button',name=re.compile(r'^(Video|Ingredients|Frames|Start|End)(?:\b|\s)',re.I)).filter(visible=True)
+        modes=scope.get_by_role('button',name=re.compile(r'^(Settings trigger|Generation settings|Video|Ingredients|Frames)(?:\b|\s|$)',re.I)).filter(visible=True)
         if await modes.count():return editor,scope
     return editor,None
 
@@ -225,7 +225,7 @@ async def prepare_uploaded_prompt(page,asset,reference,prompt,check,report,timeo
     if scope is None:return await fail('Chưa xác định duy nhất vùng nhập prompt. Ảnh đã tải vẫn được giữ.')
     if not await ready_mode(scope):
         # Only explicit mode controls and Ingredients choices are eligible.
-        triggers=scope.get_by_role('button',name=re.compile(r'^(Video|Videos|Text to Video|Frames to Video|Frames)(?:\s|[·•]|$)',re.I)).filter(visible=True)
+        triggers=scope.get_by_role('button',name=re.compile(r'^(?:Settings trigger$|Generation settings$|(?:Video|Videos|Text to Video|Frames to Video|Frames)(?:\s|[·•]|$))',re.I)).filter(visible=True)
         report['composer_controls']=await scope.locator('button,[role=tab],[role=combobox]').filter(visible=True).evaluate_all("xs=>xs.map(e=>({role:e.getAttribute('role'),name:e.getAttribute('aria-label'),text:(e.innerText||'').slice(0,160),selected:e.getAttribute('aria-selected'),pressed:e.getAttribute('aria-pressed')}))")
         if await triggers.count()!=1:return await fail('Chưa nhận diện duy nhất nút chọn chế độ Ingredients; chưa gắn ảnh hoặc điền prompt.')
         report['preparation_stage']='open_mode_menu'

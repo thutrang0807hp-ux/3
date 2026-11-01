@@ -87,3 +87,7 @@ Thêm nút Tải ảnh → Ingredients → điền prompt. Request chụp cố �
 ## v46.12 — chuyển bước sau upload và chẩn đoán timeout
 
 Báo cáo thực tế đã xác nhận image_ready và một media mới khớp, nhưng TimeoutError trước marker ingredients, chưa ghi đủ để xác định action lỗi. Helper gửi Escape sau ảnh sẵn sàng để đóng popover upload, dùng live locator chọn mode thay danh sách locator nth lưu qua lúc React đổi DOM; đọc trạng thái mode bằng một lần evaluate_all. Ghi preparation_stage trước từng thao tác, composer_controls/mode_trigger và error_stage/timeout_detail, lược nội dung prompt. Không force click hoặc bỏ xác nhận ảnh. Chromium fixture: overlay đóng bằng Escape + nút remount thành công; overlay không đóng phải timeout đúng open_mode_menu, vẫn giữ image_ready và không prompt/Generate. Chưa chứng minh nguyên nhân trên Google thật. Delta 3 file yêu cầu v46.7+, EXE tại downloads/v46-prompt-transition.
+
+## v46.13 — đúng accessible name nút chế độ
+
+Báo cáo thực tế v46.12 có composer_controls: nút text Video · 720p · 8s/crop_16_9/x2 mang aria-label Settings trigger. get_by_role(name bắt đầu Video) không thể khớp vì aria-label thay tên hiển thị. Thêm nhận diện chính xác Settings trigger trong composer và dùng control này khi xác định ancestor không có form, bỏ Start/End làm dấu nhận diện vùng cấu hình. Không thay đường upload. Chromium tái hiện đúng aria-label trên form và div composer đều đạt, cùng hồi quy ghép ảnh/prompt và timeout overlay. Chưa xác minh Google thật. Delta 3 file v46.7+, EXE tại downloads/v46-settings-trigger.

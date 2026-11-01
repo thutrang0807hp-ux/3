@@ -1,0 +1,20 @@
+{
+  "version": "2026.11.01.4613",
+  "sha256": "a18baa038571cc51e0ac138f88d1ff1971241e02a918d134507a7e99ebc917f4",
+  "verified_files": 3,
+  "confirmed_cause": "User report: visible summary Video ... has accessible name Settings trigger; old role-name Video regex matched zero buttons",
+  "changes": [
+    "Recognize Settings trigger within composer",
+    "Use settings control, not Start/End image slots, to locate non-form composer"
+  ],
+  "checks": [
+    "Chromium exact Settings trigger aria-label fixture",
+    "Chromium non-form composer with same aria-label",
+    "Ingredients attachment/old image/prompt safety regression",
+    "Full worker and non-dismissable overlay timeout regression",
+    "PowerShell version checks"
+  ],
+  "upload_function_unchanged": true,
+  "real_flow_verified": false,
+  "windows_gui_tested": false
+}
