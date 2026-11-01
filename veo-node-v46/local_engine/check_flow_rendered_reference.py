@@ -4,11 +4,11 @@ from functools import partial
 from http.server import ThreadingHTTPServer,BaseHTTPRequestHandler
 from pathlib import Path
 from threading import Thread
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock,patch
 from PIL import Image
 from playwright.async_api import async_playwright
 from .check_flow_prepare import SETTINGS
-from .flow_prepare import attached_reference,prepare_composer,image_error
+from .flow_prepare import attached_reference,prepare_composer,image_error,allowed_reference_url
 from .flow_settings import DEFAULTS
 
 async def main():
@@ -18,7 +18,7 @@ async def main():
   def log_message(self,*args):pass
   def do_GET(self):
    is_image=self.path.startswith('/image');data=state['image'] if is_image else state['html'].encode()
-   self.send_response(200);self.send_header('Content-Type','image/png' if is_image else 'text/html; charset=utf-8');self.send_header('Cache-Control','no-store');self.end_headers();self.wfile.write(data)
+   self.send_response(200);self.send_header('Content-Type','image/png' if is_image else 'text/html; charset=utf-8');self.send_header('Cache-Control','no-store');self.send_header('Content-Length',str(len(data)));self.end_headers();self.wfile.write(data)
  images=ThreadingHTTPServer(('127.0.0.1',0),Handler);host=ThreadingHTTPServer(('127.0.0.1',0),Handler)
  for server in (images,host):Thread(target=server.serve_forever,daemon=True).start()
  url=f'http://127.0.0.1:{images.server_port}/image.png'
@@ -36,6 +36,15 @@ async def main():
      candidate=report['attachment_probe']['image_candidates'][0];assert candidate['capture_method']=='screenshot',candidate
      assert candidate['error']<=4 and candidate['natural_width']==670 and candidate['natural_height']==1200 and candidate['width']==50,candidate
      errors[fit+' '+position]=candidate['error']
+    assert not allowed_reference_url(url)
+    assert allowed_reference_url('https://lh3.googleusercontent.com/example')
+    assert not allowed_reference_url('https://googleusercontent.com.evil.invalid/example')
+    # Production allows only known HTTPS image hosts. Override only this test
+    # origin to exercise the browser-context API without reaching Google.
+    with patch('local_engine.flow_prepare.allowed_reference_url',lambda value:value.startswith(url)):
+     report={};assert await attached_reference(page,source,report=report),report
+     candidate=report['attachment_probe']['image_candidates'][0]
+     assert candidate['capture_method']=='context_request' and candidate['original_read']=='ok',candidate
     await prepare_composer(page,reference,'Wave once.',DEFAULTS,AsyncMock(),{})
     assert await page.locator('textarea').input_value()=='Wave once.' and not await page.evaluate('!!window.sent')
     wrong=io.BytesIO();Image.new('RGB',(670,1200),'blue').save(wrong,format='PNG');state['image']=wrong.getvalue();await page.locator('#chip').evaluate('(e,url)=>e.src=url',url+'?v=wrong');await page.wait_for_function('document.querySelector("#chip").complete')

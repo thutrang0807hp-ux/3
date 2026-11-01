@@ -9,12 +9,13 @@ import math
 import secrets
 from pathlib import Path
 import re
+from urllib.parse import urlsplit
 
 from fastapi import HTTPException
 from fastapi.responses import FileResponse
 from PIL import Image, ImageChops, ImageDraw, ImageOps, ImageStat
 
-from .flow_settings import DEFAULTS, apply_settings, settings_panel, read_settings, control, exact, validate_settings
+from .flow_settings import DEFAULTS, apply_settings, settings_panel, read_settings, control, exact, validate_settings, snapshot_controls
 from .simple_flow_dom import composer
 
 
@@ -26,6 +27,48 @@ class ReferenceChoiceNeeded(PrepareStopped):
     def __init__(self, matches):
         super().__init__('Có nhiều ảnh khớp trong thư viện. Chọn một thumbnail để tiếp tục; chưa điền prompt hoặc gửi tạo.')
         self.matches=matches
+
+
+class AttachmentReplacementNeeded(PrepareStopped):
+    def __init__(self, attachment):
+        super().__init__('Ô tạo đang có một ảnh chưa khớp nguồn của cảnh này. Xem hai ảnh rồi xác nhận thay ảnh trong ô tạo.')
+        self.attachment=attachment
+
+
+def allowed_reference_url(url):
+    try:
+        parsed=urlsplit(url);host=parsed.hostname or ''
+        return (parsed.scheme=='https' and parsed.port in (None,443) and not parsed.username and not parsed.password
+                and (host=='googleusercontent.com' or host.endswith('.googleusercontent.com')
+                     or host=='storage.googleapis.com' or host.endswith('.storage.googleapis.com')
+                     or host=='flow.google.com' and parsed.path.startswith(('/media/','/api/media/'))))
+    except ValueError:return False
+
+
+async def original_reference_pixels(page,url,probe):
+    """Read the displayed image through the same authenticated browser context."""
+    if not allowed_reference_url(url):
+        probe['original_read']='unsupported_url';return None
+    response=None
+    try:
+        response=await page.context.request.get(url,timeout=7000,max_redirects=0)
+        probe['original_status']=response.status
+        headers=response.headers;length=int(headers.get('content-length','0'))
+        kind=headers.get('content-type','').split(';')[0].lower()
+        if response.status!=200 or not 0<length<=16*1024**2 or kind not in ('image/png','image/jpeg','image/webp'):
+            probe['original_read']='response_not_bounded_image';return None
+        raw=await response.body()
+        if len(raw)>16*1024**2:return None
+        with Image.open(io.BytesIO(raw))as image:
+            if image.width*image.height>40_000_000:return None
+        probe['original_read']='ok';return raw
+    except Exception as error:
+        # Exception strings may contain signed URLs. Keep only the error class.
+        probe['original_read']=type(error).__name__;return None
+    finally:
+        if response is not None:
+            try:await response.dispose()
+            except Exception:pass
 
 
 def prompt_text(value):
@@ -109,13 +152,19 @@ async def reference_images(scope, expected, report=None, small=False):
         if not details['ready']:continue
         try:
             encoded=await item.evaluate('''e=>{try{const c=document.createElement('canvas'),scale=Math.min(1,256/Math.max(e.naturalWidth,e.naturalHeight));c.width=Math.max(1,Math.round(e.naturalWidth*scale));c.height=Math.max(1,Math.round(e.naturalHeight*scale));c.getContext('2d').drawImage(e,0,0,c.width,c.height);return c.toDataURL('image/png').split(',')[1]}catch{return null}}''')
-            raw=base64.b64decode(encoded) if encoded else await item.screenshot(timeout=3000)
-            score=image_error(raw,expected,crop=small or not bool(encoded),small=small,render=details if small and not encoded else None)
+            fetch_probe={};method='canvas'
+            raw=base64.b64decode(encoded) if encoded else None
+            if raw is None and small:
+                raw=await original_reference_pixels(scope.page,details['src'],fetch_probe)
+                if raw is not None:method='context_request'
+            if raw is None:
+                raw=await item.screenshot(timeout=3000);method='screenshot'
+            score=image_error(raw,expected,crop=method=='screenshot' or small and method=='canvas',small=small,render=details if small and method=='screenshot' else None)
         except Exception:
             continue
         candidates.append({'index':index,'error':round(score,3),'composer':details['composer'],
                            'media_id':details['media'],'source_hash':hashlib.sha256(details['src'].encode()).hexdigest(),
-                           'capture_method':'canvas' if encoded else 'screenshot',
+                           'capture_method':method,**fetch_probe,
                            **{k:details[k] for k in ('object_fit','object_position','border_radius','natural_width','natural_height','width','height')}})
         if score <= 4:
             marker='data-sf-reference-'+secrets.token_hex(10)
@@ -156,6 +205,52 @@ async def reference_scope(page):
     return editor,best
 
 
+async def current_attachment(page):
+    _,scope=await reference_scope(page)
+    if scope is None:return None
+    items=[]
+    for handle in await scope.locator('img').element_handles():
+        info=await handle.evaluate('''e=>{const r=e.getBoundingClientRect();return {ready:e.complete&&e.naturalWidth>=8&&e.naturalHeight>=8&&r.width>=20&&r.height>=20,
+            src:e.currentSrc||e.src,natural_width:e.naturalWidth,natural_height:e.naturalHeight}}''')
+        if not info['ready']:continue
+        marker='data-sf-existing-'+secrets.token_hex(10)
+        await handle.evaluate('(e,key)=>e.setAttribute(key,"")',marker)
+        items.append({'item':scope.locator('img['+marker+']'),'fingerprint':{
+            'source_hash':hashlib.sha256(info['src'].encode()).hexdigest(),
+            'natural_width':info['natural_width'],'natural_height':info['natural_height']}})
+    return items[0] if len(items)==1 else None
+
+
+async def remove_approved_attachment(page,fingerprint,check,report):
+    report['phase']='check_replacement'
+    await check();current=await current_attachment(page)
+    if not current or current['fingerprint']!=fingerprint:
+        raise PrepareStopped('Ảnh trong ô Flow đã đổi sau lúc xem trước. Chuẩn bị lại; chưa gỡ ảnh.')
+    await current['item'].hover();remove=None
+    for depth in range(1,7):
+        chip=current['item'].locator('xpath=ancestor::*['+str(depth)+']')
+        if not await chip.count():break
+        box=await chip.bounding_box()
+        if not box:continue
+        if box['width']>180 or box['height']>180 or await chip.locator('img').count()!=1:break
+        report.setdefault('replacement_remove_controls',[]).append(await snapshot_controls(chip))
+        named=await control(chip,exact(r'Remove(?:\s+(?:image|media|ingredient|reference|attachment)(?:\s+.*)?)?|Delete image|Gỡ ảnh|Xóa ảnh|Xoá ảnh|Gỡ|Xóa|Xoá'))
+        icons=chip.get_by_role('button',name=re.compile(r'^\s*(close|cancel|clear|×|✕)\s*$',re.I)).or_(chip.locator('button').filter(has_text=re.compile(r'^\s*(close|cancel|clear|×|✕)\s*$',re.I))).filter(visible=True)
+        choices=named.or_(icons)
+        if await choices.count()==1 and await choices.is_enabled():remove=choices;break
+    if remove is None:
+        raise PrepareStopped('Chưa tìm duy nhất nút gỡ của thumbnail. Chưa gỡ ảnh; không bấm nút đóng ô tạo hoặc xóa thư viện.')
+    report['phase']='remove_approved_attachment'
+    await check();await remove.click(timeout=5000)
+    for _ in range(30):
+        await check();_,scope=await reference_scope(page)
+        visible=await scope.locator('img').evaluate_all('xs=>xs.some(e=>{const r=e.getBoundingClientRect();return e.complete&&e.naturalWidth>=8&&e.naturalHeight>=8&&r.width>=20&&r.height>=20})') if scope is not None else True
+        if not visible:
+            report['removed_attachment']=fingerprint;return
+        await asyncio.sleep(.15)
+    raise PrepareStopped('Đã bấm gỡ nhưng ô tạo vẫn còn ảnh. Chưa gắn ảnh mới hoặc gửi tạo.')
+
+
 async def attached_reference(page, expected, expected_media_id=None, report=None):
     editor,scope=await reference_scope(page)
     if editor is None or scope is None:return False
@@ -192,7 +287,7 @@ async def attached_reference(page, expected, expected_media_id=None, report=None
     return False
 
 
-async def prepare_composer(page, reference, prompt, settings, check, report, selected_reference=None):
+async def prepare_composer(page, reference, prompt, settings, check, report, selected_reference=None, replace_attachment=None):
     phase=lambda value:report.update(phase=value)
     with Image.open(reference) as image:expected=ImageOps.exif_transpose(image).convert('RGB')
     phase('apply_settings')
@@ -210,11 +305,17 @@ async def prepare_composer(page, reference, prompt, settings, check, report, sel
     current=prompt_text(await editor_text(editor))
     if current and current!=prompt_text(prompt):
         raise PrepareStopped('Ô Flow đang có prompt khác. Kiểm tra và dọn ô tạo trước; chưa ghi đè.')
+    if replace_attachment:
+        await remove_approved_attachment(page,replace_attachment,check,report)
+        editor,scope=await reference_scope(page)
+    phase('check_attached_reference')
     if not await attached_reference(page,expected,(selected_reference or {}).get('media_id'),report):
+        existing=await current_attachment(page)
+        if existing is not None:raise AttachmentReplacementNeeded(existing)
         if report.get('attachment_probe',{}).get('media_ids'):
             raise PrepareStopped('Ô tạo đang gắn media chưa khớp ảnh nguồn. Kiểm tra và dọn ảnh đó trước; chưa thêm ảnh khác.')
-        existing=scope.locator('img').filter(visible=True)
-        for item in await existing.all():
+        images=scope.locator('img').filter(visible=True)
+        for item in await images.all():
             if await item.evaluate('e=>e.complete&&e.naturalWidth>=8&&e.naturalHeight>=8&&e.getBoundingClientRect().width>=20&&e.getBoundingClientRect().height>=20'):
                 raise PrepareStopped('Ô tạo đang gắn ảnh khác hoặc nhiều ảnh. Chưa thay hoặc xóa ảnh.')
         phase('match_library_reference')
@@ -320,17 +421,21 @@ async def validate_prepared(service, payload, raw):
 def register_prepare_routes(app, service):
     service.prepare_report=None;service.prepared_page=None;service.prepared_reference=None
     service.reference_choices={}
+    service.prepare_input_reference=None;service.replacement_page=None
     def status(rid):
         report=service.prepare_report
         if not report or report['request_id']!=rid:raise HTTPException(404,'Không có lượt chuẩn bị này trong phiên hiện tại.')
-        return copy.deepcopy(report)
+        result={k:copy.deepcopy(v)for k,v in report.items()if not k.startswith('_')}
+        if service.active==rid and service.busy() and result['state']!='running':
+            result.update(state='running',message='Đang lưu ảnh xem trước; chưa gửi tạo video.')
+        return result
     async def run(report, reference, token):
         async def check():
             selection=service.account_bridge.selection()
             if not selection['available'] or selection['account_id']!=report['account_id'] or selection['token']!=token:raise PrepareStopped('Tài khoản đã đổi; dừng trước khi gửi tạo.')
             await service.assert_ready()
         try:
-            await prepare_composer(service.page,reference,report.pop('_prompt'),report['settings'],check,report,report.get('selected_reference'))
+            await prepare_composer(service.page,reference,report.pop('_prompt'),report['settings'],check,report,report.get('selected_reference'),report.pop('_replace_attachment',None))
             service.prepared_page=service.page;service.prepared_reference=reference
             matched=report.get('matched_reference')
             if matched:
@@ -347,12 +452,30 @@ def register_prepare_routes(app, service):
                 except Exception:pass
                 choices.append(candidate)
             report.update(state='awaiting_selection',message='Có '+str(len(error.matches))+' ảnh khớp trong thư viện. Chọn thumbnail bên dưới để gắn đúng ảnh và tiếp tục điền prompt; chưa gửi tạo.',candidates=choices)
+        except AttachmentReplacementNeeded as error:
+            service.replacement_page=service.page
+            report['replacement']={'approval_token':secrets.token_hex(16),'fingerprint':error.attachment['fingerprint']}
+            report['has_source_preview']=reference.is_file();report['has_attachment_preview']=False
+            try:
+                src=await error.attachment['item'].evaluate('e=>e.currentSrc||e.src')
+                raw=await original_reference_pixels(service.page,src,{})
+                if raw:
+                    with Image.open(io.BytesIO(raw))as image:
+                        image=ImageOps.exif_transpose(image).convert('RGB');image.thumbnail((512,512));image.save(service.root/(report['request_id']+'.attached.png'))
+                    report['attachment_preview_kind']='original_image'
+                else:
+                    await error.attachment['item'].screenshot(path=str(service.root/(report['request_id']+'.attached.png')),timeout=3000)
+                    report['attachment_preview_kind']='displayed_thumbnail'
+                report['has_attachment_preview']=True
+            except Exception:pass
+            report.update(state='awaiting_replacement',message='Ô Flow đang có một ảnh chưa khớp nguồn của cảnh. Xem ảnh đang gắn và ảnh cảnh bên dưới, rồi xác nhận thay ảnh nếu muốn tiếp tục; chưa điền prompt hoặc gửi tạo.')
         except asyncio.CancelledError:
             report.update(state='failed',message='Đã dừng chuẩn bị; chưa gửi tạo video.');raise
         except Exception as error:
             report.update(state='failed',message=(str(error) if isinstance(error,PrepareStopped) else 'Chưa chuẩn bị được Flow: '+type(error).__name__)+ ' Chưa gửi tạo video.',error={'type':type(error).__name__,'detail':str(error)[:1500]})
         finally:
             report.pop('_prompt',None)
+            report.pop('_replace_attachment',None)
             try:
                 if service.page and not service.page.is_closed():
                     await service.page.screenshot(path=str(service.root/(report['request_id']+'.prepare.png')),timeout=5000);report['has_preview']=True
@@ -379,6 +502,19 @@ def register_prepare_routes(app, service):
             paths=[p for p in paths if p.is_file()]
             if len(paths)!=1 or hashlib.sha256(paths[0].read_bytes()).hexdigest()!=body['reference_sha256']:raise HTTPException(409,'Không còn tệp ảnh gốc đã upload. Upload lại trước khi gắn prompt.')
             selected=service.reference_choices.get((selection['account_id'],body['room_id'],body['reference_sha256']))
+            replacement=None
+            consent=body.get('replace_attachment')
+            if consent is not None:
+                previous=service.prepare_report
+                if (not isinstance(consent,dict) or not previous or previous['state']!='awaiting_replacement'
+                    or consent.get('request_id')!=previous['request_id']
+                    or consent.get('approval_token')!=previous['replacement']['approval_token']
+                    or any(previous.get(k)!=body[k] for k in ('room_id','scene_id','part','reference_sha256'))
+                    or previous['account_id']!=selection['account_id'] or previous['settings']!=settings
+                    or previous['prompt_sha256']!=hashlib.sha256(prompt.encode()).hexdigest()
+                    or service.page is not service.replacement_page):
+                    raise HTTPException(409,'Lượt xem trước, ảnh, prompt hoặc tài khoản đã đổi. Chuẩn bị lại trước khi xác nhận thay ảnh.')
+                replacement=previous['replacement']['fingerprint']
             choice=body.get('candidate_choice')
             if choice is not None:
                 previous=service.prepare_report
@@ -393,6 +529,8 @@ def register_prepare_routes(app, service):
                 selected={k:candidates[0][k] for k in ('media_id','source_hash')}
             rid='flow-prepare-'+secrets.token_hex(12)
             report={'request_id':rid,'state':'running','message':'Đang đối chiếu ảnh, gắn vào ô tạo và điền prompt; chưa gửi tạo.', 'settings':settings,'account_id':selection['account_id'],'room_id':body['room_id'],'scene_id':body['scene_id'],'part':body['part'],'has_preview':False,'_prompt':prompt,'reference_sha256':body['reference_sha256'],'prompt_sha256':hashlib.sha256(prompt.encode()).hexdigest(),'selected_reference':selected}
+            report['_replace_attachment']=replacement
+            service.prepare_input_reference=paths[0]
             service.prepare_report=report;service.active=rid;service.sent=False
             service.task=asyncio.create_task(run(report,paths[0],selection['token']))
             receipt=status(rid);receipt.pop('_prompt',None);return receipt
@@ -410,3 +548,13 @@ def register_prepare_routes(app, service):
         candidates=[c for c in report.get('candidates',[]) if c['id']==candidate_id and c['has_preview']]
         if len(candidates)!=1:raise HTTPException(404,'Không có thumbnail của lựa chọn này.')
         return FileResponse(service.root/(rid+'.candidate-'+candidates[0]['id']+'.png'),media_type='image/png',headers={'Cache-Control':'no-store'})
+    @app.get('/local-api/flow/simple/prepare/{rid}/source-image')
+    async def source_preview(rid:str):
+        report=status(rid)
+        if not report.get('has_source_preview') or not service.prepare_input_reference:raise HTTPException(404,'Chưa có ảnh nguồn để xem trước.')
+        return FileResponse(service.prepare_input_reference,headers={'Cache-Control':'no-store'})
+    @app.get('/local-api/flow/simple/prepare/{rid}/attached-image')
+    async def attached_preview(rid:str):
+        report=status(rid)
+        if not report.get('has_attachment_preview'):raise HTTPException(404,'Chưa có ảnh đang gắn để xem trước.')
+        return FileResponse(service.root/(rid+'.attached.png'),media_type='image/png',headers={'Cache-Control':'no-store'})

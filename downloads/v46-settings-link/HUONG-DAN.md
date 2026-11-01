@@ -1,6 +1,6 @@
-# v46.24 — gắn ảnh của cảnh, điền prompt và gửi một lượt
+# v46.25 — gắn ảnh của cảnh, điền prompt và gửi một lượt
 
-Đóng SceneForge, chạy `SceneForge-Update-20261102-v46.24-Thumbnail-Crop.exe`, chọn thư mục có SceneForge.exe và install-settings.json, bấm Cập nhật rồi mở lại. Cài trên v46.7 trở lên của bộ cài v2. Giữ nguyên hàm upload .19, tài khoản, profile và dữ liệu.
+Đóng SceneForge, chạy `SceneForge-Update-20261102-v46.25-Replace-Reference.exe`, chọn thư mục có SceneForge.exe và install-settings.json, bấm Cập nhật rồi mở lại. Cài trên v46.7 trở lên của bộ cài v2. Giữ nguyên hàm upload .19, tài khoản, profile và dữ liệu.
 
 ## Thử một cảnh
 
@@ -48,3 +48,13 @@ Báo cáo .23 ghi nhận scope composer 600×160 có đúng một img đã tải
 .24 giữ cách đọc canvas ảnh gốc nếu được phép. Nếu CORS chặn canvas và phải chụp img hiển thị, bộ so sánh dựng đúng object-fit, object-position, padding/viền và chỉ loại pixel góc bo/viền không chứa ảnh. Ngưỡng xác minh vẫn là 4, ảnh sai tiếp tục bị chặn. Báo cáo ghi capture_method (canvas/screenshot), object_fit, object_position, border_radius và kích thước ảnh để xác định chính xác nếu vẫn chưa khớp. Không lưu URL ảnh.
 
 Đã tái hiện Chromium với ảnh 670×1200 hiển thị 50×50 khác origin, canvas bị chặn: cách crop giữa cũ báo sai lớn; đối chiếu theo CSS nhận đúng cover/top, cover/center, fill và contain. Ảnh màu khác bị từ chối; prompt chỉ điền khi ảnh được xác nhận, không bấm Generate trong chuẩn bị. Phần mới chưa xác nhận trên Flow thật và chưa chạy updater Windows.
+
+## .25 — ảnh đang gắn chưa khớp nguồn mới
+
+Báo cáo mới ghi nhận nguồn ảnh/cảnh đã đổi, trong ô tạo vẫn có một ảnh, setting đúng, so thumbnail vẫn chưa đạt. .25 ưu tiên đọc ảnh gốc bằng request context của trình duyệt khi canvas bị CORS chặn; chỉ đọc HTTPS từ host media Google được hỗ trợ, không theo redirect, giới hạn loại/dung lượng và giữ TLS verification. Nếu không đọc được thì đối chiếu ảnh hiển thị như .24. Không ghi URL có chữ ký vào báo cáo.
+
+Nếu ảnh trong ô chưa được xác nhận khớp: node hiện hai ảnh **Ảnh đang gắn trong Flow** và **Ảnh đã duyệt của cảnh**. Bấm **Thay bằng ảnh của cảnh này**, xem xác nhận rồi đồng ý. Phần mềm kiểm lại ảnh đã xem chưa đổi, tìm đúng nút Remove/close của thumbnail nhỏ trong ô tạo, gỡ một ảnh đó, rồi chọn ảnh nguồn đang yêu cầu và điền prompt. Ảnh thư viện không bị xóa. Nếu có nhiều bản ảnh nguồn, vẫn dùng bước chọn thumbnail của .22. Không gỡ ảnh trước khi người dùng xác nhận, không xóa/ghi đè prompt khác và chưa gửi tạo ở bước chuẩn bị.
+
+Xác nhận bị từ chối khi ảnh, cảnh, prompt, tài khoản, setting, phiên Flow hoặc ảnh đang gắn đã đổi sau lúc xem trước. Nếu chưa nhận diện duy nhất nút gỡ của thumbnail, dừng và ghi replacement_remove_controls vào báo cáo. Không bấm X đóng toàn bộ ô tạo. Sau khi ảnh/prompt được xác nhận, mới mở nút Tạo 1 video.
+
+Đã kiểm Chromium: hai ảnh xem trước; hủy không gửi yêu cầu; xác nhận đúng lượt mới thay; nguồn/prompt/cảnh đổi và ảnh đang gắn đổi đều chặn; chỉ gỡ thumbnail đã duyệt một lần; thư viện còn nguyên; ảnh cảnh mới được gắn và prompt đúng; không bấm Generate. Đã kiểm request context đọc pixel gốc trong fixture khác origin khi canvas bị chặn. Phần mới chưa xác nhận trên Flow thật hoặc updater Windows.
