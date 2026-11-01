@@ -1,0 +1,12 @@
+{
+  "version": "2026.11.01.4617",
+  "file": "SceneForge-Update-20261101-v46.17-Settings-Link.exe",
+  "bytes": 3986944,
+  "sha256": "7c26c5001161bb90a9c97c9d4a4b9315c858b63ead64fdf9dd0594c606f61ed2",
+  "files": 3,
+  "minimum_patch": "2026.11.01.4616",
+  "embedded_files_verified": true,
+  "launcher_code_unchanged": true,
+  "live_flow_verified": false,
+  "windows_installer_tested": false
+}
