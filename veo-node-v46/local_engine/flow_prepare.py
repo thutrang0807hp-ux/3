@@ -35,16 +35,17 @@ async def editor_text(editor):
     return await editor.evaluate("e=>e.matches('input,textarea')?e.value:e.innerText")
 
 
-def image_error(raw, expected, crop=False):
+def image_error(raw, expected, crop=False, small=False):
     with Image.open(io.BytesIO(raw)) as image:
         image = ImageOps.exif_transpose(image).convert('RGB')
         source = ImageOps.fit(expected, image.size) if crop else expected
-        left = source.resize((48,48), Image.Resampling.LANCZOS)
-        right = image.resize((48,48), Image.Resampling.LANCZOS)
+        size=(min(48,image.width),min(48,image.height)) if small else (48,48)
+        left = source.resize(size, Image.Resampling.LANCZOS)
+        right = image.resize(size, Image.Resampling.LANCZOS)
         return sum(ImageStat.Stat(ImageChops.difference(left,right)).mean)/3
 
 
-async def reference_images(scope, expected, report=None):
+async def reference_images(scope, expected, report=None, small=False):
     images = scope.locator('img').filter(visible=True)
     if await images.count() > 80:
         raise PrepareStopped('Có quá nhiều ảnh để đối chiếu an toàn. Thu gọn thư viện Flow rồi thử lại.')
@@ -52,14 +53,14 @@ async def reference_images(scope, expected, report=None):
     for index in range(await images.count()):
         item=await images.nth(index).element_handle()
         if item is None:continue
-        details=await item.evaluate('''e=>({ready:e.complete&&e.naturalWidth>32&&e.naturalHeight>32,
+        details=await item.evaluate('''(e,small)=>({ready:e.complete&&e.naturalWidth>=(small?8:33)&&e.naturalHeight>=(small?8:33)&&(!small||(e.getBoundingClientRect().width>=20&&e.getBoundingClientRect().height>=20)),
             composer:!!e.closest('[data-sf-flow-composer]'),src:e.currentSrc||e.src,
-            media:e.closest('[data-media-id],[data-asset-id]')?.getAttribute('data-media-id')||e.closest('[data-asset-id]')?.getAttribute('data-asset-id')||null})''')
+            media:e.closest('[data-media-id],[data-asset-id]')?.getAttribute('data-media-id')||e.closest('[data-asset-id]')?.getAttribute('data-asset-id')||null})''',small)
         if not details['ready']:continue
         try:
             encoded=await item.evaluate('''e=>{try{const c=document.createElement('canvas'),scale=Math.min(1,256/Math.max(e.naturalWidth,e.naturalHeight));c.width=Math.max(1,Math.round(e.naturalWidth*scale));c.height=Math.max(1,Math.round(e.naturalHeight*scale));c.getContext('2d').drawImage(e,0,0,c.width,c.height);return c.toDataURL('image/png').split(',')[1]}catch{return null}}''')
             raw=base64.b64decode(encoded) if encoded else await item.screenshot(timeout=3000)
-            score=image_error(raw,expected,crop=not bool(encoded))
+            score=image_error(raw,expected,crop=small or not bool(encoded),small=small)
         except Exception:
             continue
         candidates.append({'index':index,'error':round(score,3),'composer':details['composer'],
@@ -80,16 +81,63 @@ async def reference_images(scope, expected, report=None):
     return matches
 
 
-async def attached_reference(page, expected):
+async def reference_scope(page):
     editor,scope=await composer(page)
+    if editor is None or scope is None:return editor,scope
+    best=scope
+    # Flow can place attachment chips above the inner prompt/button row.
+    # Expand only within a small composer card, never into the library grid.
+    for depth in range(1,5):
+        candidate=scope.locator('xpath=ancestor::*['+str(depth)+']')
+        if not await candidate.count():break
+        acceptable=await candidate.evaluate('''e=>{
+            const r=e.getBoundingClientRect();
+            if(['BODY','HTML'].includes(e.tagName)||r.height>400||r.width>1200)return false;
+            const editors=[...e.querySelectorAll('textarea,[contenteditable="true"],[role="textbox"]')].filter(x=>x.getClientRects().length);
+            if(editors.length!==1||e.querySelector('article,video'))return false;
+            if([...e.querySelectorAll('button')].some(x=>/^(Favorite|More options|Add media menu)$/i.test(x.getAttribute('aria-label')||'')))return false;
+            return [...e.querySelectorAll('img')].every(x=>{const b=x.getBoundingClientRect();return !b.width||(b.width<=128&&b.height<=128)});
+        }''')
+        if not acceptable:break
+        best=candidate
+        if await candidate.evaluate("e=>e.tagName==='FORM'"):break
+    return editor,best
+
+
+async def attached_reference(page, expected, expected_media_id=None, report=None):
+    editor,scope=await reference_scope(page)
     if editor is None or scope is None:return False
-    images=scope.locator('img').filter(visible=True)
-    usable=[]
-    for item in await images.all():
-        if await item.evaluate('e=>e.complete&&e.naturalWidth>32&&e.naturalHeight>32'):usable.append(item)
-    if len(usable)!=1:return False
-    if await scope.locator('[role=progressbar],[aria-busy=true],[role=alert]').filter(visible=True).count():return False
-    return len(await reference_images(scope,expected))==1
+    await scope.evaluate("e=>e.setAttribute('data-sf-flow-composer','true')")
+    probe={'expected_media_id':expected_media_id}
+    if report is not None:report['attachment_probe']=probe
+    probe['scope']=await scope.evaluate("e=>({tag:e.tagName,width:Math.round(e.getBoundingClientRect().width),height:Math.round(e.getBoundingClientRect().height)})")
+    probe['editor_contains_media']=bool(await editor.locator('img,[data-media-id],[data-asset-id]').count())
+    if await scope.locator('[role=progressbar],[aria-busy=true],[role=alert]').filter(visible=True).count():
+        probe['busy_or_error']=True;return False
+    probe['images']=await scope.locator('img').evaluate_all('''xs=>xs.filter(e=>e.getClientRects().length).map(e=>({
+        natural_width:e.naturalWidth,natural_height:e.naturalHeight,width:Math.round(e.getBoundingClientRect().width),height:Math.round(e.getBoundingClientRect().height),loaded:e.complete
+    }))''')
+    usable=[x for x in probe['images'] if x['loaded'] and x['natural_width']>=8 and x['natural_height']>=8 and x['width']>=20 and x['height']>=20]
+    chips=await scope.locator('[data-media-id],[data-asset-id]').evaluate_all('''xs=>xs.filter(e=>{
+        const r=e.getBoundingClientRect();if(r.width<12||r.height<12||r.width>160||r.height>160)return false;
+        return e.matches('img,canvas')||!!e.querySelector('img,canvas')||[e,...e.querySelectorAll('*')].slice(0,12).some(x=>getComputedStyle(x).backgroundImage!=='none');
+    }).map(e=>e.getAttribute('data-media-id')||e.getAttribute('data-asset-id')).filter(Boolean)''')
+    probe['media_ids']=sorted(set(chips))
+    if expected_media_id and probe['media_ids']==[expected_media_id] and len(usable)<=1:
+        probe['verified_by']='media_id';return True
+    if len(usable)==1:
+        image_report={};matches=await reference_images(scope,expected,image_report,small=True)
+        probe['image_candidates']=image_report.get('image_candidates',[])
+        if len(matches)==1:
+            probe['verified_by']='small_thumbnail_pixels';return True
+    if expected_media_id is None and len(probe['media_ids'])==1 and len(usable)<=1:
+        # A persisted CSS chip can survive app restart without a remembered
+        # binding. Its ID must occur on a library thumbnail matching the source.
+        library=await reference_images(page,expected)
+        ids={m['media_id'] for m in library if not m['composer'] and m['media_id']}
+        if probe['media_ids'][0] in ids:
+            probe['verified_by']='media_id_from_matched_library';return True
+    return False
 
 
 async def prepare_composer(page, reference, prompt, settings, check, report, selected_reference=None):
@@ -104,16 +152,18 @@ async def prepare_composer(page, reference, prompt, settings, check, report, sel
     await page.keyboard.press('Escape')
     phase('locate_composer')
     await check()
-    editor,scope=await composer(page)
+    editor,scope=await reference_scope(page)
     if editor is None or scope is None:raise PrepareStopped('Chưa nhận diện duy nhất ô tạo Flow.')
     await scope.evaluate("e=>e.setAttribute('data-sf-flow-composer','true')")
     current=prompt_text(await editor_text(editor))
     if current and current!=prompt_text(prompt):
         raise PrepareStopped('Ô Flow đang có prompt khác. Kiểm tra và dọn ô tạo trước; chưa ghi đè.')
-    if not await attached_reference(page,expected):
+    if not await attached_reference(page,expected,(selected_reference or {}).get('media_id'),report):
+        if report.get('attachment_probe',{}).get('media_ids'):
+            raise PrepareStopped('Ô tạo đang gắn media chưa khớp ảnh nguồn. Kiểm tra và dọn ảnh đó trước; chưa thêm ảnh khác.')
         existing=scope.locator('img').filter(visible=True)
         for item in await existing.all():
-            if await item.evaluate('e=>e.complete&&e.naturalWidth>32&&e.naturalHeight>32'):
+            if await item.evaluate('e=>e.complete&&e.naturalWidth>=8&&e.naturalHeight>=8&&e.getBoundingClientRect().width>=20&&e.getBoundingClientRect().height>=20'):
                 raise PrepareStopped('Ô tạo đang gắn ảnh khác hoặc nhiều ảnh. Chưa thay hoặc xóa ảnh.')
         phase('match_library_reference')
         deadline=asyncio.get_running_loop().time()+20
@@ -167,17 +217,24 @@ async def prepare_composer(page, reference, prompt, settings, check, report, sel
         # Some layouts show an Image submenu after Add to prompt.
         for _ in range(40):
             await check()
-            if await attached_reference(page,expected):break
+            if await attached_reference(page,expected,match['media_id'],report):break
             option=page.get_by_role('menuitem',name=re.compile(r'^(Image|Hình ảnh)$',re.I)).or_(page.get_by_role('option',name=re.compile(r'^(Image|Hình ảnh)$',re.I))).filter(visible=True)
             if await option.count()==1:await option.click(timeout=5000)
             await asyncio.sleep(.15)
         else:raise PrepareStopped('Đã bấm Add to prompt nhưng chưa đối chiếu được đúng ảnh trong ô tạo.')
     phase('fill_scene_prompt')
     await check()
-    editor,scope=await composer(page)
-    await editor.fill(prompt,timeout=5000)
+    editor,scope=await reference_scope(page)
+    if prompt_text(await editor_text(editor))!=prompt_text(prompt):
+        if await editor.locator('img,[data-media-id],[data-asset-id]').count():
+            # An inline reference must survive text insertion. No Select All,
+            # Enter key or submit shortcut is used here.
+            await editor.focus();await editor.press('Control+End')
+            await page.keyboard.insert_text(prompt)
+        else:
+            await editor.fill(prompt,timeout=5000)
     if prompt_text(await editor_text(editor))!=prompt_text(prompt):raise PrepareStopped('Prompt đọc lại không khớp nguyên nội dung của cảnh.')
-    if not await attached_reference(page,expected):raise PrepareStopped('Ảnh trong ô tạo đã đổi trước khi xác nhận prompt.')
+    if not await attached_reference(page,expected,report.get('matched_reference',{}).get('media_id') or (selected_reference or {}).get('media_id'),report):raise PrepareStopped('Ảnh trong ô tạo đã đổi trước khi xác nhận prompt.')
     phase('ready_for_review')
     report['prompt_sha256']=hashlib.sha256(prompt.encode()).hexdigest()
     report['reference_sha256']=hashlib.sha256(Path(reference).read_bytes()).hexdigest()
@@ -204,7 +261,7 @@ async def validate_prepared(service, payload, raw):
     if actual!=report['settings']:raise PrepareStopped('Cấu hình Flow đã đổi sau bước chuẩn bị. Chưa gửi tạo.')
     with Image.open(service.prepared_reference) as image:expected=ImageOps.exif_transpose(image).convert('RGB')
     editor,_=await composer(service.page)
-    if editor is None or prompt_text(await editor_text(editor))!=prompt_text(payload['prompt']) or not await attached_reference(service.page,expected):
+    if editor is None or prompt_text(await editor_text(editor))!=prompt_text(payload['prompt']) or not await attached_reference(service.page,expected,(report.get('matched_reference') or report.get('selected_reference') or {}).get('media_id')):
         raise PrepareStopped('Ảnh hoặc prompt thực tế trong Flow không còn khớp. Chưa gửi tạo.')
 
 

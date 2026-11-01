@@ -9,8 +9,8 @@ import zipfile
 import dnfile
 
 ROOT = Path(__file__).resolve().parents[3]
-VERSION = '2026.11.02.4622'
-NAME = 'SceneForge-Update-20261102-v46.22-Reference-Choice.exe'
+VERSION = '2026.11.02.4623'
+NAME = 'SceneForge-Update-20261102-v46.23-Composer-Preview.exe'
 BASELINE = '8178af48a4db6180eb0fb3ef042b04ea21617c7380ca2e106d8e967990eb0c35'
 
 def main():
@@ -63,7 +63,7 @@ def main():
     exe.with_suffix('.exe.sha256').write_text(digest+'  '+NAME+'\n')
     report = {'version': VERSION, 'file': NAME, 'bytes': len(data), 'sha256': digest, 'files': len(sources),
               'minimum_patch': manifest['minimum_patch'], 'embedded_files_verified': True,
-              'duplicate_reference_choice': True, 'scene_prompt_preparation': True, 'prepared_generation_receipt': True,
+              'small_composer_reference': True, 'create_disabled_reason': True, 'duplicate_reference_choice': True, 'scene_prompt_preparation': True, 'prepared_generation_receipt': True,
               'upload_implementation': 'project_upload_v46_19', 'uploader_byte_identical_to_v46_19': True,
               'uploader_sha256': upload19_sha256,
               'launcher_code_unchanged': True, 'live_flow_verified': False, 'windows_installer_tested': False}

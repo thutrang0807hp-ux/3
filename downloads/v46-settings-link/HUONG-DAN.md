@@ -1,6 +1,6 @@
-# v46.22 — gắn ảnh của cảnh, điền prompt và gửi một lượt
+# v46.23 — gắn ảnh của cảnh, điền prompt và gửi một lượt
 
-Đóng SceneForge, chạy `SceneForge-Update-20261102-v46.22-Reference-Choice.exe`, chọn thư mục có SceneForge.exe và install-settings.json, bấm Cập nhật rồi mở lại. Cài trên v46.7 trở lên của bộ cài v2. Giữ nguyên hàm upload .19, tài khoản, profile và dữ liệu.
+Đóng SceneForge, chạy `SceneForge-Update-20261102-v46.23-Composer-Preview.exe`, chọn thư mục có SceneForge.exe và install-settings.json, bấm Cập nhật rồi mở lại. Cài trên v46.7 trở lên của bộ cài v2. Giữ nguyên hàm upload .19, tài khoản, profile và dữ liệu.
 
 ## Thử một cảnh
 
@@ -30,3 +30,13 @@ Hàm upload giữ nguyên SHA-256 `342e1bde247a0ca3612efe7c363cb0d741c84a1b014a7
 Báo cáo .21 dừng ở match_library_reference vì có hai thumbnail khớp cùng sai số 0.756 nhưng media ID khác nhau. Setting đã đọc lại đúng Video / Ingredients / 9:16 / Lite / x1; chưa tới bước mở menu ảnh hoặc điền prompt. .22 thêm trạng thái chờ chọn thumbnail, kiểm tra lựa chọn còn thuộc đúng cảnh/prompt/tài khoản và media ID vẫn khớp ảnh nguồn. Ghi nhớ binding ảnh trong phiên hiện tại để lần chuẩn bị tiếp theo không hỏi lại nếu còn đúng. Không cần upload thêm vì gặp ảnh trùng trong cùng phiên. Khi khởi động lại app sau cập nhật, vẫn thực hiện bước upload như quy trình bên trên.
 
 Đã kiểm Chromium tái hiện hai media ID, chọn ID thứ hai sau khi danh sách đổi thứ tự, thumbnail PNG, chặn lựa chọn giả/cũ và không chạm menu, prompt hoặc Generate trước khi người dùng chọn. Phần mới chưa được thử trên Flow thật.
+
+## .23 — nhận diện ảnh trong ô tạo và phản hồi thao tác
+
+Ảnh chụp từ máy người dùng cho thấy đã bấm Add to prompt nhưng kiểm tra ảnh đính kèm chưa đạt, nên nút Tạo bị khóa. .23 hỗ trợ thumbnail nhỏ/cắt giữa ảnh, chip nằm phía trên hàng nhập prompt và chip CSS có media ID trùng ảnh nguồn đã đối chiếu. Khi chip tồn tại từ phiên trước, ID phải đối chiếu được với thumbnail thư viện khớp ảnh gốc. Không coi riêng ảnh trong thư viện là ảnh đã gắn.
+
+Ngay khi bấm Gắn ảnh + điền prompt, trạng thái hiện trong node; khi lỗi API, thông báo được giữ lại. Dưới nút Tạo luôn có lý do nếu chưa sẵn sàng: chờ chọn thumbnail, chuẩn bị lỗi, prompt đổi, setting chưa đúng hoặc còn lượt chưa rõ kết quả. Chỉ mở khi đủ bước. Báo cáo ảnh/prompt có attachment_probe ghi kích thước ảnh, vùng composer, ID và cách kiểm chứng; không ghi URL media.
+
+Đã kiểm Chromium với thumbnail 24px bị crop, chip phía trên form nhập, chip CSS, ảnh sai và trường hợp chỉ có ảnh thư viện; kiểm phản hồi lỗi API vẫn hiện trong node và lý do khóa nút. Đây là kiểm thử mô phỏng, chưa xác nhận phần mới trên Flow thật hoặc updater Windows.
+
+Nếu ảnh là thành phần inline trong editor, .23 chèn chữ mà không Select All hoặc phát phím Enter, để giữ ảnh đã gắn và tránh gửi sớm. Đã kiểm ảnh inline còn nguyên, prompt đúng và Generate chưa được bấm.
