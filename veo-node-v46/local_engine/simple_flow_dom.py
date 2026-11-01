@@ -32,18 +32,18 @@ async def settings_ready(page):
  return bool(re.search(r'Veo.*Lite|Lite.*Veo',text,re.I) and
   re.search(r'8\s*(?:s\b|sec|giây)',text,re.I) and re.search(r'9\s*:\s*16',text) and
   re.search(r'(?:\bx\s*1\b|\b1\s*x\b)',text,re.I) and
-  re.search(r'Frames to Video|\bFrames\b|Khung hình thành video|Từ khung hình|Khung hình',text,re.I))
+  re.search(r'Ingredients to Video|\bIngredients\b|Thành phần thành video|Từ thành phần|Thành phần',text,re.I))
 
 async def _prepare_settings(page):
  if await settings_ready(page):return True
  _,scope=await composer(page)
  if scope is None:return False
- frames=scope.get_by_role('tab',name=re.compile(r'^(Frames to Video|Frames|Khung hình thành video|Khung hình)$',re.I)).filter(visible=True)
- if await frames.count()==1 and await frames.get_attribute('aria-selected')!='true' and await frames.get_attribute('data-state')not in ('active','checked'):await frames.click(timeout=3000)
+ ingredients=scope.get_by_role('tab',name=re.compile(r'^(Ingredients to Video|Ingredients|Thành phần thành video|Thành phần)$',re.I)).filter(visible=True)
+ if await ingredients.count()==1 and await ingredients.get_attribute('aria-selected')!='true' and await ingredients.get_attribute('data-state')not in ('active','checked'):await ingredients.click(timeout=3000)
  # Standard select controls can be configured without guessing popover structure.
  choices=[(r'model|mô hình',r'Veo.*Lite|Lite.*Veo'),(r'duration|thời lượng',r'^8\s*(s|seconds?|giây)$'),
   (r'aspect|ratio|tỉ lệ|tỷ lệ',r'9\s*:\s*16'),(r'outputs?|số lượng',r'^(1|x1|1x)$'),
-  (r'mode|chế độ',r'Frames to Video|Khung hình thành video|Từ khung hình')]
+  (r'mode|chế độ',r'Ingredients to Video|Ingredients|Thành phần thành video|Từ thành phần')]
  for label,desired in choices:
   selects=scope.get_by_role('combobox',name=re.compile(label,re.I)).filter(visible=True)
   if await selects.count()!=1 or await selects.evaluate('(e)=>e.tagName')!='SELECT':continue
@@ -52,7 +52,7 @@ async def _prepare_settings(page):
   if len(matched)==1:await selects.select_option(matched[0]['value'])
  # Flow also uses button popovers. Only named settings controls and exact
  # options are eligible; this path never presses Generate or an image tile.
- popovers=[(r'^(Text to Video|Frames to Video|Ingredients to Video|Từ văn bản|Từ khung hình|Khung hình thành video)$',r'^(Frames to Video|Từ khung hình|Khung hình thành video)$'),
+ popovers=[(r'^(Text to Video|Frames to Video|Ingredients to Video|Từ văn bản|Từ khung hình|Khung hình thành video)$',r'^(Ingredients to Video|Ingredients|Từ thành phần|Thành phần thành video)$'),
   (r'^Veo\s+\d.*',r'^Veo\s+3\.1\s*[-·]?\s*Lite$'),
   (r'^\d+\s*(s|seconds?|giây)$',r'^8\s*(s|seconds?|giây)$'),
   (r'^(9\s*:\s*16|16\s*:\s*9)$',r'^9\s*:\s*16$'),
@@ -86,7 +86,10 @@ async def uploaded_preview(page,before,timeout=8):
   current=await previews(page)
   # Exactly one newly attached preview; no uploading progress still in the composer.
   _,scope=await composer(page)
-  if len([x for x in current if x and x not in before])==1 and scope is not None and not await scope.get_by_role('progressbar').filter(visible=True).count():return True
+  if len(current)==len(before)+1 and len([x for x in current if x and x not in before])==1 and scope is not None:
+   busy=scope.locator('[role=progressbar],[aria-busy=true]').filter(visible=True)
+   errors=scope.get_by_role('alert').filter(visible=True)
+   if not await busy.count() and not await errors.count():return True
   await asyncio.sleep(.25)
  return False
 

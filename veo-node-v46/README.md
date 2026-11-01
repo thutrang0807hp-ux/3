@@ -35,3 +35,11 @@ Tài khoản trong tab Tài khoản là nguồn duy nhất. Node không có nút
 - So khớp từng file/hash của ZIP nhúng EXE với nguồn; kiểm ZIP integrity và compile Python. Không tuyên bố tất cả test UI lịch sử áp dụng cho v46.
 
 **Chưa kiểm việc tạo/tải một video Google thật từ v46 và chưa chạy updater v46 trên Windows.** Đăng nhập nền đã có kết quả người dùng; selector/cài đặt/tài nguyên media/CORS của Flow thật vẫn cần thử một clip. Nếu UI hoặc nguồn tải không hỗ trợ, v46 báo rõ và không tự đổi model, tài khoản hay gửi lại. Không khẳng định mọi tài khoản Google đều chạy nền được.
+
+## Sửa tải ảnh Ingredients
+
+Giữ chế độ Ingredients (không ép Frames). Worker chỉ điền prompt sau khi xác nhận có đúng một ảnh xem trước mới trong vùng tạo, ảnh đã tải xong và không còn trạng thái tải/lỗi. Việc gán tệp vào input hoặc hộp chọn tệp chưa được coi là gắn ảnh thành công. Input ảnh được giới hạn trong composer hoặc hộp tải đang mở để tránh chọn nhầm input ở khu vực khác.
+
+Ở chế độ nền, không xác nhận được ảnh thì dừng trước prompt/Tạo, lưu ảnh chẩn đoán tại node và không yêu cầu tải thủ công. Kiểm tra lại ảnh và cấu hình ngay trước gửi; giao diện Tài khoản giữ nguyên.
+
+Kiểm thử trên bản nguồn đầy đủ (ZIP v46 giải nén, chép đè các file local_engine v46 đã sửa): `python3 -m local_engine.check_reference_upload_v46`, `python3 -m local_engine.check_background_veo_v46`, `python3 -m local_engine.check_simple_flow_v44`, `python3 -m local_engine.check_account_api_v46`. Dùng Chromium và fixture, không chứng nhận Google thật. Bản EXE cập nhật 2026.11.01.46.1 đã đóng gói tại downloads/v46-ingredients-fix; gói source ZIP và EXE v46 cũ giữ nguyên.

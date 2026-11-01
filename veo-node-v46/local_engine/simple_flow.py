@@ -6,7 +6,7 @@ from fastapi.responses import FileResponse
 from .request_ledger import NO_RESULT,RequestConflict
 from .admission import guarded_submission
 from .simple_flow_upload import upload_reference
-from .simple_flow_dom import ResultObserver,create_button,prepare_settings,previews,uploaded_preview
+from .simple_flow_dom import ResultObserver,create_button,prepare_settings,settings_ready,previews,uploaded_preview
 
 MODEL='veo-3.1-lite-i2v-8s-portrait'
 class SimpleStopped(RuntimeError):pass
@@ -270,6 +270,11 @@ class SimpleFlow:
    self.phase(rid,'uploading','Đang tải ảnh đầu lên Flow.')
    delivered=await upload_reference(self.page,reference,lambda text:None)
    attached=await uploaded_preview(self.page,before)if automatic_mode and delivered else False
+   if automatic_mode and not attached:
+    if background:raise SimpleStopped('Chưa xác nhận ảnh tham khảo đã gắn thành công trong Ingredients. Chưa điền prompt hoặc bấm Tạo; xem ảnh bước đang vướng trong node.')
+    await self.checkpoint('image','Chưa xác nhận ảnh tham khảo đã gắn thành công trong Ingredients. Kiểm tra đúng ảnh trên Flow rồi Tiếp tục; chưa điền prompt hoặc bấm Tạo.')
+    attached=await uploaded_preview(self.page,before)
+    if not attached:raise SimpleStopped('Chưa xác nhận ảnh tham khảo đã gắn thành công. Chưa điền prompt hoặc bấm Tạo.')
    if not automatic_mode:
     await self.checkpoint('image','Kiểm tra ảnh đầu đã gắn đúng trong ô tạo Flow. '+('Đã gửi tệp.'if delivered else'Chưa tự tải được: tải ảnh thủ công từ '+str(reference))+' Tiếp tục chỉ khi đã nhìn thấy đúng ảnh; bấm Dừng nếu chưa đúng.')
    await self.assert_ready()
@@ -281,12 +286,13 @@ class SimpleFlow:
     # One fallback checkpoint for the specific unverified inputs, not three routine steps.
     missing=[]
     if self.email is None:missing.append('đúng tài khoản Flow')
-    if not settings:missing.append('Veo Lite, 8 giây, 9:16, x1, chế độ từ ảnh')
-    if not attached:missing.append('đúng ảnh đầu'+(' (tải thủ công từ '+str(reference)+')'if not delivered else''))
+    if not settings:missing.append('Veo Lite, 8 giây, 9:16, x1, Ingredients')
+    if not attached:missing.append('ảnh tham khảo đã gắn thành công trong Ingredients')
     if not filled:missing.append('prompt từ node đã được dán đúng')
     if missing and background:raise SimpleStopped('Chưa tự xác minh được '+', '.join(missing)+'. Chưa bấm Tạo; xem ảnh bước đang vướng trong node.')
     if missing:await self.checkpoint('review','Chưa tự xác minh được: '+', '.join(missing)+'. Kiểm tra trên Flow rồi Tiếp tục để tạo một lần; có thể tốn credit.')
-    elif not await prepare_settings(self.page):raise SimpleStopped('Cài đặt Flow đã đổi trước khi gửi. Chưa bấm Tạo.')
+    elif not await settings_ready(self.page):raise SimpleStopped('Cài đặt Flow đã đổi trước khi gửi. Chưa bấm Tạo.')
+    if not await uploaded_preview(self.page,before,timeout=1):raise SimpleStopped('Ảnh tham khảo không còn được xác nhận trong Ingredients trước khi gửi. Chưa bấm Tạo.')
    else:await self.checkpoint('submit','Cảnh '+payload['scene_id']+': kiểm tra đúng ảnh, prompt, Veo Lite, 8 giây, 9:16 và x1 trên Flow. Tiếp tục cho phép bấm Tạo một lần, có thể tốn credit.')
    await self.assert_ready()
    button=await create_button(self.page)

@@ -1,0 +1,12 @@
+{
+  "version": "2026.11.01.46.1",
+  "verified_files": 55,
+  "changed_payload_entries": [
+    "files/app/local_engine/simple_flow.py",
+    "files/app/local_engine/simple_flow_dom.py",
+    "files/app/local_engine/simple_flow_upload.py",
+    "patch-manifest.json"
+  ],
+  "sha256": "21ff4bee658c0f0c50f56c6cbfd6b2fc3a23ab7dc817c094f3f3df39e2403059",
+  "windows_execution_tested": false
+}

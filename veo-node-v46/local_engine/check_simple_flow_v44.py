@@ -24,7 +24,7 @@ async def main():
   image=io.BytesIO();Image.new('RGB',(90,160),'green').save(image,format='PNG');img='data:image/png;base64,'+base64.b64encode(image.getvalue()).decode()
   html='''<script>window.WIZ_global_data={oPEP7c:'fixture@invalid'};window.sent=0;</script>
   <article id="old">Smile and wave.<video src="OLD"></video><span>90%</span></article>
-  <form onsubmit="return false"><button type=button>Frames to Video</button><button type=button>Veo 3.1 Lite · 8s · 9:16 · x1</button>
+  <form onsubmit="return false"><button type=button>Ingredients to Video</button><button type=button>Veo 3.1 Lite · 8s · 9:16 · x1</button>
   <input type=file accept="image/*" onchange="document.querySelector('#preview').src='IMAGE'"><img id=preview>
   <textarea></textarea><button type=button onclick="window.sent++;document.querySelector('#results').innerHTML='<article id=new><p>Smile and wave.</p><div role=progressbar aria-valuenow=37></div></article>'">Generate</button></form><div id=results></div>'''.replace('IMAGE',img).replace('OLD',video)
   async with async_playwright()as pw:
@@ -71,10 +71,10 @@ async def main():
    await page.evaluate("""()=>document.body.insertAdjacentHTML('beforeend','<article id=percent-prompt><p>Show 100% cotton.</p><p>Generating</p></article>')""")
    row=await observer.read();assert row and row['progress']is None
    # Settings must use selected values, not an unselected Lite option.
-   await page.set_content('<form><textarea></textarea><select><option selected>Veo Quality</option><option>Veo Lite 8s 9:16 x1 Frames to Video</option></select><button>Generate</button></form>')
+   await page.set_content('<form><textarea></textarea><select><option selected>Veo Quality</option><option>Veo Lite 8s 9:16 x1 Ingredients to Video</option></select><button>Generate</button></form>')
    assert not await settings_ready(page)
-   # Button popovers can set frame mode without pressing Generate.
-   await page.set_content("""<form onsubmit='return false'><textarea></textarea><button type=button id=mode onclick="document.querySelector('#menu').hidden=false">Text to Video</button><button type=button>Veo Lite · 8s · 9:16 · x1</button><button type=button onclick="window.badSend=true">Generate</button></form><div id=menu hidden><div role=option onclick="document.querySelector('#mode').textContent='Frames to Video';document.querySelector('#menu').hidden=true">Frames to Video</div></div>""")
+   # Button popovers can set Ingredients mode without pressing Generate.
+   await page.set_content("""<form onsubmit='return false'><textarea></textarea><button type=button id=mode onclick="document.querySelector('#menu').hidden=false">Text to Video</button><button type=button>Veo Lite · 8s · 9:16 · x1</button><button type=button onclick="window.badSend=true">Generate</button></form><div id=menu hidden><div role=option onclick="document.querySelector('#mode').textContent='Ingredients to Video';document.querySelector('#menu').hidden=true">Ingredients to Video</div></div>""")
    assert await prepare_settings(page)and not await page.evaluate('!!window.badSend')
    # Unknown settings/image proof leads to ONE review step, then no extra project/image/submit prompts.
    await page.goto('https://flow.google.com/project/fixture');s.page=page

@@ -19,7 +19,15 @@ async def upload_reference(page, reference, log):
         chooser_tasks.add(task)
         task.add_done_callback(chooser_tasks.discard)
     async def fill_input():
-        inputs = page.locator('input[type="file"]')
+        from .simple_flow_dom import composer
+        _, scope = await composer(page)
+        dialogs = page.get_by_role('dialog').filter(visible=True)
+        if await dialogs.count() > 1:
+            return False
+        target = dialogs if await dialogs.count() == 1 else scope
+        if target is None:
+            return False
+        inputs = target.locator('input[type="file"]')
         candidates = []
         explicit_images = []
         for index in range(await inputs.count()):
@@ -43,12 +51,10 @@ async def upload_reference(page, reference, log):
     try:
         if await fill_input():
             return True
-        editors = page.locator('textarea, [contenteditable="true"], [role="textbox"]').filter(visible=True)
-        scope = page
-        if await editors.count() == 1:
-            composer = editors.locator('xpath=ancestor::*[.//button][1]')
-            if await composer.count() == 1:
-                scope = composer
+        from .simple_flow_dom import composer
+        _, scope = await composer(page)
+        if scope is None:
+            return False
         add_name = re.compile(r'^(\+|add|add image|add media|add reference|attach|attach file|upload|upload image|upload media|thêm|thêm ảnh|tải ảnh lên|tải lên)$', re.I)
         buttons = scope.get_by_role('button', name=add_name).filter(visible=True)
         if await buttons.count() != 1:
@@ -72,7 +78,7 @@ async def upload_reference(page, reference, log):
             await asyncio.sleep(.2)
         return False
     except PlaywrightTimeoutError:
-        log('Nút tải ảnh chưa sẵn sàng. Có thể mở nút + thủ công rồi thử lại.')
+        log('Nút tải ảnh chưa sẵn sàng; chưa xác nhận gắn ảnh.')
         return False
     finally:
         page.remove_listener('filechooser', on_chooser)
