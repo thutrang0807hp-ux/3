@@ -303,7 +303,7 @@ async def run_pair(service,report,raw,mime,prompt,settings,token):
             report['errors']['settings']={'type':type(exc).__name__,'message':str(exc)}
             report['logs'].append('Cấu hình chưa hoàn tất; vẫn tiếp tục ảnh và prompt.')
         await check()
-        await service.page.keyboard.press('Escape',timeout=2000)
+        await asyncio.wait_for(service.page.keyboard.press('Escape'),timeout=2)
         from .flow_composer_upload import upload_into_composer_and_fill
         await upload_into_composer_and_fill(service.page,reference,prompt,check,report=report)
     except asyncio.CancelledError:

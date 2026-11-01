@@ -98,7 +98,7 @@ async def upload_into_composer_and_fill(page,image_path,prompt,check,*,report=No
             error('attachment',exc)
         await check()
         # Escape dismisses the media popover before filling; no resubmission.
-        try:await page.keyboard.press('Escape',timeout=2000)
+        try:await asyncio.wait_for(page.keyboard.press('Escape'),timeout=2)
         except Exception as exc:error('close_media_menu',exc)
         await check()
         try:await asyncio.wait_for(fill(),12)

@@ -1,8 +1,8 @@
 {
-  "version": "2026.11.02.4629",
-  "file": "SceneForge-Update-20261102-v46.29-Composer-Upload.exe",
+  "version": "2026.11.02.4630",
+  "file": "SceneForge-Update-20261102-v46.30-Composer-Hotfix.exe",
   "bytes": 3986944,
-  "sha256": "25062653f546d924c1fb23dde5c5a00664da0231fc271b16d943aba1b6f31bed",
+  "sha256": "921a2df844b5516e5a15a79105c454e2efc3fdb1c2098332bccbdfcea882b7d2",
   "files": 7,
   "minimum_patch": "2026.11.01.467",
   "embedded_files_verified": true,

@@ -1,7 +1,9 @@
 """Local Chromium fixture only; no live Google Flow or video generation."""
 import asyncio,tempfile
 from pathlib import Path
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock,patch
+from types import SimpleNamespace
+from .flow_pair_trial import run_pair
 from playwright.async_api import async_playwright
 from .flow_composer_upload import upload_into_composer_and_fill
 
@@ -28,7 +30,21 @@ async def main():
    report=await upload_into_composer_and_fill(page,image,'Second prompt',AsyncMock())
    assert not report['delivered'] and not report['image_attached'] and report['prompt_verified'],report
    assert await page.evaluate('window.files')==0 and await page.evaluate('window.sent')==0
+   # Exercise the actual orchestrator, not just the upload helper.
+   await page.set_content(HTML)
+   selection={'available':True,'account_id':'account','token':'token'}
+   service=SimpleNamespace(root=Path(folder),page=page,
+       account_bridge=SimpleNamespace(selection=lambda:selection),
+       assert_ready=AsyncMock(),disconnect_browser=AsyncMock(),restore=AsyncMock(),active='trial')
+   report={'request_id':'flow-pair-orchestrator','account_id':'account'}
+   with patch('local_engine.flow_pair_trial.apply_settings',AsyncMock(return_value=True)):
+    await run_pair(service,report,b'fixture','image/png','Orchestrated prompt',{},'token')
+   assert report['state']=='inputs_sent',report
+   assert report['delivered'] and report['prompt_verified'] and report['image_attached'],report
+   assert not report['errors'] and service.active is None,report
+   assert await page.evaluate('window.sent')==0 and await page.evaluate('window.wrong')==0
+   assert (Path(folder)/'flow-pair-orchestrator.pair.json').is_file()
   await browser.close()
- print('PASS Chromium: composer-only +, real filechooser delivery once, chip without decoded preview, prompt readback, no Generate; existing chip preserved and prompt still handled.')
+ print('PASS Chromium: composer-only +, real filechooser delivery once, chip without decoded preview, prompt readback, no Generate; existing chip preserved; actual run_pair passes settings-to-upload transition without TypeError.')
 
 if __name__=='__main__':asyncio.run(main())
