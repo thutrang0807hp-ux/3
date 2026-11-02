@@ -306,6 +306,9 @@ async def run_pair(service,report,raw,mime,prompt,settings,token):
         await asyncio.wait_for(service.page.keyboard.press('Escape'),timeout=2)
         from .flow_composer_upload import upload_into_composer_and_fill
         await upload_into_composer_and_fill(service.page,reference,prompt,check,report=report)
+        await check()
+        from .flow_pair_generation import seal_pair
+        await seal_pair(service,report,settings)
     except asyncio.CancelledError:
         report.update(state='failed',message='Đã dừng lượt thử; chưa gửi tạo video.');raise
     except Exception as error:

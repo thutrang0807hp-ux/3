@@ -288,7 +288,7 @@ class SimpleFlow:
   return {**report,'code':code,'message':message}
  @guarded_submission
  async def submit(self,body):
-  if getattr(self,'pair_trial_only',False):raise HTTPException(409,'Bản thử này chỉ tự đưa ảnh và prompt sang Flow; chưa mở gửi tạo video.')
+  if getattr(self,'pair_trial_only',False) and not (body.get('prepared_request_id') and body.get('prepared_request_id')==(getattr(self,'pair_report',None) or {}).get('request_id')):raise HTTPException(409,'Cần chuẩn bị ảnh + prompt bằng lượt trực tiếp trước khi tạo video.')
   if not self.enabled():raise HTTPException(409,'Node Veo mới cần phiên Flow đơn giản. Bấm Kết nối Flow trước.')
   rid=body.get('request_id');self.valid_id(rid)
   prompt=body.get('prompt');refs=body.get('references')
@@ -406,7 +406,10 @@ class SimpleFlow:
     try:await validate_prepared(self,payload,raw)
     except PrepareStopped as exc:raise SimpleStopped(str(exc))from None
    self.ledger.set_metadata(rid,{'clicked':button is not None,'manual_submit_allowed':button is None});self.sent=True
-   if payload.get('prepared_request_id'):self.prepare_report['state']='submitted'
+   if payload.get('prepared_request_id'):
+    prepared=(getattr(self,'pair_report',None) or {})
+    if prepared.get('request_id')!=payload['prepared_request_id']:prepared=self.prepare_report
+    prepared['state']='submitted'
    self.phase(rid,'submitting','Đang gửi một lượt tạo trên Flow.')
    if button is not None:await button.click(timeout=15000)
    else:await self.checkpoint('manual-submit','Chưa nhận diện duy nhất nút tạo. Bấm Tạo trên Flow MỘT lần rồi Tiếp tục. App không bấm lại.')

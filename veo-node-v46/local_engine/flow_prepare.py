@@ -394,6 +394,10 @@ async def prepare_composer(page, reference, prompt, settings, check, report, sel
 
 
 async def validate_prepared(service, payload, raw):
+    pair=getattr(service,'pair_report',None)
+    if pair and payload.get('prepared_request_id')==pair.get('request_id'):
+        from .flow_pair_generation import validate_pair
+        return await validate_pair(service,payload,raw)
     report=service.prepare_report
     if not report or report['state']!='ready' or payload.get('prepared_request_id')!=report['request_id']:
         raise PrepareStopped('Lượt gắn ảnh/prompt không còn sẵn sàng. Chuẩn bị lại, chưa gửi tạo.')
