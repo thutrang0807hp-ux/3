@@ -1,10 +1,8 @@
-# SceneForge v46.35 — báo cáo theo dõi video
+# SceneForge v46.36 — tự tìm lượt video cần kiểm tra
 
-1. Đóng SceneForge, chạy SceneForge-Update-20261102-v46.35-Tracking-Report.exe, chọn thư mục có SceneForge.exe và install-settings.json. Yêu cầu v46.7 trở lên.
-2. Mở lại đúng phòng/cảnh/tài khoản của lượt đã gửi. Không tạo video lại.
-3. Bấm **Tải báo cáo theo dõi video** bên dưới thanh tiến độ, không cần bấm Dừng trước.
-4. Gửi file SceneForge-theo-doi-video.json trong chat. File ghi cấu trúc các thẻ, số video/phần trăm nhìn thấy và lý do thẻ không khớp. Nếu không đọc được Flow, báo cáo vẫn tải với lỗi và dữ liệu gần nhất.
+1. Đóng SceneForge, chạy SceneForge-Update-20261102-v46.36-Auto-Tracking.exe, chọn thư mục có SceneForge.exe và install-settings.json. Yêu cầu v46.7 trở lên.
+2. Mở lại đúng phòng và chọn đúng tài khoản đã tạo video. Không cần tìm mã hoặc chọn lại cảnh.
+3. Trong node Veo, phần **Video đã gửi chưa nhận được kết quả** nằm phía trên chọn cảnh. Bấm **Tự kiểm tra video đã gửi và tải báo cáo**.
+4. Gửi file SceneForge-theo-doi-video.json trong chat. Nhiều lượt unknown được gộp vào một file; dùng prompt gốc trong toàn bộ lịch sử Flow của phòng, kể cả schema cũ. Nếu thiếu prompt hoặc không mở được Flow, file ghi lỗi cùng dữ liệu gần nhất.
 
-Với lượt đang chạy: đọc trạng thái hiện tại. Với lượt unknown đã dừng: mở lại dự án đã lưu bằng đúng tài khoản để đọc, rồi đóng phiên. Không bấm Generate, không nhận video theo phỏng đoán, không đổi unknown hoặc mở retry. Khi mở lại không còn baseline trước lúc gửi nên báo cáo ghi rõ giới hạn này.
-
-Giữ upload .33 và nút tạo .34. Bản .35 chỉ bổ sung chẩn đoán, chưa sửa dứt điểm việc theo dõi hoặc khôi phục video trên Flow thật. Đã kiểm tra Chromium/ledger/API mô phỏng; chưa xác minh trên Flow thật hoặc chạy installer Windows.
+Không tạo lại video, không đổi unknown, không mở retry. Giữ đường upload .33 và nút tạo .34. Bản .36 bổ sung chẩn đoán và tự chọn lượt đúng; chưa sửa dứt điểm theo dõi hoặc khôi phục video trên Flow thật. Đã kiểm tra Chromium/ledger/API mô phỏng; chưa xác minh trên Flow thật hoặc chạy installer Windows.

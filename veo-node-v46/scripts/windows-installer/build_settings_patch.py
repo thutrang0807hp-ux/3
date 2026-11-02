@@ -9,8 +9,8 @@ import zipfile
 import dnfile
 
 ROOT = Path(__file__).resolve().parents[3]
-VERSION = '2026.11.02.4635'
-NAME = 'SceneForge-Update-20261102-v46.35-Tracking-Report.exe'
+VERSION = '2026.11.02.4636'
+NAME = 'SceneForge-Update-20261102-v46.36-Auto-Tracking.exe'
 BASELINE = '8178af48a4db6180eb0fb3ef042b04ea21617c7380ca2e106d8e967990eb0c35'
 
 def main():
@@ -70,7 +70,7 @@ def main():
     report = {'version': VERSION, 'file': NAME, 'bytes': len(data), 'sha256': digest, 'files': len(sources),
               'minimum_patch': manifest['minimum_patch'], 'embedded_files_verified': True,
               'prompt_filled_separate_from_verified': True, 'prompt_readback_required': False,
-              'image_prompt_trial': True, 'generation_disabled': False, 'single_generation_after_pair_receipt': True, 'progress_source': 'flow_ui', 'read_only_tracking_diagnostics': True, 'preview_required': False,
+              'image_prompt_trial': True, 'generation_disabled': False, 'single_generation_after_pair_receipt': True, 'progress_source': 'flow_ui', 'read_only_tracking_diagnostics': True, 'automatic_unknown_selection_by_room_and_account': True, 'preview_required': False,
               'composer_upload_timeout_seconds': 45, 'prompt_timeout_seconds': 12,
               'upload_implementation': 'composer_filechooser_v46_31', 'uploader_byte_identical_to_v46_19': True,
               'uploader_sha256': upload19_sha256,

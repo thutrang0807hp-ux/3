@@ -65,7 +65,7 @@ async def inspect_tracking(service,rid,body):
     meta=service.ledger.metadata(rid)
     if body.get('store_id')!=service.ledger.store_id or body.get('room_id')!=meta.get('room_id'):
         raise HTTPException(409,'Kho dữ liệu hoặc phòng không khớp lượt đang kiểm tra.')
-    prompt=body.get('prompt')
+    prompt=body.get('prompt') or meta.get('prompt')
     if not isinstance(prompt,str) or not prompt.strip() or len(prompt)>20000:
         raise HTTPException(400,'Thiếu prompt đã gửi của lượt cũ.')
     if not service.account_bridge:raise HTTPException(409,'Cần tài khoản Flow đã chọn.')

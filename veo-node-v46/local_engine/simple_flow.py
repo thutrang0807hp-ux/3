@@ -48,8 +48,8 @@ class SimpleFlow:
    'selection':{'mode':'selected','account_id':self.account_id(),'account_name':self.email or (self.binding()or{}).get('email') or 'Flow · phiên đã xác nhận','available':bool(self.connected and self.page and not self.page.is_closed()),'token':self.token}}
  def unresolved(self):
   with self.ledger.connect()as db:
-   rows=db.execute("SELECT r.id,m.metadata FROM request r JOIN request_meta m ON r.id=m.id WHERE r.state='unknown'").fetchall()
-  return [{'id':rid,'scene_id':(json.loads(meta or '{}')).get('scene_id','')}for rid,meta in rows if (json.loads(meta or '{}')).get('transport')=='simple_flow']
+   rows=db.execute("SELECT r.id,m.metadata,r.updated FROM request r JOIN request_meta m ON r.id=m.id WHERE r.state='unknown' ORDER BY r.updated DESC").fetchall()
+  return [{'id':rid,'scene_id':data.get('scene_id',''),'part':data.get('part',''),'room_id':data.get('room_id',''),'account_id':data.get('account_id',''),'updated':updated}for rid,meta,updated in rows for data in [json.loads(meta or '{}')] if data.get('transport')=='simple_flow']
  async def review(self,rid,body):
   self.valid_id(rid)
   if self.busy():raise HTTPException(409,'Dừng lượt đang chạy trước khi đối soát.')
@@ -336,7 +336,7 @@ class SimpleFlow:
    try:self.ledger.claim(rid,payload)
    except (ValueError,RequestConflict)as exc:raise HTTPException(409,str(exc))from None
    digest=hashlib.sha256(json.dumps({k:v for k,v in payload.items()if k!='account_id'},sort_keys=True).encode()).hexdigest()
-   self.ledger.set_metadata(rid,{'transport':'simple_flow','payload_sha256':digest,'clicked':False,'automatic':body.get('automatic')is True,'phase':'preparing','progress':None})
+   self.ledger.set_metadata(rid,{'transport':'simple_flow','payload_sha256':digest,'clicked':False,'automatic':body.get('automatic')is True,'phase':'preparing','progress':None,'prompt':payload['prompt'],'part':payload['part']})
    self.active=rid;self.pinned_account=payload['account_id'];self.pinned_room=payload['room_id'];self.cancel_reason=None;self.sent=False;self.task=asyncio.create_task(self.run(rid,payload,raw))
    self.tasks[rid]=self.task
    return self.lookup(rid)

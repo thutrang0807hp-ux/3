@@ -18,7 +18,7 @@ async def main():
   service.assert_ready=AsyncMock();service.disconnect_browser=AsyncMock()
   rid='flow-tracking-fixture-unknown';prompt='A person waves slowly and smiles at the camera. Keep the same outfit.'
   service.ledger.claim(rid,{'room_id':'room','scene_id':'scene','account_id':'account','kind':'video'})
-  service.ledger.set_metadata(rid,{'transport':'simple_flow','phase':'waiting'})
+  service.ledger.set_metadata(rid,{'transport':'simple_flow','phase':'waiting','prompt':prompt,'part':'a'})
   service.ledger.finish(rid,'unknown')
   async with async_playwright() as p:
    browser=await p.chromium.launch(executable_path='/usr/bin/chromium',args=['--no-sandbox'])
@@ -53,6 +53,10 @@ async def main():
    for changed in (dict(body,room_id='other'),dict(body,store_id='other')):
     try:await inspect_tracking(service,rid,changed);raise AssertionError('Wrong binding accepted')
     except HTTPException as e:assert e.status_code==409
+   fallback=await inspect_tracking(service,rid,dict(body,prompt=''))
+   assert fallback['result_tracking']['expected_prompt_length']==len(' '.join(prompt.split()))
+   unknown=service.unresolved()[0]
+   assert unknown['room_id']=='room' and unknown['account_id']=='account' and unknown['part']=='a'
    selection['account_id']='other'
    try:await inspect_tracking(service,rid,body);raise AssertionError('Wrong account accepted')
    except HTTPException as e:assert e.status_code==409

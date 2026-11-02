@@ -11,13 +11,13 @@ from .check_flow_prepare_ui import Quiet
 def main():
  root=Path(__file__).resolve().parents[2]
  server=ThreadingHTTPServer(('127.0.0.1',0),partial(Quiet,directory=str(root)));Thread(target=server.serve_forever,daemon=True).start()
- posts=[];pairs=[];errors=[];selection={'available':True,'account_id':'account','account_name':'Fixture','token':'fixture'}
+ posts=[];pairs=[];errors=[];unresolved=[];selection={'available':True,'account_id':'account','account_name':'Fixture','token':'fixture'}
  try:
   with sync_playwright() as p:
    browser=p.chromium.launch(executable_path='/usr/bin/chromium',args=['--no-sandbox']);page=browser.new_page();page.on('pageerror',lambda e:errors.append(str(e)))
    def api(route):
     path=route.request.url.split('/local-api/')[1]
-    if path=='flow/simple/status':return route.fulfill(json={'enabled':True,'selection':selection,'unresolved':[]})
+    if path=='flow/simple/status':return route.fulfill(json={'enabled':True,'selection':selection,'unresolved':unresolved})
     if path=='flow/simple/pair-trial':
      body=route.request.post_data_json;pairs.append(body)
      return route.fulfill(json={'request_id':'flow-pair-ready','state':'inputs_sent','message':'Ready',
@@ -72,8 +72,51 @@ def main():
    payload=json.loads(Path(fallback.value.path()).read_text())
    assert 'tracking_capture_error' in payload['report'] and payload['report']['can_retry'] is False
    assert len(posts)==1
+   # An older unknown from another scene/schema must override the latest failed job.
+   old='flow-91d22109-84b3-4515-bbeb-f176580f176c';other='flow-older-second'
+   unresolved.extend([
+    {'id':old,'room_id':'room','account_id':'account','scene_id':'older-scene'},
+    {'id':'flow-foreign-room','room_id':'elsewhere','account_id':'account'},
+    {'id':'flow-foreign-account','room_id':'room','account_id':'another'},
+   ])
+   page.evaluate("""old=>{
+    for(const job of project.cloudJobs)job.state='failed';
+    project.cloudJobs.push({id:old,provider:'flow',kind:'video',sceneId:'older-scene',part:'a',prompt:'Original old prompt',state:'unknown',veoNodeVersion:42});
+   }""",old)
+   page.route('**/local-api/flow/simple/jobs/*',lambda r:r.fulfill(json={'request_id':r.request.url.split('/')[-1],'state':'unknown','store_id':'fixture','result':None}))
+   captured=[]
+   def tracking(route):
+    captured.append((route.request.url.split('/')[-1],route.request.post_data_json))
+    route.fulfill(json={'request_id':captured[-1][0],'can_retry':False,'result_tracking':{'read_only':True}})
+   page.route('**/local-api/flow/simple/tracking-diagnostics/*',tracking)
+   page.evaluate('()=>SFVeoNode.refresh()')
+   panel=node.locator('[data-vn-unresolved-tracking]');expect(panel).to_be_visible()
+   expect(panel).to_contain_text('Có 1 lượt')
+   expect(node.locator('[data-vn=pair-trial]')).to_be_disabled()
+   with page.expect_download() as automatic:panel.locator('[data-vn=tracking-report]').click()
+   payload=json.loads(Path(automatic.value.path()).read_text())
+   assert payload['report']['request_id']==old and captured[-1][1]['prompt']=='Original old prompt',captured
+   assert len(posts)==1
+   # Multiple unknowns are collected, rather than forcing a code/scene selection.
+   unresolved.append({'id':other,'room_id':'room','account_id':'account','scene_id':'third-scene'})
+   page.evaluate('()=>SFVeoNode.refresh()');expect(panel).to_contain_text('Có 2 lượt')
+   with page.expect_download() as batch:panel.locator('[data-vn=tracking-report]').click()
+   payload=json.loads(Path(batch.value.path()).read_text())
+   assert payload['report']['request_ids']==[old,other] and len(payload['report']['reports'])==2
+   assert payload['report']['can_retry'] is False
+   assert all(item[0] not in ('flow-foreign-room','flow-foreign-account') for item in captured)
+   assert len(posts)==1
+   # A missing GET receipt must still produce a fallback report, not a JS error.
+   unresolved[:]=[unresolved[0]]
+   page.route('**/local-api/flow/simple/jobs/*',lambda r:r.fulfill(status=503,json={'detail':'Receipt unavailable'}))
+   page.route('**/local-api/flow/simple/diagnostics/*',lambda r:r.fulfill(json={'request_id':old,'can_retry':False}))
+   page.evaluate('()=>SFVeoNode.refresh()')
+   with page.expect_download() as no_record:panel.locator('[data-vn=tracking-report]').click()
+   payload=json.loads(Path(no_record.value.path()).read_text())
+   assert payload['report']['request_id']==old and 'tracking_capture_error' in payload['report']
+   assert len(posts)==1
    assert not errors,errors
    browser.close()
-  print('PASS UI: one visible Create button, ready receipt required, changed prompt locks, cancel sends nothing, confirm posts once, 37% rendered, missing percent indeterminate.')
+  print('PASS UI: one visible Create button, ready receipt required, changed prompt locks, cancel sends nothing, confirm posts once, 37% rendered, missing percent indeterminate; automatic older-schema unknown selection, original prompt, batch reports, room/account filtering, missing receipt fallback without any new generation.')
  finally:server.shutdown()
 if __name__=='__main__':main()
