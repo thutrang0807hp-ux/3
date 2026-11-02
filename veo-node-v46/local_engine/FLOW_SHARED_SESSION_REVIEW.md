@@ -1,6 +1,7 @@
 # Duyệt thay đổi lớp session/RPC dùng chung sau .44
 
-Đây là source để duyệt, **chưa nằm trong EXE .44, chưa đóng bản update mới**.
+Code được duyệt tại `2dadc2e`, **chưa nằm trong EXE .44**. Sau khi người dùng
+yêu cầu đóng gói, đã tạo bản thử **v46.45**, gồm đầy đủ module mới và caller.
 Mục đích là bỏ sự lệch giữa các hàm chuẩn bị/upload/gửi/read đã xác nhận
 trong cuộc đối chiếu Phoma. Không coi đây là fix đã được chứng minh cho
 `PUBLIC_ERROR_UNUSUAL_ACTIVITY`.
