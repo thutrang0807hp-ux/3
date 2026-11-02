@@ -1,8 +1,8 @@
 # Duyệt code: phiên → upload nhận ID → gửi → nhận video
 
 Thay đổi này nằm **sau bản v46.43**, chưa có trong EXE v46.43 đã tải trước đó.
-Đã nối vào source SceneForge; **chưa đóng gói bản cài mới**, theo yêu cầu duyệt
-code trước. Chưa xác minh tạo video Google thật hoặc chạy trên Windows.
+Code được duyệt tại `b590750`; sau khi người dùng yêu cầu đóng gói, đã tạo bản
+thử **v46.44**. Chưa xác minh tạo video Google thật hoặc chạy trên Windows.
 
 ## Luồng mới
 
@@ -116,5 +116,6 @@ coi là sửa xong lỗi đó. Chưa mở hàng đợi nhiều cảnh, chưa th�
 đang chạy sau khi khởi động lại app. ID/receipt đã lưu không đồng nghĩa có
 chức năng resume được kiểm chứng trên Flow thật.
 
-Sau khi duyệt mới tạo bản update mới với đầy đủ các module và workflow HTML;
-không tái dùng EXE .43 để đại diện cho thay đổi này.
+Bản thử .44 chứa đầy đủ các module thay đổi và workflow HTML. Có bổ sung tải
+báo cáo của lượt lỗi upload mà không mở trình duyệt hoặc gửi lại. Không tái dùng
+EXE .43 để đại diện cho thay đổi này.

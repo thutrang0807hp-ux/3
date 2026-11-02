@@ -1,6 +1,7 @@
 """Actual workflow HTML with mocked local API. No Google or paid generation."""
 import base64
 import io
+import json
 from functools import partial
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
@@ -18,7 +19,7 @@ def main():
     root=Path(__file__).resolve().parents[2]
     server=ThreadingHTTPServer(('127.0.0.1',0),partial(Quiet,directory=str(root)))
     Thread(target=server.serve_forever,daemon=True).start()
-    posts=[];errors=[]
+    posts=[];errors=[];job_state='running'
     try:
         with sync_playwright() as p:
             browser=p.chromium.launch(executable_path='/usr/bin/chromium',args=['--no-sandbox'])
@@ -35,8 +36,13 @@ def main():
                     return route.fulfill(json={'request_id':body['request_id'],'state':'running','submitted':None,
                         'store_id':'fixture','phase':'native_upload','message':'Đang upload ảnh; chưa gửi tạo.'})
                 if path.startswith('flow/simple/jobs/'):
-                    return route.fulfill(json={'request_id':path.split('/')[-1],'state':'running','submitted':None,
+                    return route.fulfill(json={'request_id':path.split('/')[-1],'state':job_state,'submitted':None,
                         'store_id':'fixture','phase':'native_upload','message':'Đang upload ảnh; chưa gửi tạo.'})
+                if path.startswith('flow/simple/diagnostics/'):
+                    return route.fulfill(json={'request_id':posts[0]['request_id'],'can_retry':False,
+                        'record':{'state':job_state,'native_inputs':{'native_stage':'upload_dispatching','generation_ready':False}}})
+                if path.startswith('flow/simple/tracking-diagnostics/'):
+                    raise AssertionError('Native report download must not reopen or inspect a browser')
                 return route.fulfill(json={})
             page.route('**/local-api/**',api)
             page.goto(f'http://127.0.0.1:{server.server_port}/workflow.html?mode=reference')
@@ -70,9 +76,17 @@ def main():
             assert 'prepared_request_id' not in posts[0]
             assert posts[0]['prompt']=='Wave once.' and posts[0]['confirm_send'] is True
             assert posts[0]['room_id']=='room' and posts[0]['scene_id']=='scene'
+            job_state='failed'
+            page.evaluate('()=>SFVeoNode.sync()')
+            with page.expect_download() as downloaded:
+                node.locator('[data-vn=tracking-report]').click()
+            report=json.loads(Path(downloaded.value.path()).read_text())['report']
+            assert report['record']['state']=='failed'
+            assert report['record']['native_inputs']['native_stage']=='upload_dispatching'
+            assert len(posts)==1
             assert not errors,errors
             browser.close()
-        print('PASS native UI: one Create action, no separate composer preparation, cancel posts nothing, confirm claims one job with image/prompt/scene, no JavaScript errors.')
+        print('PASS native UI: one Create action, cancel posts nothing, confirm claims one job; failed-upload report downloads without browser inspection or resubmission; no JavaScript errors.')
     finally:
         server.shutdown();server.server_close()
 

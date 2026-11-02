@@ -2072,8 +2072,8 @@ async function trackingReport(){
  if(trackingBusy)return;
  const room=project.id,row=selected(),unknown=unresolvedTrackingTargets();
  const current=row&&latestJob(row);
- const targets=unknown.length?unknown:(current&&pendingStates.includes(current.state)?[current]:[]);
- if(!targets.length){state().trackingReportMessage='Không tìm thấy lượt đang chạy hoặc chưa rõ trong phòng và tài khoản này; không lấy lượt lỗi upload thay thế.';paint();return;}
+ const targets=unknown.length?unknown:(current&&(pendingStates.includes(current.state)||remote?.native_pipeline)?[current]:[]);
+ if(!targets.length){state().trackingReportMessage='Không tìm thấy lượt trong phòng và tài khoản này để tải báo cáo.';paint();return;}
  trackingBusy=true;state().trackingReportMessage='App đang tự kiểm tra lượt đã gửi trong phòng này; không tạo lại.';paint();
  const reports=[];
  try{
@@ -2082,7 +2082,7 @@ async function trackingReport(){
    let report,record;
    try{
     record=await workflowLocalRequest('flow/simple/jobs/'+encodeURIComponent(job.id));assertRoom(room);
-    report=await workflowLocalRequest('flow/simple/tracking-diagnostics/'+encodeURIComponent(job.id),{store_id:record.store_id,room_id:room,prompt:job.prompt||'',inspect_video_detail:true});assertRoom(room);
+    if(record.native_inputs||remote?.native_pipeline&&job.id===current?.id){const query=new URLSearchParams({store_id:record.store_id||job.store_id||'',room_id:room});report=await workflowLocalRequest('flow/simple/diagnostics/'+encodeURIComponent(job.id)+'?'+query);}else{report=await workflowLocalRequest('flow/simple/tracking-diagnostics/'+encodeURIComponent(job.id),{store_id:record.store_id,room_id:room,prompt:job.prompt||'',inspect_video_detail:true});}assertRoom(room);
    }catch(e){
     assertRoom(room);
     const query=new URLSearchParams({store_id:record?.store_id||job.store_id||'',room_id:room});
