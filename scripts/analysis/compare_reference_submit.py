@@ -17,6 +17,8 @@ UNCHANGED_CHECKS = ('flow_background_session.py', 'flow_account_session.py',
 
 
 def source(repo, ref, name):
+    if ref == 'WORKTREE':
+        return (repo / 'veo-node-v46/local_engine' / name).read_bytes()
     result = subprocess.run(['git', 'show', ref + ':veo-node-v46/local_engine/' + name],
                             cwd=repo, capture_output=True)
     if result.returncode:
@@ -36,8 +38,18 @@ def compare(repo, phoma, old_ref='7583a0b', new_ref='48e84aa'):
                       'old_sha256': hashlib.sha256(old).hexdigest(),
                       'new_sha256': hashlib.sha256(new).hexdigest()})
     tree = ast.parse(source(repo, new_ref, 'flow_native_reference.py'))
-    submit = next(n.value.value for n in tree.body if isinstance(n, ast.Assign) and
-                  any(isinstance(t, ast.Name) and t.id == 'SUBMIT' for t in n.targets))
+    assignment = next(n for n in tree.body if isinstance(n, ast.Assign) and
+                      any(isinstance(t, ast.Name) and t.id == 'SUBMIT' for t in n.targets))
+    if isinstance(assignment.value, ast.Constant):
+        submit = assignment.value.value
+    elif (isinstance(assignment.value, ast.Call) and isinstance(assignment.value.func, ast.Name) and
+          assignment.value.func.id == 'batch_script'):
+        # Render only our local transport generator, never the Phoma backend.
+        namespace = {}
+        exec(compile(source(repo,new_ref,'flow_batch_session.py'),'flow_batch_session.py','exec'),namespace)
+        submit = namespace['batch_script']('generation')
+    else:
+        raise ValueError('unsupported_submit_source')
     start = code.index('function Lc(')
     lc = code[start:code.index('function ', start + 15)]
     start = code.index('async function $e(')
@@ -109,8 +121,9 @@ def main():
     ap.add_argument('--phoma', type=Path, required=True)
     ap.add_argument('--repo', type=Path, default=Path(__file__).resolve().parents[2])
     ap.add_argument('--output', type=Path)
+    ap.add_argument('--new-ref', default='48e84aa', help='Commit or WORKTREE for the code currently being reviewed')
     args = ap.parse_args()
-    result = compare(args.repo, args.phoma)
+    result = compare(args.repo, args.phoma, new_ref=args.new_ref)
     text = json.dumps(result, ensure_ascii=False, indent=2) + '\n'
     if args.output:
         args.output.write_text(text, encoding='utf-8')

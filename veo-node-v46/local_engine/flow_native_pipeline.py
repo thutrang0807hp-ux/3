@@ -5,6 +5,7 @@ profile or generation authority. Authentication remains inside the normal page.
 No Phoma preload, challenge interception, fingerprint patches or token export.
 """
 import asyncio
+from .flow_batch_session import batch_script, CONTEXT_JS
 import base64
 import hashlib
 import json
@@ -24,52 +25,7 @@ class NativePipelineStopped(RuntimeError):
     pass
 
 
-RPC = r'''async ({method,project,payload,key=null,upload=null}) => {
-    const allow=['jHPbke','NfrxTb','ve2Lsc','DTaVef','nzlxg','maseQ','as29s'];
-    if(!allow.includes(method))return {not_sent:true,error:'method_denied'};
-    const path=project?'/project/'+project:'/';
-    if(location.origin!=='https://flow.google.com' ||
-       (project && location.pathname.replace(/\/$/,'')!==path) ||
-       (!project && (method!=='jHPbke' || location.pathname!=='/')))
-        return {not_sent:true,error:'project_changed'};
-    const wiz=window.WIZ_global_data || {};
-    if(typeof wiz.cfb2h!=='string' || !wiz.cfb2h || typeof wiz.SNlM0e!=='string' || !wiz.SNlM0e)
-        return {not_sent:true,error:'session_metadata_missing'};
-    if(method==='maseQ'){
-        const state=window[key];delete window[key];
-        if(!state || state.project!==project || state.action!=='MEDIA_GENERATION' ||
-           Date.now()-state.created>20000 || !upload || typeof upload.base64!=='string' ||
-           !['image/png','image/jpeg','image/webp'].includes(upload.mime))
-            return {not_sent:true,error:'upload_session_expired'};
-        const id=()=>crypto.randomUUID().toUpperCase();
-        payload=[[null,22,null,null,null,project,null,null,null,null,[state.token,1]],
-            upload.base64,upload.mime,1,null,null,null,null,upload.filename,null,id(),id()];
-    }else if(upload || key)return {not_sent:true,error:'unexpected_upload_arguments'};
-    const endpoint=new URL('/_/AiSandboxAngularFrontend/data/batchexecute',location.origin);
-    endpoint.searchParams.set('rpcids',method);endpoint.searchParams.set('source-path',path);
-    endpoint.searchParams.set('bl',wiz.cfb2h);
-    if(['string','number'].includes(typeof wiz.FdrFJe))endpoint.searchParams.set('f.sid',String(wiz.FdrFJe));
-    endpoint.searchParams.set('hl',document.documentElement.lang||'en-GB');
-    endpoint.searchParams.set('_reqid',String(Date.now()%100000000));endpoint.searchParams.set('rt','c');
-    const form=new URLSearchParams();form.set('f.req',JSON.stringify([[[method,JSON.stringify(payload),null,'generic']]]));
-    form.set('at',wiz.SNlM0e);
-    const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),30000);
-    try{
-        const response=await fetch(endpoint,{method:'POST',credentials:'same-origin',redirect:'error',
-            referrer:new URL(path,location.origin).href,
-            headers:{'content-type':'application/x-www-form-urlencoded;charset=UTF-8','x-same-domain':'1'},
-            body:form,signal:controller.signal});
-        if(!response.body)return {status:response.status,error:'response_body_missing'};
-        const reader=response.body.getReader(),chunks=[];let size=0;
-        try{while(true){const {done,value}=await reader.read();if(done)break;
-            size+=value.length;if(size>2097152)throw Error('response_limit');chunks.push(value);
-        }}finally{await reader.cancel().catch(()=>{});}
-        const bytes=new Uint8Array(size);let offset=0;
-        for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.length;}
-        return {status:response.status,body:new TextDecoder('utf-8',{fatal:true}).decode(bytes)};
-    }catch{return {error:'transport_unconfirmed'};}
-    finally{clearTimeout(timer);controller.abort();}
-}'''
+RPC = batch_script('bootstrap')
 
 
 def unique_id(payload, *, excluded=()):
@@ -155,11 +111,9 @@ class NativeProjectSession:
     async def ready(self):
         await self.check()
         try:
-            await self.page.wait_for_function('''() => {
-                const w=window.WIZ_global_data || {};
-                return typeof w.cfb2h==='string' && !!w.cfb2h &&
-                    typeof w.SNlM0e==='string' && !!w.SNlM0e;
-            }''', timeout=15000)
+            project = None if urlsplit(self.page.url).path == '/' else project_from_url(self.page.url)
+            await self.page.wait_for_function('project => {\n'+CONTEXT_JS+
+                '\nreturn !contextFor(project,true).error;\n}', arg=project, timeout=15000)
         except Exception:
             raise NativePipelineStopped('Phiên Flow chưa nạp đủ metadata RPC; chưa upload hoặc gửi tạo.') from None
         await self.check()

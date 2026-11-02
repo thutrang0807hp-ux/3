@@ -4,6 +4,7 @@ No Generate RPC, no replay, no automatic retry, no token/body/URL persistence.
 Read RPC schemas still require verification against the user's live Flow session.
 """
 import asyncio
+from .flow_batch_session import batch_script
 import copy
 import hashlib
 import time
@@ -17,48 +18,7 @@ from .flow_task_protocol import (
 
 
 # Only the two read methods below can reach fetch. No caller-supplied body or URL.
-READ_RPC = r'''async ({method, project, media, batchPath}) => {
-    if (!['jwpduf', 'as29s'].includes(method)) throw Error('read_method_denied');
-    if (location.origin !== 'https://flow.google.com' ||
-        location.pathname.replace(/\/$/, '') !== '/project/' + project)
-        throw Error('read_project_changed');
-    const wiz = window.WIZ_global_data || {};
-    const build = wiz.cfb2h;
-    // Use the existing page session only. Do not extract CAPTCHA data or export auth.
-    if (typeof build !== 'string' || !build) throw Error('read_session_metadata_missing');
-    const endpoint = new URL(batchPath, location.origin);
-    endpoint.searchParams.set('rpcids', method);
-    endpoint.searchParams.set('source-path', '/project/' + project);
-    endpoint.searchParams.set('bl', build);
-    if (['string', 'number'].includes(typeof wiz.FdrFJe)) endpoint.searchParams.set('f.sid', String(wiz.FdrFJe));
-    endpoint.searchParams.set('rt', 'c');
-    endpoint.searchParams.set('_reqid', String(Date.now() % 100000000));
-    const payload = method === 'jwpduf' ? [null, null, [[media]]] : [media];
-    const form = new URLSearchParams();
-    form.set('f.req', JSON.stringify([[[method, JSON.stringify(payload), null, 'generic']]]));
-    if (typeof wiz.SNlM0e === 'string') form.set('at', wiz.SNlM0e);
-    const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 8000);
-    try {
-        const response = await fetch(endpoint, {
-            method: 'POST', credentials: 'same-origin', redirect: 'error',
-            headers: {'content-type': 'application/x-www-form-urlencoded;charset=UTF-8', 'x-same-domain': '1'},
-            body: form, signal: controller.signal,
-        });
-        if (!response.body) throw Error('read_body_missing');
-        const reader = response.body.getReader(), chunks = []; let size = 0;
-        try {
-            while (true) {
-                const {done, value} = await reader.read(); if (done) break;
-                size += value.length;
-                if (size > 2097152) throw Error('read_body_limit');
-                chunks.push(value);
-            }
-        } finally { await reader.cancel().catch(() => {}); }
-        const bytes = new Uint8Array(size); let offset = 0;
-        for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.length; }
-        return {status: response.status, body: new TextDecoder('utf-8', {fatal: true}).decode(bytes)};
-    } finally { clearTimeout(timer); controller.abort(); }
-}'''
+READ_RPC = batch_script('read')
 
 
 class FlowTaskTracker:

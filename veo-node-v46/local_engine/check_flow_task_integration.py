@@ -74,7 +74,13 @@ async def scenario(browser, root, movie, mode):
         # No composer, settings panel, filechooser, chip or Generate button.
         html = '<title>Flow fixture</title><script>window.sent=0;window.WIZ_global_data={cfb2h:"fixture-build",SNlM0e:"'+SECRET+'"};window.grecaptcha={enterprise:{ready:f=>f(),execute:()=>Promise.resolve("PRIVATE_NATIVE_TOKEN")}};</script>'
         html += '<script type="application/json" src="https://www.google.com/recaptcha/enterprise.js?render=FIXTURE_SITE_KEY"></script>'
+        if mode=='context_fallback':
+            html=html.replace('SNlM0e:"'+SECRET+'"','SNlM0e:""')
+            html+='<input type="hidden" name="at" value="'+SECRET+'">'
     context = await browser.new_context()
+    if pipeline:
+        await context.add_cookies([{'name':'fixture_session','value':'PRIVATE_COOKIE',
+            'url':'https://flow.google.com/','secure':True,'httpOnly':True}])
     counts = {'generate': 0, 'status': 0, 'detail': 0, 'download': 0}
     if pipeline:
         counts.update(upload=0,resolve=0,warmup=0)
@@ -92,6 +98,12 @@ async def scenario(browser, root, movie, mode):
         fields = parse_qs(r.post_data or '')
         call = json.loads(fields['f.req'][0])[0][0]
         method = call[0]
+        if pipeline:
+            query=parse_qs(urlsplit(r.url).query)
+            assert query['hl']==['en-GB']
+            assert query['source-path']==['/project/'+PROJECT]
+            assert await r.header_value('referer')==URL
+            assert 'fixture_session=PRIVATE_COOKIE' in (await r.header_value('cookie') or '')
         if pipeline and method in ('NfrxTb','ve2Lsc','DTaVef','nzlxg'):
             counts['warmup'] += 1
             wire=response([],method)
@@ -229,6 +241,8 @@ async def scenario(browser, root, movie, mode):
     assert await page.evaluate('window.sent') == (0 if native else 1)
     if pipeline:
         assert counts['warmup']==4 and counts['upload']==1, (record,counts)
+        if counts['generate']:
+            assert record['native_inputs']['generation_ready'] is False
         if mode in ('upload_rejected','upload_transport_error','wrong_image_project','account_changed','project_changed'):
             assert record['state']=='failed' and not service.sent and counts['generate']==0, record
             assert record['native_inputs']['upload_attempted'] is True
@@ -246,7 +260,7 @@ async def scenario(browser, root, movie, mode):
         return counts
     assert counts['generate'] == (2 if mode == 'ambiguous' else 1), counts
     assert record['progress'] is None and record['progress_source'] is None, record
-    if mode in ('success','rpc_lines_success'):
+    if mode in ('success','rpc_lines_success','context_fallback'):
         assert record['state'] == 'done' and record['submitted'] is True, record
         result = record['result']
         assert result['provider_identity'] == {'media_id': VIDEO, 'project_id': PROJECT, 'workflow_id': WORKFLOW}
@@ -272,6 +286,7 @@ async def scenario(browser, root, movie, mode):
     exported = json.dumps(record) + json.dumps(service.diagnose(body['request_id']))
     assert SECRET not in exported and 'signature=' not in exported
     assert 'PRIVATE_NATIVE_TOKEN' not in exported
+    assert 'PRIVATE_COOKIE' not in exported
     # Lookup/repeat of exactly the same local request must not send again.
     again = await service.submit(body)
     assert again['state'] == record['state'] and counts['generate'] == (2 if mode == 'ambiguous' else 1)

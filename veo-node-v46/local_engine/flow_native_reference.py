@@ -4,6 +4,7 @@ Uses only the page's normal Enterprise API. No Phoma preload/hijack, fingerprint
 patch, challenge solver, alternate profile, or credential export is included.
 """
 import asyncio
+from .flow_batch_session import batch_script, CONTEXT_JS
 import base64
 import hashlib
 import json
@@ -136,15 +137,15 @@ async def attached_reference(page, report):
     return media
 
 
-PREFLIGHT = r'''async ({key,project,action='VIDEO_GENERATION'}) => {
+PREFLIGHT = (r'''async ({key,project,action='VIDEO_GENERATION'}) => {
+''' + CONTEXT_JS + r'''
     if(!['VIDEO_GENERATION','MEDIA_GENERATION'].includes(action)) return {error:'native_action_denied'};
     const projectPath='/project/'+project;
     const current=()=>location.origin==='https://flow.google.com' &&
         location.pathname.replace(/\/$/,'')===projectPath;
     if(!current()) return {error:'project_changed'};
-    const wiz=window.WIZ_global_data || {};
-    if(typeof wiz.cfb2h!=='string' || !wiz.cfb2h || typeof wiz.SNlM0e!=='string' || !wiz.SNlM0e)
-        return {error:'session_metadata_missing'};
+    const ctx=contextFor(project,true);
+    if(ctx.error)return {error:ctx.error};
     const keys=new Set([...document.querySelectorAll('script[src]')].flatMap(e=>{
         try{const u=new URL(e.src);const host=u.hostname;
             if(!['www.google.com','www.recaptcha.net'].includes(host) ||
@@ -173,47 +174,10 @@ PREFLIGHT = r'''async ({key,project,action='VIDEO_GENERATION'}) => {
     }catch{return {error:'native_verification_failed'};}
     finally{clearTimeout(timer);}
 }'''
+)
 
 
-SUBMIT = r'''async ({key,project,media,prompt}) => {
-    const state=window[key]; delete window[key];
-    if(!state || state.project!==project || state.action!=='VIDEO_GENERATION' || Date.now()-state.created>20000 ||
-       location.origin!=='https://flow.google.com' ||
-       location.pathname.replace(/\/$/,'')!=='/project/'+project)
-        return {not_sent:true,error:'prepared_session_expired'};
-    const wiz=window.WIZ_global_data || {};
-    if(typeof wiz.cfb2h!=='string' || !wiz.cfb2h || typeof wiz.SNlM0e!=='string' || !wiz.SNlM0e)
-        return {not_sent:true,error:'session_metadata_missing'};
-    const id=()=>crypto.randomUUID().toUpperCase();
-    const payload=[[[[null,null,[[[prompt]]]],[[null,media]],'veo_3_1_r2v_lite',1,null,
-        [null,null,null,null,id(),id()]]],
-        [null,22,null,null,null,project,null,null,null,null,[state.token,1]],[id(),2]];
-    const endpoint=new URL('/_/AiSandboxAngularFrontend/data/batchexecute',location.origin);
-    endpoint.searchParams.set('rpcids','MZZa6b');
-    endpoint.searchParams.set('source-path','/project/'+project);
-    endpoint.searchParams.set('bl',wiz.cfb2h);
-    if(['string','number'].includes(typeof wiz.FdrFJe)) endpoint.searchParams.set('f.sid',String(wiz.FdrFJe));
-    endpoint.searchParams.set('rt','c');
-    endpoint.searchParams.set('_reqid',String(Date.now()%100000000));
-    const form=new URLSearchParams();
-    form.set('f.req',JSON.stringify([[['MZZa6b',JSON.stringify(payload),null,'generic']]]));
-    form.set('at',wiz.SNlM0e);
-    const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),20000);
-    try{
-        const response=await fetch(endpoint,{method:'POST',credentials:'same-origin',redirect:'error',
-            headers:{'content-type':'application/x-www-form-urlencoded;charset=UTF-8','x-same-domain':'1'},
-            body:form,signal:controller.signal});
-        if(!response.body)return {status:response.status,error:'response_body_missing'};
-        const reader=response.body.getReader(),chunks=[];let size=0;
-        try{while(true){const {done,value}=await reader.read();if(done)break;
-            size+=value.length;if(size>2097152)throw Error('response_limit');chunks.push(value);
-        }}finally{await reader.cancel().catch(()=>{});}
-        const bytes=new Uint8Array(size);let offset=0;
-        for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.length;}
-        return {status:response.status,body:new TextDecoder('utf-8',{fatal:true}).decode(bytes)};
-    }catch{return {error:'transport_unconfirmed'};}
-    finally{clearTimeout(timer);controller.abort();}
-}'''
+SUBMIT = batch_script('generation')
 
 
 async def prepare(service, report):
@@ -251,7 +215,8 @@ async def submit(service, rid, payload, prepared, tracker):
     metadata={'clicked':False,'direct_rpc_attempted':True,'submission_method':'native_reference_rpc'}
     report=getattr(service,'pair_report',None)
     if report and report.get('preparation_method')=='native_reference_pipeline':
-        report.update(native_stage='generation_dispatching',generation_submitted=None)
+        report.update(native_stage='generation_dispatching',generation_submitted=None,generation_ready=False,
+                      message='Đã bắt đầu lệnh gửi tạo; đang chờ Flow xác nhận.')
         metadata['native_inputs']=dict(report)
     service.ledger.set_metadata(rid, metadata)
     service.sent = True  # Set before the browser call: cancellation is ambiguous.
@@ -261,6 +226,10 @@ async def submit(service, rid, payload, prepared, tracker):
         raise DirectNotReady('Chưa xác định phản hồi gửi tạo; giữ lượt, không tự gửi lại.')
     if reply.get('not_sent') is True:
         service.sent = False
+        if report and report.get('preparation_method')=='native_reference_pipeline':
+            report.update(native_stage='generation_not_sent',generation_submitted=False,generation_ready=False,
+                          message='Phiên thay đổi hoặc hết hạn trước lệnh gửi; chưa tạo video.')
+            service.ledger.set_metadata(rid,{'native_inputs':dict(report),'direct_rpc_not_sent':True})
         raise DirectNotReady('Phiên chuẩn bị đã hết hạn trước lệnh gửi; chưa tạo video.')
     status = reply.get('status')
     if type(status) is not int or not isinstance(reply.get('body'), str):
@@ -270,6 +239,9 @@ async def submit(service, rid, payload, prepared, tracker):
     if report and report.get('preparation_method')=='native_reference_pipeline':
         rejected=tracker.snapshot()['state']=='rpc_rejected'
         report.update(native_stage='generation_accepted' if tracker.identity else 'generation_rejected' if rejected else 'generation_unconfirmed',
-                      generation_submitted=True if tracker.identity else False if rejected else None)
+                      generation_submitted=True if tracker.identity else False if rejected else None,
+                      generation_ready=False,message='Flow đã trả ID video; đang theo dõi.' if tracker.identity else
+                      'Flow đã từ chối lệnh tạo; không tự gửi lại.' if rejected else
+                      'Chưa xác nhận Flow tiếp nhận; giữ lượt để kiểm tra, không tự gửi lại.')
         metadata['native_inputs']=dict(report)
     service.ledger.set_metadata(rid, metadata)

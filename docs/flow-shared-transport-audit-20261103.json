@@ -1,0 +1,71 @@
+{
+  "old_ref": "7583a0b",
+  "new_ref": "WORKTREE",
+  "phoma_sha256": "929a8acef0f970dbf3bf7672c165119b151cfd6be7f1e8c9c18c88a4084910bd",
+  "browser_session_sources": [
+    {
+      "file": "flow_background_session.py",
+      "identical": true,
+      "old_sha256": "810705a40de7ece260ec9329d66e56700334c3bd89c737f944d97a8ad5c2af22",
+      "new_sha256": "810705a40de7ece260ec9329d66e56700334c3bd89c737f944d97a8ad5c2af22"
+    },
+    {
+      "file": "flow_account_session.py",
+      "identical": true,
+      "old_sha256": "388dc4356943e0af842dbea3a78728f1694b505a8e5bb87ba3e6e598d10116f2",
+      "new_sha256": "388dc4356943e0af842dbea3a78728f1694b505a8e5bb87ba3e6e598d10116f2"
+    },
+    {
+      "file": "flow_ui_session.py",
+      "identical": true,
+      "old_sha256": "47be6a88daef9772683ec51a6bc8796ca12320ba516ceb7c8323bcbcc1d218ba",
+      "new_sha256": "47be6a88daef9772683ec51a6bc8796ca12320ba516ceb7c8323bcbcc1d218ba"
+    },
+    {
+      "file": "flow_managed_driver.py",
+      "identical": true,
+      "old_sha256": "0c38726488e03e6eeaedbc06cd1135eff10a881af86fa888549695c42a04f39f",
+      "new_sha256": "0c38726488e03e6eeaedbc06cd1135eff10a881af86fa888549695c42a04f39f"
+    }
+  ],
+  "generation_payload": {
+    "payload_equal": true,
+    "scene_transport": {
+      "query_names": [
+        "_reqid",
+        "bl",
+        "f.sid",
+        "hl",
+        "rpcids",
+        "rt",
+        "source-path"
+      ],
+      "credentials": "include",
+      "explicit_referrer": true,
+      "header_names": [
+        "content-type",
+        "x-same-domain"
+      ]
+    },
+    "phoma_transport": {
+      "query_names": [
+        "_reqid",
+        "bl",
+        "f.sid",
+        "hl",
+        "rpcids",
+        "rt",
+        "source-path"
+      ],
+      "credentials": "include",
+      "explicit_referrer": true,
+      "header_names": [
+        "content-type",
+        "x-same-domain"
+      ]
+    },
+    "fixture_scope": "one image, text prompt without reference tags, Lite portrait"
+  },
+  "network_requests": 0,
+  "live_generation_verified": false
+}

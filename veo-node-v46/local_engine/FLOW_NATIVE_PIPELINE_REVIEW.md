@@ -1,5 +1,9 @@
 # Duyệt code: phiên → upload nhận ID → gửi → nhận video
 
+Bản source sau .44 có thay đổi lớp context/RPC dùng chung, xem
+[FLOW_SHARED_SESSION_REVIEW.md](FLOW_SHARED_SESSION_REVIEW.md). Thay đổi đó
+chưa nằm trong EXE .44.
+
 Thay đổi này nằm **sau bản v46.43**, chưa có trong EXE v46.43 đã tải trước đó.
 Code được duyệt tại `b590750`; sau khi người dùng yêu cầu đóng gói, đã tạo bản
 thử **v46.44**. Chưa xác minh tạo video Google thật hoặc chạy trên Windows.
