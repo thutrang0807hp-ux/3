@@ -27,7 +27,7 @@ def main():
      posts.append(route.request.post_data_json)
      return route.fulfill(json={'request_id':posts[-1]['request_id'],'state':'running','submitted':True,'store_id':'fixture'})
     if path.startswith('flow/simple/tracking-diagnostics/'):
-     return route.fulfill(json={'request_id':path.split('/')[-1],'message':'Đã đọc cấu trúc kết quả Flow; không tạo lại.','can_retry':False,'result_tracking':{'read_only':True,'cards':[{'rejected_because':['full_prompt_not_in_card']}]}})
+     return route.fulfill(json={'request_id':path.split('/')[-1],'message':'Đã đọc cấu trúc kết quả Flow; không tạo lại.','can_retry':False,'network_probe':{'capture_state':'active','association_confirmed':False},'result_tracking':{'read_only':True,'cards':[{'rejected_because':['full_prompt_not_in_card']}]}})
     if path.startswith('flow/simple/diagnostics/'):
      return route.fulfill(json={'request_id':posts[0]['request_id'],'can_retry':False,'record':{'state':'unknown'},'result_tracking':{'read_only':True}})
     if path.startswith('flow/simple/jobs/'):
@@ -63,6 +63,7 @@ def main():
     node.locator('[data-vn=tracking-report]').click()
    payload=json.loads(Path(downloaded.value.path()).read_text())
    assert payload['report']['result_tracking']['read_only'] and payload['report']['can_retry'] is False
+   assert payload['report']['network_probe']['capture_state']=='active'
    assert len(posts)==1
    assert page.evaluate('project.cloudJobs[0].state')=='running'
    # Failed live inspection still downloads the cached receipt and failure reason.

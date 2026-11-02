@@ -21,7 +21,7 @@ class SimpleFlow:
   self.active=None;self.project=None;self.state='idle';self.message='Chưa kết nối Flow đơn giản.'
   self.gate=asyncio.Lock();self.download_waiter=None;self.download_task=None;self.observer=None;self.auto_download=None;self.download_item=None
   self.account_bridge=None;self.account_session=None;self.pinned_binding=None;self.pinned_account=None;self.pinned_room=None
-  self.upload_report=None
+  self.upload_report=None;self.network_probes={};self.network_probe_errors={}
   binding=self.binding()
   if binding:self.channel=binding['browser'];self.token=binding['token'];self.message='Đã lưu dự án Flow; sẽ mở lại khi tạo clip.'
  def binding(self):
@@ -269,7 +269,7 @@ class SimpleFlow:
   with self.ledger.connect()as db:row=db.execute('SELECT state,result,updated FROM request WHERE id=?',(rid,)).fetchone()
   if not row or self.ledger.metadata(rid).get('transport')!='simple_flow':raise HTTPException(404,'Không có lượt SimpleFlow này.')
   meta=self.ledger.metadata(rid)
-  return {**self.ledger.receipt(rid),'state':row[0],'result':json.loads(row[1]) if row[0]=='done'else None,'message':meta.get('message',self.message if self.active==rid else ''),'phase':meta.get('phase'),'progress':meta.get('progress'),'progress_source':meta.get('progress_source'),'has_preview':bool(meta.get('has_preview')),'automatic_retry':False,'saved_video_review':meta.get('saved_video_review'),'needs_manual_review':row[0]=='unknown' and time.time()-row[2]>=180 and not meta.get('saved_video_review',{}).get('allow_new_generation')}
+  return {**self.ledger.receipt(rid),'state':row[0],'result':json.loads(row[1]) if row[0]=='done'else None,'message':meta.get('message',self.message if self.active==rid else ''),'phase':meta.get('phase'),'progress':meta.get('progress'),'progress_source':meta.get('progress_source'),'has_preview':bool(meta.get('has_preview')),'automatic_retry':False,'network_probe_available':rid in self.network_probes or (self.root/(rid+'.network.json')).is_file(),'saved_video_review':meta.get('saved_video_review'),'needs_manual_review':row[0]=='unknown' and time.time()-row[2]>=180 and not meta.get('saved_video_review',{}).get('allow_new_generation')}
  @staticmethod
  def valid_id(rid):
   if not isinstance(rid,str)or not re.fullmatch(r'flow-[a-zA-Z0-9-]{8,100}',rid):raise HTTPException(400,'Mã lượt Flow không hợp lệ.')
@@ -288,7 +288,7 @@ class SimpleFlow:
   elif room_id and meta.get('room_id')!=room_id:
    code='different_room';message='Lượt này thuộc phòng khác. App không nhập kết quả vào phòng đang mở.'
   else:
-   code='found';message='Đã tìm thấy bản ghi trong app; chưa đồng nghĩa đã tìm thấy video trên Flow.';report['record']=self.lookup(rid);report['result_tracking']=meta.get('result_tracking');report['tracking_capture_error']=meta.get('tracking_capture_error')
+   code='found';message='Đã tìm thấy bản ghi trong app; chưa đồng nghĩa đã tìm thấy video trên Flow.';report['record']=self.lookup(rid);report['result_tracking']=meta.get('result_tracking');report['tracking_capture_error']=meta.get('tracking_capture_error');report['network_probe']=self.network_probe_snapshot(rid);report['network_probe_error']=self.network_probe_errors.get(rid)
   return {**report,'code':code,'message':message}
  @guarded_submission
  async def submit(self,body):
@@ -345,6 +345,7 @@ class SimpleFlow:
    self.tasks[rid]=self.task
    return self.lookup(rid)
  async def run(self,rid,payload,raw):
+  network_probe=None
   ext={'image/png':'.png','image/jpeg':'.jpg','image/webp':'.webp'}[payload['references'][0]['mime_type']]
   reference=self.root/(rid+'.input'+ext)
   try:
@@ -409,13 +410,34 @@ class SimpleFlow:
    if payload.get('prepared_request_id'):
     try:await validate_prepared(self,payload,raw)
     except PrepareStopped as exc:raise SimpleStopped(str(exc))from None
+   if button is not None:
+    try:
+     from .flow_network_probe import FlowNetworkProbe
+     network_probe=FlowNetworkProbe(self.page,rid,payload['prompt'],self.assert_ready,context={k:payload[k]for k in ('room_id','scene_id','part','account_id')})
+     await network_probe.start();self.network_probes[rid]=network_probe
+    except SimpleStopped:raise
+    except Exception as exc:
+     self.network_probe_errors[rid]=type(exc).__name__
+     if network_probe:
+      try:await network_probe.stop()
+      except Exception:pass
+     network_probe=None
    self.ledger.set_metadata(rid,{'clicked':button is not None,'manual_submit_allowed':button is None});self.sent=True
    if payload.get('prepared_request_id'):
     prepared=(getattr(self,'pair_report',None) or {})
     if prepared.get('request_id')!=payload['prepared_request_id']:prepared=self.prepare_report
     prepared['state']='submitted'
    self.phase(rid,'submitting','Đang gửi một lượt tạo trên Flow.')
-   if button is not None:await button.click(timeout=15000)
+   if button is not None:
+    if network_probe:
+     try:await network_probe.mark_generate_attempt()
+     except SimpleStopped:raise
+     except Exception as exc:self.network_probe_errors[rid]=type(exc).__name__
+    # A recorder failure never bypasses the original account/project guard.
+    await self.assert_ready()
+    await button.click(timeout=15000)
+    if network_probe:
+     network_probe.mark_click_returned();self.save_network_probe(rid)
    else:await self.checkpoint('manual-submit','Chưa nhận diện duy nhất nút tạo. Bấm Tạo trên Flow MỘT lần rồi Tiếp tục. App không bấm lại.')
    self.state='waiting_download';self.phase(rid,'waiting','Đã gửi; đang tìm trạng thái của đúng clip trên Flow.')
    path=await self.wait_result(rid,observer)
@@ -439,11 +461,32 @@ class SimpleFlow:
    if not self.connected:await self.disconnect_browser()
    if isinstance(exc,asyncio.CancelledError):raise
   finally:
+   if network_probe:
+    try:
+     evidence=await network_probe.stop();evidence['capture_state']='stopped';self.save_network_probe(rid,evidence)
+    except Exception as exc:self.network_probe_errors[rid]=type(exc).__name__
+    self.network_probes.pop(rid,None)
    if self.page:self.page.remove_listener('download',self.on_download)
    if self.download_task and not self.download_task.done():
     self.download_task.cancel();await asyncio.gather(self.download_task,return_exceptions=True)
    reference.unlink(missing_ok=True);self.pending=None;self.active=None;self.download_waiter=None;self.download_task=None;self.tasks.pop(rid,None);self.observer=None;self.auto_download=None;self.download_item=None
    if self.account_bridge:await self.disconnect_browser()
+ def network_probe_snapshot(self,rid):
+  self.valid_id(rid)
+  probe=self.network_probes.get(rid)
+  if probe:return {**probe.snapshot(),'capture_state':'active'}
+  path=self.root/(rid+'.network.json')
+  if not path.is_file():return {'capture_state':'not_recorded','message':'Lượt này chưa có log mạng; probe chỉ ghi các lượt tạo sau khi cập nhật.'}
+  try:
+   if path.stat().st_size>16*1024*1024:return {'capture_state':'report_size_limit'}
+   return json.loads(path.read_text(encoding='utf-8'))
+  except Exception as exc:return {'capture_state':'unavailable','error_type':type(exc).__name__}
+ def save_network_probe(self,rid,evidence=None):
+  try:
+   evidence=self.network_probe_snapshot(rid) if evidence is None else evidence
+   target=self.root/(rid+'.network.json');temporary=self.root/(rid+'.network.tmp')
+   temporary.write_text(json.dumps(evidence,ensure_ascii=False,indent=2),encoding='utf-8');temporary.replace(target)
+  except Exception as exc:self.network_probe_errors[rid]=type(exc).__name__
  async def capture_tracking(self,rid,observer):
   try:
    await self.assert_ready()
@@ -461,10 +504,12 @@ class SimpleFlow:
  def phase(self,rid,phase,message,progress=None):
   self.message=message;self.ledger.set_metadata(rid,{'phase':phase,'message':message,'progress':progress,'progress_source':'flow_ui'if progress is not None else None})
  async def wait_result(self,rid,observer):
-  deadline=time.monotonic()+1800;preview_after=time.monotonic()+45;preview_taken=False;last=None;last_tracking=0
+  deadline=time.monotonic()+1800;preview_after=time.monotonic()+45;preview_taken=False;last=None;last_tracking=0;last_network=0
   while not self.download_waiter.done():
    if time.monotonic()>deadline:raise SimpleStopped('Flow chưa trả video sau 30 phút; kiểm tra lượt cũ, không tự gửi lại.')
    await self.assert_ready()
+   if rid in self.network_probes and time.monotonic()-last_network>=5:
+    self.save_network_probe(rid);last_network=time.monotonic()
    try:row=await observer.read()
    except Exception:row=None
    if time.monotonic()-last_tracking>=10:
