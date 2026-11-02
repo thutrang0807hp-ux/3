@@ -11,13 +11,13 @@ from .check_flow_prepare_ui import Quiet
 def main():
  root=Path(__file__).resolve().parents[2]
  server=ThreadingHTTPServer(('127.0.0.1',0),partial(Quiet,directory=str(root)));Thread(target=server.serve_forever,daemon=True).start()
- posts=[];pairs=[];errors=[];unresolved=[];selection={'available':True,'account_id':'account','account_name':'Fixture','token':'fixture'}
+ posts=[];pairs=[];errors=[];unresolved=[];saved_reviews=[];selection={'available':True,'account_id':'account','account_name':'Fixture','token':'fixture'}
  try:
   with sync_playwright() as p:
    browser=p.chromium.launch(executable_path='/usr/bin/chromium',args=['--no-sandbox']);page=browser.new_page();page.on('pageerror',lambda e:errors.append(str(e)))
    def api(route):
     path=route.request.url.split('/local-api/')[1]
-    if path=='flow/simple/status':return route.fulfill(json={'enabled':True,'selection':selection,'unresolved':unresolved})
+    if path=='flow/simple/status':return route.fulfill(json={'enabled':True,'selection':selection,'unresolved':unresolved,'saved_video_reviews':saved_reviews})
     if path=='flow/simple/pair-trial':
      body=route.request.post_data_json;pairs.append(body)
      return route.fulfill(json={'request_id':'flow-pair-ready','state':'inputs_sent','message':'Ready',
@@ -114,6 +114,43 @@ def main():
    with page.expect_download() as no_record:panel.locator('[data-vn=tracking-report]').click()
    payload=json.loads(Path(no_record.value.path()).read_text())
    assert payload['report']['request_id']==old and 'tracking_capture_error' in payload['report']
+   assert len(posts)==1
+   # Unknown older than three minutes only changes the label, not permission.
+   current_id=posts[0]['request_id'];acknowledgements=[]
+   unresolved[:]=[
+    {'id':old,'room_id':'room','account_id':'account','scene_id':'scene','needs_manual_review':True},
+    {'id':current_id,'room_id':'room','account_id':'account','scene_id':'scene','needs_manual_review':True},
+   ]
+   page.evaluate("""old=>{for(const job of project.cloudJobs){job.state='unknown';if(job.id===old)job.sceneId='scene'}}""",old)
+   page.route('**/local-api/flow/simple/jobs/*',lambda r:r.fulfill(json={'request_id':r.request.url.split('/')[-1],'state':'unknown','store_id':'fixture','result':None}))
+   def acknowledge(route):
+    rid=route.request.url.split('/')[-1];body=route.request.post_data_json
+    assert body['confirm_saved_video'] is True and body['allow_new_generation'] is True
+    assert body['room_id']=='room' and body['store_id']=='fixture'
+    acknowledgements.append(rid)
+    saved_reviews.append({'request_id':rid,'room_id':'room','account_id':'account','allow_new_generation':True})
+    unresolved[:]=[row for row in unresolved if row['id']!=rid]
+    route.fulfill(json={'request_id':rid,'state':'unknown','result':None,'saved_video_review':saved_reviews[-1]})
+   page.route('**/local-api/flow/simple/acknowledge-saved-video/*',acknowledge)
+   page.evaluate('()=>SFVeoNode.refresh()');expect(panel).to_contain_text('Cần kiểm tra video cũ')
+   expect(node.locator('[data-vn=pair-trial]')).to_be_disabled()
+   assert not acknowledgements
+   page.once('dialog',lambda d:d.dismiss())
+   panel.locator('[data-vn=ack-saved-video]').click()
+   expect(panel.locator('[data-vn=ack-saved-video]')).to_be_enabled();assert not acknowledgements
+   def accept_review(dialog):
+    assert 'App chưa tải' in dialog.message
+    dialog.accept()
+   page.once('dialog',accept_review)
+   panel.locator('[data-vn=ack-saved-video]').click()
+   expect(panel).to_have_count(0)
+   expect(node.locator('[data-vn=pair-trial]')).to_be_enabled()
+   assert set(acknowledgements)=={old,current_id} and len(posts)==1
+   assert page.evaluate('project.cloudJobs.every(j=>j.state==="unknown")')
+   assert page.evaluate('project.scenes[0].clips.length')==0
+   node.locator('[data-vn=pair-trial]').click();expect(node.locator('[data-vn=create]')).to_be_enabled()
+   page.evaluate('async()=>{await storeProject();render();await SFVeoNode.refresh()}')
+   expect(node.locator('[data-vn=create]')).to_be_enabled()
    assert len(posts)==1
    assert not errors,errors
    browser.close()

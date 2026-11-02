@@ -111,8 +111,10 @@ async def inspect_tracking(service,rid,body):
                     from .flow_video_detail_probe import inspect_video_details
                     from .flow_media_structure import collect_media_structure
                     probe={}
+                    from .flow_video_history import make_detail_check
+                    detail_check=make_detail_check(service,page=service.page,project_url=service.project,account_id=meta['account_id'],report=probe)
                     try:
-                        await asyncio.wait_for(inspect_video_details(service.page,prompt,service.assert_ready,report=probe),20)
+                        await asyncio.wait_for(inspect_video_details(service.page,prompt,service.assert_ready,report=probe,detail_check=detail_check),20)
                     except asyncio.TimeoutError:
                         probe.update(state='needs_inspection',message='Hết thời gian đọc chi tiết; không tạo lại hoặc tải video.')
                     snapshot['video_detail_probe']=probe

@@ -98,7 +98,7 @@ async def read_new_detail(page,marker,expected):
             'match_basis':'labelled_full_prompt' if exact else None}
 
 
-async def inspect_video_details(page,expected_prompt,check,*,report=None,detail_timeout=10):
+async def inspect_video_details(page,expected_prompt,check,*,report=None,detail_timeout=10,detail_check=None):
     report={} if report is None else report
     report.update(state='inspecting',thumbnail_clicked=False,detail_found=False,
                   full_prompt_match=False,request_attribution_confirmed=False,
@@ -136,7 +136,13 @@ async def inspect_video_details(page,expected_prompt,check,*,report=None,detail_
         log('Đã click thumbnail của duy nhất thẻ video để đọc chi tiết; chưa xác nhận thuộc lượt cũ.')
         deadline=asyncio.get_running_loop().time()+detail_timeout
         while asyncio.get_running_loop().time()<deadline:
-            await check()
+            await (detail_check or check)()
+            from .flow_video_history import read_history_prompt
+            if await page.locator('flow-editor-history-step-video').filter(visible=True).count():
+                result=await read_history_prompt(page,expected_prompt,detail_check or check,timeout=5)
+                report.update(result)
+                report['detail_found']=bool(result.get('history_found'))
+                break
             result=await asyncio.wait_for(read_new_detail(page,before_marker,expected_prompt),timeout=2)
             report.update(result)
             if result.get('full_prompt_match'):break

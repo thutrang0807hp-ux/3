@@ -2,6 +2,7 @@
 import asyncio,json,tempfile
 from pathlib import Path
 from unittest.mock import AsyncMock
+from types import SimpleNamespace
 from playwright.async_api import async_playwright
 from .flow_video_detail_probe import inspect_video_details
 from .flow_tracking_diagnostics import inspect_tracking
@@ -24,6 +25,8 @@ async def main():
   async with async_playwright() as p:
    browser=await p.chromium.launch(executable_path='/usr/bin/chromium',args=['--no-sandbox'])
    page=await browser.new_page();await page.route('**/*',lambda r:r.abort())
+   await page.route('https://flow.google.com/**',lambda r:r.fulfill(body=HTML,content_type='text/html'))
+   await page.goto('https://flow.google.com/project/fixture')
    await fixture(page,prompt)
    # Reuse a hidden video DOM node that existed BEFORE the thumbnail click.
    report=await inspect_video_details(page,prompt,AsyncMock(),detail_timeout=.3)
@@ -60,8 +63,8 @@ async def main():
    # Route integration only opens details on explicit request for an idle unknown.
    await fixture(page,prompt)
    root=Path(folder);service=SimpleFlow(root,Vault(root),RequestLedger(root))
-   service.account_bridge=type('Bridge',(),{'background':True,'selection':lambda _:{'available':True,'account_id':'account'}})()
-   service.page=page;service.assert_ready=AsyncMock();service.restore=AsyncMock();service.disconnect_browser=AsyncMock()
+   service.account_bridge=type('Bridge',(),{'background':True,'selection':lambda _:{'available':True,'account_id':'account'},'check':AsyncMock()})()
+   service.page=page;service.project='https://flow.google.com/project/fixture';service.connected=True;service.account_session=SimpleNamespace(page=page);service.pinned_binding={'account_id':'account'};service.assert_ready=AsyncMock();service.restore=AsyncMock();service.disconnect_browser=AsyncMock()
    rid='flow-detail-inspection-fixture'
    service.ledger.claim(rid,{'room_id':'room','account_id':'account','scene_id':'scene'})
    service.ledger.set_metadata(rid,{'transport':'simple_flow','prompt':prompt});service.ledger.finish(rid,'unknown')

@@ -35,12 +35,12 @@ class SimpleFlow:
   if self.account_bridge:
    selection=self.account_bridge.selection()
    message=self.message if self.busy()or self.state in ('failed','unknown')else ('Đã chọn '+str(selection.get('account_name'))+' từ tab Tài khoản. Phiên được mở nền khi tạo clip.'if selection['available']else'Đăng nhập web và chọn một tài khoản Flow tại Cài đặt → Tài khoản.')
-   return {'state':self.state,'message':message,'interaction':self.pending,'active_request':self.active,'unresolved':self.unresolved(),
+   return {'state':self.state,'message':message,'interaction':self.pending,'active_request':self.active,'unresolved':self.unresolved(),'saved_video_reviews':self.saved_video_reviews(),
     'configured':True,'account_binding':selection['available'],'transport':'web_ui','connection_method':'account_web','shared_accounts':True,'background':bool(self.account_bridge.background),
     'models':[MODEL],'model_details':[{'id':MODEL,'description':'Lite · 8s · 9:16 · tài khoản web đã chọn','accepts_images':True,'video_type':'i2v','max_images':1}],
     'per_account':1,'automatic_retry':False,'selection':selection,'project_url':self.project,'restorable':False,
     'generation_verified':bool(self.vault.secret('simple-flow-verified'))}
-  return {'state':self.state,'message':self.message,'interaction':self.pending,'active_request':self.active,'unresolved':self.unresolved(),
+  return {'state':self.state,'message':self.message,'interaction':self.pending,'active_request':self.active,'unresolved':self.unresolved(),'saved_video_reviews':self.saved_video_reviews(),
    'browser':self.channel,'project_url':self.project or (self.binding()or{}).get('project'),'restorable':bool(self.binding()),
    'configured':True,'account_binding':self.connected,'transport':'web_ui','connection_method':'simple_flow',
    'models':[MODEL],'model_details':[{'id':MODEL,'description':'Lite · 8s · 9:16 · xác nhận trên Flow','accepts_images':True,'video_type':'i2v','max_images':1}],
@@ -49,7 +49,11 @@ class SimpleFlow:
  def unresolved(self):
   with self.ledger.connect()as db:
    rows=db.execute("SELECT r.id,m.metadata,r.updated FROM request r JOIN request_meta m ON r.id=m.id WHERE r.state='unknown' ORDER BY r.updated DESC").fetchall()
-  return [{'id':rid,'scene_id':data.get('scene_id',''),'part':data.get('part',''),'room_id':data.get('room_id',''),'account_id':data.get('account_id',''),'updated':updated}for rid,meta,updated in rows for data in [json.loads(meta or '{}')] if data.get('transport')=='simple_flow']
+  return [{'id':rid,'scene_id':data.get('scene_id',''),'part':data.get('part',''),'room_id':data.get('room_id',''),'account_id':data.get('account_id',''),'updated':updated,'needs_manual_review':time.time()-updated>=180}for rid,meta,updated in rows for data in [json.loads(meta or '{}')] if data.get('transport')=='simple_flow' and data.get('saved_video_review',{}).get('allow_new_generation') is not True]
+ def saved_video_reviews(self):
+  with self.ledger.connect()as db:
+   rows=db.execute("SELECT r.id,m.metadata FROM request r JOIN request_meta m ON r.id=m.id WHERE r.state='unknown'").fetchall()
+  return [data['saved_video_review'] for rid,meta in rows for data in [json.loads(meta or '{}')] if data.get('transport')=='simple_flow' and data.get('saved_video_review',{}).get('allow_new_generation') is True]
  async def review(self,rid,body):
   self.valid_id(rid)
   if self.busy():raise HTTPException(409,'Dừng lượt đang chạy trước khi đối soát.')
@@ -262,10 +266,10 @@ class SimpleFlow:
   if not self.connected or (self.email is not None and current!=self.email) or self.project_url()!=self.project:raise SimpleStopped('Tài khoản hoặc dự án đã đổi; chưa gửi thêm thao tác.')
  def lookup(self,rid):
   self.valid_id(rid)
-  with self.ledger.connect()as db:row=db.execute('SELECT state,result FROM request WHERE id=?',(rid,)).fetchone()
+  with self.ledger.connect()as db:row=db.execute('SELECT state,result,updated FROM request WHERE id=?',(rid,)).fetchone()
   if not row or self.ledger.metadata(rid).get('transport')!='simple_flow':raise HTTPException(404,'Không có lượt SimpleFlow này.')
   meta=self.ledger.metadata(rid)
-  return {**self.ledger.receipt(rid),'state':row[0],'result':json.loads(row[1]) if row[0]=='done'else None,'message':meta.get('message',self.message if self.active==rid else ''),'phase':meta.get('phase'),'progress':meta.get('progress'),'progress_source':meta.get('progress_source'),'has_preview':bool(meta.get('has_preview')),'automatic_retry':False}
+  return {**self.ledger.receipt(rid),'state':row[0],'result':json.loads(row[1]) if row[0]=='done'else None,'message':meta.get('message',self.message if self.active==rid else ''),'phase':meta.get('phase'),'progress':meta.get('progress'),'progress_source':meta.get('progress_source'),'has_preview':bool(meta.get('has_preview')),'automatic_retry':False,'saved_video_review':meta.get('saved_video_review'),'needs_manual_review':row[0]=='unknown' and time.time()-row[2]>=180 and not meta.get('saved_video_review',{}).get('allow_new_generation')}
  @staticmethod
  def valid_id(rid):
   if not isinstance(rid,str)or not re.fullmatch(r'flow-[a-zA-Z0-9-]{8,100}',rid):raise HTTPException(400,'Mã lượt Flow không hợp lệ.')
@@ -584,6 +588,10 @@ def install_simple_flow(app,data,vault,ledger,provider):
   return await service.connect(body)
  @app.post('/local-api/flow/simple/respond')
  async def respond(body:dict):return await service.respond(body)
+ @app.post('/local-api/flow/simple/acknowledge-saved-video/{rid}')
+ async def acknowledge_saved_video(rid:str,body:dict):
+  from .flow_saved_video_review import acknowledge_saved_video
+  return await acknowledge_saved_video(service,rid,body)
  @app.post('/local-api/flow/simple/review/{rid}')
  async def review(rid:str,body:dict):return await service.review(rid,body)
  @app.post('/local-api/flow/simple/stop')
