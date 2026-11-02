@@ -1,5 +1,5 @@
 """Browser UI with mocked API; no real Flow submission."""
-import base64,io
+import base64,io,json
 from pathlib import Path
 from functools import partial
 from http.server import ThreadingHTTPServer
@@ -26,6 +26,10 @@ def main():
     if path=='flow/simple/jobs':
      posts.append(route.request.post_data_json)
      return route.fulfill(json={'request_id':posts[-1]['request_id'],'state':'running','submitted':True,'store_id':'fixture'})
+    if path.startswith('flow/simple/tracking-diagnostics/'):
+     return route.fulfill(json={'request_id':path.split('/')[-1],'message':'Đã đọc cấu trúc kết quả Flow; không tạo lại.','can_retry':False,'result_tracking':{'read_only':True,'cards':[{'rejected_because':['full_prompt_not_in_card']}]}})
+    if path.startswith('flow/simple/diagnostics/'):
+     return route.fulfill(json={'request_id':posts[0]['request_id'],'can_retry':False,'record':{'state':'unknown'},'result_tracking':{'read_only':True}})
     if path.startswith('flow/simple/jobs/'):
      return route.fulfill(json={'request_id':path.split('/')[-1],'state':'running','submitted':True,'store_id':'fixture','progress':37,'progress_source':'flow_ui','message':'Flow đang tạo video · 37%'})
     return route.fulfill(json={})
@@ -53,6 +57,21 @@ def main():
    page.evaluate('()=>SFVeoNode.sync()')
    expect(node.locator('[data-vn-generation] progress')).not_to_have_attribute('value','37')
    assert node.locator('[data-vn-generation] progress').get_attribute('value') is None
+   # Report is downloadable while generation remains active, without Stop.
+   expect(node.locator('[data-vn=tracking-report]')).to_be_enabled()
+   with page.expect_download() as downloaded:
+    node.locator('[data-vn=tracking-report]').click()
+   payload=json.loads(Path(downloaded.value.path()).read_text())
+   assert payload['report']['result_tracking']['read_only'] and payload['report']['can_retry'] is False
+   assert len(posts)==1
+   assert page.evaluate('project.cloudJobs[0].state')=='running'
+   # Failed live inspection still downloads the cached receipt and failure reason.
+   page.route('**/local-api/flow/simple/tracking-diagnostics/*',lambda r:r.fulfill(status=409,json={'detail':'Phiên Flow chưa sẵn sàng.'}))
+   with page.expect_download() as fallback:
+    node.locator('[data-vn=tracking-report]').click()
+   payload=json.loads(Path(fallback.value.path()).read_text())
+   assert 'tracking_capture_error' in payload['report'] and payload['report']['can_retry'] is False
+   assert len(posts)==1
    assert not errors,errors
    browser.close()
   print('PASS UI: one visible Create button, ready receipt required, changed prompt locks, cancel sends nothing, confirm posts once, 37% rendered, missing percent indeterminate.')

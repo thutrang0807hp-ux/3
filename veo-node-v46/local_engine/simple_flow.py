@@ -284,7 +284,7 @@ class SimpleFlow:
   elif room_id and meta.get('room_id')!=room_id:
    code='different_room';message='Lượt này thuộc phòng khác. App không nhập kết quả vào phòng đang mở.'
   else:
-   code='found';message='Đã tìm thấy lượt trong dữ liệu hiện tại. App có thể đọc lại trạng thái.';report['record']=self.lookup(rid)
+   code='found';message='Đã tìm thấy bản ghi trong app; chưa đồng nghĩa đã tìm thấy video trên Flow.';report['record']=self.lookup(rid);report['result_tracking']=meta.get('result_tracking');report['tracking_capture_error']=meta.get('tracking_capture_error')
   return {**report,'code':code,'message':message}
  @guarded_submission
  async def submit(self,body):
@@ -430,6 +430,7 @@ class SimpleFlow:
    state='unknown'if self.sent else'failed';self.ledger.finish(rid,state)
    message=('Tác vụ đã dừng ('+str(getattr(self,'cancel_reason',None)or'phiên ứng dụng bị hủy')+'). '+('Kiểm tra lượt đã gửi trước khi tạo thêm.'if self.sent else'Chưa bấm tạo video.'))if isinstance(exc,asyncio.CancelledError)else(str(exc)if isinstance(exc,SimpleStopped)else'Phiên Flow đã dừng: '+type(exc).__name__+'. Không tự gửi lại.')
    self.ledger.set_metadata(rid,{'message':message,'cancel_reason':getattr(self,'cancel_reason',None)if isinstance(exc,asyncio.CancelledError)else None});self.state=state;self.message=message
+   if self.observer:await self.capture_tracking(rid,self.observer)
    if self.account_bridge and self.account_bridge.background:await self.capture_preview(rid)
    if not self.connected:await self.disconnect_browser()
    if isinstance(exc,asyncio.CancelledError):raise
@@ -439,6 +440,15 @@ class SimpleFlow:
     self.download_task.cancel();await asyncio.gather(self.download_task,return_exceptions=True)
    reference.unlink(missing_ok=True);self.pending=None;self.active=None;self.download_waiter=None;self.download_task=None;self.tasks.pop(rid,None);self.observer=None;self.auto_download=None;self.download_item=None
    if self.account_bridge:await self.disconnect_browser()
+ async def capture_tracking(self,rid,observer):
+  try:
+   await self.assert_ready()
+   from .flow_tracking_diagnostics import observer_report
+   snapshot=await asyncio.wait_for(observer_report(observer),3)
+   snapshot['session_source']='active_generation'
+   self.ledger.set_metadata(rid,{'result_tracking':snapshot})
+  except Exception as exc:
+   self.ledger.set_metadata(rid,{'tracking_capture_error':type(exc).__name__})
  async def capture_preview(self,rid):
   if not self.page or self.page.is_closed():return
   try:
@@ -447,12 +457,14 @@ class SimpleFlow:
  def phase(self,rid,phase,message,progress=None):
   self.message=message;self.ledger.set_metadata(rid,{'phase':phase,'message':message,'progress':progress,'progress_source':'flow_ui'if progress is not None else None})
  async def wait_result(self,rid,observer):
-  deadline=time.monotonic()+1800;preview_after=time.monotonic()+45;preview_taken=False;last=None
+  deadline=time.monotonic()+1800;preview_after=time.monotonic()+45;preview_taken=False;last=None;last_tracking=0
   while not self.download_waiter.done():
    if time.monotonic()>deadline:raise SimpleStopped('Flow chưa trả video sau 30 phút; kiểm tra lượt cũ, không tự gửi lại.')
    await self.assert_ready()
    try:row=await observer.read()
    except Exception:row=None
+   if time.monotonic()-last_tracking>=10:
+    await self.capture_tracking(rid,observer);last_tracking=time.monotonic()
    if row:
     if row['failed']:raise SimpleStopped('Flow báo tạo thất bại cho lượt đang theo dõi. Xem chi tiết trong node; app không tự gửi lại.')
     progress=row.get('progress');phase='downloading'if row['video']else'generating'
@@ -552,6 +564,10 @@ def install_simple_flow(app,data,vault,ledger,provider):
  async def lookup(rid:str):return service.lookup(rid)
  @app.get('/local-api/flow/simple/diagnostics/{rid}')
  async def diagnostics(rid:str,store_id:str='',room_id:str=''):return service.diagnose(rid,store_id,room_id)
+ @app.post('/local-api/flow/simple/tracking-diagnostics/{rid}')
+ async def tracking_diagnostics(rid:str,body:dict):
+  from .flow_tracking_diagnostics import inspect_tracking
+  return await inspect_tracking(service,rid,body)
  @app.get('/local-api/flow/simple/files/{rid}')
  async def file(rid:str):return service.file(rid)
  @app.get('/local-api/flow/simple/preview/{rid}')
