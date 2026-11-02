@@ -66,3 +66,23 @@ or skipped, not guessed. No live Flow response has yet verified this draft.
   and path shape, never query strings or an unreviewed full raw path.
 
 Chromium request/response fixtures and sender/Stop integration were tested. No live Flow capture yet. Selected facts have an additional 4 MiB export budget.
+
+## Protocol decoder (included in v46.41 trial)
+
+`flow_network_protocol.py` supports plain/XSSI JSON, byte-length-prefixed JSON
+frames, multiple JSON containers, and URL-encoded form payloads (`f.req`,
+`request`, `payload`). It skips auth form values. Recognized `wrb.fr` payload JSON
+strings are decoded under depth/node/document/byte limits; positional arrays are
+not assigned operation/media semantics by guessing.
+
+New request/response `*_media_type` and `*_transport` report fields contain MIME
+type, byte/frame counts, envelope markers, hashed RPC method IDs, bounded structural
+shapes, and explicit decode/partial/limit flags. `er` envelopes and integer slots
+are diagnostics only, not a conclusion that generation failed. RPC method hashes
+are not job IDs. Raw envelopes/strings/token values are not exported.
+
+The runtime waiting message is changed to “Đã bấm tạo; chưa xác nhận Flow tiếp nhận”.
+HTTP 200 and a returned click are not provider acceptance. DOM observation remains available for diagnostics; new automatic sends use the separate
+provider-ID tracker without a DOM attribution fallback. Decoder and ID tracking
+were tested with intercepted Chromium traffic and local video files, and included
+in v46.41. Live Flow wire compatibility is still unverified. See FLOW_TASK_TRACKING_REVIEW.md.

@@ -22,7 +22,7 @@ STATUS_KEYS={'status','state','generationstatus','videogenerationstatus','operat
 PROGRESS_KEYS={'progress','progresspercent','percentcomplete','percentage'}
 CONTEXT=re.compile(r'operations?|generations?|media|videos?|assets?|jobs?|requests?|results?',re.I)
 SAFE_ID=re.compile(r'^[A-Za-z0-9_/-]{1,240}$')
-ENDPOINT_HINT=re.compile(r'generat|operation|media|video',re.I)
+ENDPOINT_HINT=re.compile(r'generat|operation|media|video|batchexecute',re.I)
 
 
 def normalized(value):
@@ -32,7 +32,8 @@ def normalized(value):
 def endpoint_summary(url):
     parsed=urlsplit(url)
     # No query, fragment, credentials or opaque path segments in output.
-    fixed={'video','videos','media','operations','projects','assets','status','generate','batch'}
+    fixed={'video','videos','media','operations','projects','assets','status','generate','batch',
+           '_','AiSandboxAngularFrontend','data','batchexecute'}
     parts=[]
     for part in parsed.path.split('/'):
         if not part:continue
@@ -68,6 +69,8 @@ def candidate_facts(document,expected_prompt):
         if isinstance(value,list):
             if len(value)>40:truncated=True
             for i,item in enumerate(value[:40]):walk(item,f'{path}[{i}]',depth+1,context)
+        elif isinstance(value,str):
+            if expected_prompt and normalized(value)==expected_prompt:matches.append(path)
         elif isinstance(value,dict):
             if len(value)>80:truncated=True
             for key,item in list(value.items())[:80]:
@@ -100,7 +103,8 @@ def candidate_facts(document,expected_prompt):
 class FlowNetworkProbe:
     def __init__(self,page,request_id,expected_prompt,check,*,context=None,
                  max_requests=300,max_pending=8,duration=600,
-                 allow_unannounced_json=True,initial_response_timeout=15,max_fact_bytes=4*1024*1024):
+                 allow_unannounced_json=True,initial_response_timeout=15,max_fact_bytes=4*1024*1024,
+                 task_tracker=None):
         if type(max_requests)is not int or max_requests<1 or type(max_pending)is not int or max_pending<1:
             raise ValueError('Request/task limits must be positive integers')
         if any(type(value) not in (int,float) or not math.isfinite(value) or value<=0 for value in (duration,initial_response_timeout)):
@@ -108,6 +112,7 @@ class FlowNetworkProbe:
         if type(max_fact_bytes)is not int or max_fact_bytes<1:raise ValueError('Fact byte limit must be positive')
         self.max_fact_bytes=max_fact_bytes;self.fact_bytes=0
         self.page=page;self.check=check;self.expected=normalized(expected_prompt)
+        self.task_tracker=task_tracker
         self.max_requests=max_requests;self.max_pending=max_pending;self.duration=duration
         self.allow_unannounced_json=allow_unannounced_json
         self.initial_response_timeout=initial_response_timeout
@@ -185,7 +190,16 @@ class FlowNetworkProbe:
     def _request(self,request):
         if not self._in_scope(request):return
         entry=self._entry(request)
-        if entry:self._spawn(self._request_json(request,entry),priority=entry['priority'])
+        if entry:
+            if self.task_tracker:
+                try:
+                    self.task_tracker.observe_request(entry['http_request'],request.url,request.method,
+                        request.headers.get('content-type',''),request.post_data,entry['request_after_generate_attempt'])
+                except Exception as error:
+                    try:self.task_tracker.invalidate('task_request_capture_failed')
+                    except Exception:pass
+                    self._warn('task_request_capture_failed:'+type(error).__name__)
+            self._spawn(self._request_json(request,entry),priority=entry['priority'])
 
     async def _binding_ok(self):
         try:await asyncio.wait_for(self.check(),2);return True
@@ -195,14 +209,18 @@ class FlowNetworkProbe:
 
     async def _request_json(self,request,entry):
         if not await self._binding_ok():return
+        from .flow_network_protocol import media_type,readable_type,decode_evidence
         kind=await request.header_value('content-type') or ''
-        if 'json' not in kind.lower():
-            entry['request_body']='not_json';return
+        entry['request_media_type']=media_type(kind)
+        if not readable_type(kind):
+            entry['request_body']='unsupported_media_type';return
         try:
             raw=request.post_data
             if raw is None:entry['request_body']='empty';return
-            self._save_facts(entry,'request_facts',candidate_facts(json_document(raw),self.expected))
-            entry['request_body']='parsed_not_saved'
+            facts,transport=decode_evidence(raw,kind,self.expected,candidate_facts,direction='request')
+            self._save_facts(entry,'request_facts',facts)
+            self._save_facts(entry,'request_transport',transport)
+            entry['request_body']='decoded_not_saved'
         except Exception as error:entry['request_body']='unreadable:'+type(error).__name__
 
     def _response(self,response):
@@ -225,9 +243,11 @@ class FlowNetworkProbe:
 
     async def _response_json(self,response,entry):
         if not await self._binding_ok():return
+        from .flow_network_protocol import media_type,readable_type,decode_evidence
         kind=await response.header_value('content-type') or ''
-        if 'json' not in kind.lower():
-            entry['response_body']='not_json';return
+        entry['response_media_type']=media_type(kind)
+        if not readable_type(kind):
+            entry['response_body']='unsupported_media_type';return
         length=await response.header_value('content-length')
         try:announced=int(length) if length is not None else None
         except ValueError:announced=None
@@ -241,8 +261,14 @@ class FlowNetworkProbe:
             # Playwright exposes whole bodies, not a bounded stream. With unknown
             # Content-Length this limit is checked AFTER reading; not a hard RAM cap.
             raw=await asyncio.wait_for(response.body(),2)
-            self._save_facts(entry,'response_facts',candidate_facts(json_document(raw),self.expected))
-            entry['response_body']='parsed_not_saved'
+            if self.task_tracker and len(raw)<=MAX_BODY:
+                self.task_tracker.observe_response(entry['http_request'],response.status,raw)
+            facts,transport=decode_evidence(raw,kind,self.expected,candidate_facts,direction='response')
+            self._save_facts(entry,'response_facts',facts)
+            self._save_facts(entry,'response_transport',transport)
+            entry['response_body']='decoded_not_saved'
+            if transport.get('rpc_records') or transport.get('error_envelopes'):
+                self._candidate_response(entry,'rpc_envelope_candidate')
             if entry.get('response_facts',{} ) and entry['response_facts']['facts']:
                 self._candidate_response(entry,'json_candidate_fields')
         except Exception as error:entry['response_body']='unreadable:'+type(error).__name__
@@ -281,6 +307,7 @@ class FlowNetworkProbe:
         """Call immediately BEFORE the existing button.click(), not instead of it."""
         if not self.accepting or self.click_time is not None:raise RuntimeError('Probe not ready or attempt already marked')
         await self.check();self.click_time=time.monotonic()
+        if self.task_tracker:self.task_tracker.mark_generate_attempt()
         self.report['generate_attempt_ms']=round((self.click_time-self.started)*1000)
         self.report['generate_attempt_at_unix']=time.time()
         for entry in self.report['requests']:

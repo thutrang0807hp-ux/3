@@ -10,6 +10,7 @@ from .simple_flow_dom import ResultObserver,create_button,wait_composer,prepare_
 
 MODEL='veo-3.1-lite-i2v-8s-portrait'
 class SimpleStopped(RuntimeError):pass
+class FlowGenerationFailed(SimpleStopped):pass
 
 class SimpleFlow:
  def __init__(self,data,vault,ledger):
@@ -21,7 +22,7 @@ class SimpleFlow:
   self.active=None;self.project=None;self.state='idle';self.message='Chưa kết nối Flow đơn giản.'
   self.gate=asyncio.Lock();self.download_waiter=None;self.download_task=None;self.observer=None;self.auto_download=None;self.download_item=None
   self.account_bridge=None;self.account_session=None;self.pinned_binding=None;self.pinned_account=None;self.pinned_room=None
-  self.upload_report=None;self.network_probes={};self.network_probe_errors={}
+  self.upload_report=None;self.network_probes={};self.network_probe_errors={};self.task_trackers={}
   binding=self.binding()
   if binding:self.channel=binding['browser'];self.token=binding['token'];self.message='Đã lưu dự án Flow; sẽ mở lại khi tạo clip.'
  def binding(self):
@@ -269,7 +270,8 @@ class SimpleFlow:
   with self.ledger.connect()as db:row=db.execute('SELECT state,result,updated FROM request WHERE id=?',(rid,)).fetchone()
   if not row or self.ledger.metadata(rid).get('transport')!='simple_flow':raise HTTPException(404,'Không có lượt SimpleFlow này.')
   meta=self.ledger.metadata(rid)
-  return {**self.ledger.receipt(rid),'state':row[0],'result':json.loads(row[1]) if row[0]=='done'else None,'message':meta.get('message',self.message if self.active==rid else ''),'phase':meta.get('phase'),'progress':meta.get('progress'),'progress_source':meta.get('progress_source'),'has_preview':bool(meta.get('has_preview')),'automatic_retry':False,'network_probe_available':rid in self.network_probes or (self.root/(rid+'.network.json')).is_file(),'saved_video_review':meta.get('saved_video_review'),'needs_manual_review':row[0]=='unknown' and time.time()-row[2]>=180 and not meta.get('saved_video_review',{}).get('allow_new_generation')}
+  provider_task=meta.get('provider_task')or{};receipt=self.ledger.receipt(rid)
+  return {**receipt,'submitted':True if provider_task.get('association_confirmed')else receipt['submitted'],'state':row[0],'result':json.loads(row[1]) if row[0]=='done'else None,'message':meta.get('message',self.message if self.active==rid else ''),'phase':meta.get('phase'),'progress':meta.get('progress'),'progress_source':meta.get('progress_source'),'has_preview':bool(meta.get('has_preview')),'automatic_retry':False,'provider_task':provider_task or None,'network_probe_available':rid in self.network_probes or (self.root/(rid+'.network.json')).is_file(),'saved_video_review':meta.get('saved_video_review'),'needs_manual_review':row[0]=='unknown' and time.time()-row[2]>=180 and not meta.get('saved_video_review',{}).get('allow_new_generation')}
  @staticmethod
  def valid_id(rid):
   if not isinstance(rid,str)or not re.fullmatch(r'flow-[a-zA-Z0-9-]{8,100}',rid):raise HTTPException(400,'Mã lượt Flow không hợp lệ.')
@@ -413,7 +415,11 @@ class SimpleFlow:
    if button is not None:
     try:
      from .flow_network_probe import FlowNetworkProbe
-     network_probe=FlowNetworkProbe(self.page,rid,payload['prompt'],self.assert_ready,context={k:payload[k]for k in ('room_id','scene_id','part','account_id')})
+     from .flow_task_tracker import FlowTaskTracker
+     tracker=FlowTaskTracker(self.page,payload['prompt'],self.project,self.assert_ready,
+      lambda snapshot:self.ledger.set_metadata(rid,{'provider_task':snapshot}))
+     self.task_trackers[rid]=tracker
+     network_probe=FlowNetworkProbe(self.page,rid,payload['prompt'],self.assert_ready,context={k:payload[k]for k in ('room_id','scene_id','part','account_id')},task_tracker=tracker)
      await network_probe.start();self.network_probes[rid]=network_probe
     except SimpleStopped:raise
     except Exception as exc:
@@ -422,24 +428,31 @@ class SimpleFlow:
       try:await network_probe.stop()
       except Exception:pass
      network_probe=None
-   self.ledger.set_metadata(rid,{'clicked':button is not None,'manual_submit_allowed':button is None});self.sent=True
+     raise SimpleStopped('Chưa mở được bộ theo dõi ID. Chưa bấm Tạo; không gửi lượt không có bộ ghi nhận.')from None
+   self.ledger.set_metadata(rid,{'clicked':False,'manual_submit_allowed':button is None})
    if payload.get('prepared_request_id'):
     prepared=(getattr(self,'pair_report',None) or {})
     if prepared.get('request_id')!=payload['prepared_request_id']:prepared=self.prepare_report
-    prepared['state']='submitted'
    self.phase(rid,'submitting','Đang gửi một lượt tạo trên Flow.')
    if button is not None:
     if network_probe:
      try:await network_probe.mark_generate_attempt()
      except SimpleStopped:raise
-     except Exception as exc:self.network_probe_errors[rid]=type(exc).__name__
+     except Exception as exc:
+      self.network_probe_errors[rid]=type(exc).__name__
+      raise SimpleStopped('Chưa ghi nhận được thời điểm gửi. Chưa bấm Tạo.')from None
     # A recorder failure never bypasses the original account/project guard.
     await self.assert_ready()
+    self.ledger.set_metadata(rid,{'clicked':True});self.sent=True
+    if payload.get('prepared_request_id'):prepared['state']='submitted'
     await button.click(timeout=15000)
     if network_probe:
      network_probe.mark_click_returned();self.save_network_probe(rid)
-   else:await self.checkpoint('manual-submit','Chưa nhận diện duy nhất nút tạo. Bấm Tạo trên Flow MỘT lần rồi Tiếp tục. App không bấm lại.')
-   self.state='waiting_download';self.phase(rid,'waiting','Đã gửi; đang tìm trạng thái của đúng clip trên Flow.')
+   else:
+    self.sent=True
+    if payload.get('prepared_request_id'):prepared['state']='submitted'
+    await self.checkpoint('manual-submit','Chưa nhận diện duy nhất nút tạo. Bấm Tạo trên Flow MỘT lần rồi Tiếp tục. App không bấm lại.')
+   self.state='waiting_download';self.phase(rid,'waiting','Đã bấm tạo; chưa xác nhận Flow tiếp nhận hoặc liên kết được tác vụ.')
    path=await self.wait_result(rid,observer)
    if background and self.auto_download is None:raise SimpleStopped('Đã có tệp nhưng chưa xác minh được đúng lượt video. Không tạo lại; giữ lượt để đối soát.')
    if not (automatic_mode and self.auto_download is not None):
@@ -450,10 +463,13 @@ class SimpleFlow:
     for chunk in iter(lambda:stream.read(1024*1024),b''):hasher.update(chunk)
    digest=hasher.hexdigest()
    result={'file':path.name,'mime_type':'video/webm'if path.suffix=='.webm'else'video/mp4','sha256':digest,'bytes':size,'account_id':payload['account_id'],'room_id':payload['room_id'],'scene_id':payload['scene_id'],'part':payload['part'],'model':MODEL,'kind':'video','origin':'flow','cost':None}
+   provider_task=self.ledger.metadata(rid).get('provider_task')or{}
+   if provider_task.get('association_confirmed'):
+    result['provider_identity']={key:provider_task[key]for key in ('media_id','project_id','workflow_id')}
    self.phase(rid,'complete','Đã nhận video về đúng cảnh.');self.ledger.finish(rid,'done',result);self.vault.set_secret('simple-flow-verified',True)
    self.state='ready';self.message='Đã lưu video; node sẽ nhận về đúng cảnh.'
   except BaseException as exc:
-   state='unknown'if self.sent else'failed';self.ledger.finish(rid,state)
+   state='failed'if isinstance(exc,FlowGenerationFailed)else'unknown'if self.sent else'failed';self.ledger.finish(rid,state)
    message=('Tác vụ đã dừng ('+str(getattr(self,'cancel_reason',None)or'phiên ứng dụng bị hủy')+'). '+('Kiểm tra lượt đã gửi trước khi tạo thêm.'if self.sent else'Chưa bấm tạo video.'))if isinstance(exc,asyncio.CancelledError)else(str(exc)if isinstance(exc,SimpleStopped)else'Phiên Flow đã dừng: '+type(exc).__name__+'. Không tự gửi lại.')
    self.ledger.set_metadata(rid,{'message':message,'cancel_reason':getattr(self,'cancel_reason',None)if isinstance(exc,asyncio.CancelledError)else None});self.state=state;self.message=message
    if self.observer:await self.capture_tracking(rid,self.observer)
@@ -466,6 +482,7 @@ class SimpleFlow:
      evidence=await network_probe.stop();evidence['capture_state']='stopped';self.save_network_probe(rid,evidence)
     except Exception as exc:self.network_probe_errors[rid]=type(exc).__name__
     self.network_probes.pop(rid,None)
+   self.task_trackers.pop(rid,None)
    if self.page:self.page.remove_listener('download',self.on_download)
    if self.download_task and not self.download_task.done():
     self.download_task.cancel();await asyncio.gather(self.download_task,return_exceptions=True)
@@ -504,6 +521,8 @@ class SimpleFlow:
  def phase(self,rid,phase,message,progress=None):
   self.message=message;self.ledger.set_metadata(rid,{'phase':phase,'message':message,'progress':progress,'progress_source':'flow_ui'if progress is not None else None})
  async def wait_result(self,rid,observer):
+  tracker=self.task_trackers.get(rid)
+  if tracker:return await self.wait_linked_result(rid,tracker)
   deadline=time.monotonic()+1800;preview_after=time.monotonic()+45;preview_taken=False;last=None;last_tracking=0;last_network=0
   while not self.download_waiter.done():
    if time.monotonic()>deadline:raise SimpleStopped('Flow chưa trả video sau 30 phút; kiểm tra lượt cũ, không tự gửi lại.')
@@ -536,10 +555,64 @@ class SimpleFlow:
    if not row and not preview_taken and time.monotonic()>=preview_after and self.account_bridge and self.account_bridge.background:
     await self.capture_preview(rid);preview_taken=True
    if not row and last!=('waiting',None):
-    self.phase(rid,'waiting','Đã gửi; app đang theo dõi phiên nền, chưa đọc được thẻ tiến độ của đúng clip.');last=('waiting',None)
+    self.phase(rid,'waiting','Đã bấm tạo; chưa có bằng chứng xác nhận Flow tiếp nhận. Đang thu dữ liệu, chưa xác định kết quả.');last=('waiting',None)
    await asyncio.wait({self.download_waiter},timeout=1)
   return self.download_waiter.result()
+ async def wait_linked_result(self,rid,tracker):
+  """Provider-ID path: never fall back to prompt/thumbnail attribution."""
+  deadline=time.monotonic()+600;last=None;last_network=0
+  while time.monotonic()<deadline:
+   await self.assert_ready()
+   if tracker.blocked:
+    raise SimpleStopped('Không còn đủ bằng chứng liên kết một lượt gửi với một video. Giữ lượt để kiểm tra; không tự tạo lại.')
+   if tracker.correlation_expired():
+    self.phase(rid,'needs_review','Sau 60 giây chưa lấy được ID video của lượt vừa bấm. Chưa xác nhận Flow tiếp nhận; không tự tạo lại.')
+    raise SimpleStopped(self.message)
+   await tracker.tick()
+   if tracker.blocked:
+    raise SimpleStopped('Liên kết ID đã thay đổi hoặc chưa lưu được. Chưa nhận video; không tự tạo lại.')
+   record=tracker.snapshot();state=record['state']
+   if time.monotonic()-last_network>=5:
+    self.save_network_probe(rid);last_network=time.monotonic()
+   if state=='failed':
+    message='Flow báo tạo thất bại cho đúng ID video đã gửi.'
+    if record.get('failure_code'):message+=' '+record['failure_code']
+    self.phase(rid,'generation_failed',message)
+    raise FlowGenerationFailed(message+' App không tự gửi lại.')
+   if state=='ready':
+    self.phase(rid,'downloading','Đã xác định đúng video hoàn tất; đang tải về app.')
+    tmp=self.root/(rid+'.partial')
+    try:
+     await asyncio.wait_for(tracker.download_to(tmp),120)
+     path=await self.validate_video(rid,tmp,'.mp4')
+     await self.assert_ready()
+     if tracker.blocked:raise SimpleStopped('Liên kết video thay đổi trong khi tải. Chưa nhập video vào cảnh.')
+     self.auto_download=True
+     self.ledger.set_metadata(rid,{'provider_video_downloaded':True})
+     return path
+    except BaseException as exc:
+     tmp.unlink(missing_ok=True)
+     if isinstance(exc,asyncio.CancelledError):raise
+     self.ledger.set_metadata(rid,{'provider_video_downloaded':False,'provider_download_error':type(exc).__name__})
+     raise SimpleStopped('Flow đã có đúng video nhưng app chưa tải và xác minh được tệp ('+type(exc).__name__+'). Giữ ID để kiểm tra; không tạo lại.')from None
+   snapshot=(state,record.get('tracking_error'))
+   if snapshot!=last:
+    if record.get('tracking_error'):
+     self.phase(rid,'tracking_error','Đã có ID video nhưng chưa đọc được trạng thái. App chỉ thử đọc lại, không gửi tạo lại.')
+    elif state=='success':
+     self.phase(rid,'resolving_video','Flow báo video hoàn tất; đang lấy tệp theo đúng ID.')
+    elif record.get('association_confirmed'):
+     self.phase(rid,'generating','Đã liên kết ID video; đang chờ Flow báo kết quả. Chưa có phần trăm render.')
+    else:
+     self.phase(rid,'waiting','Đã bấm tạo; đang chờ phản hồi chứa ID video, chưa xác nhận Flow tiếp nhận.')
+    last=snapshot
+   if record['read_failures']>=3:
+    raise SimpleStopped('Đã lưu ID video nhưng ba lần đọc trạng thái không thành công. Cần kiểm tra lượt đã gửi; app không tự tạo lại.')
+   await asyncio.sleep(1)
+  raise SimpleStopped('Hết thời gian theo dõi; kết quả chưa được nhận về app. Giữ ID video để kiểm tra, không tự tạo lại.')
  def on_download(self,download):
+  # Unrelated browser downloads cannot complete a job tracked by provider ID.
+  if self.active in self.task_trackers:return
   if not self.active or not self.sent or not self.download_waiter or self.download_waiter.done()or self.download_task:return
   self.download_item=download;self.download_task=asyncio.create_task(self.save_download(download))
  async def save_download(self,download):

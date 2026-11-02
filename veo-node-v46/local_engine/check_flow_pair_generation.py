@@ -51,54 +51,8 @@ async def main():
    await page.evaluate('''prompt=>{const card=document.createElement('article');card.setAttribute('data-generation-id','new-result');card.innerHTML='<p></p><span>37%</span>';card.querySelector('p').textContent=prompt;document.body.append(card)}''',prompt)
    row=await observer.read();assert row and row['progress']==37,row
    await page.locator('[data-generation-id=new-result]').evaluate('e=>e.remove()')
-   # Real submit/run/ledger/wait_result, with fixture statuses after one click.
-   class StatusFixture:
-    def __init__(self,*a):self.calls=0;self.clicked=False
-    async def baseline(self):pass
-    async def read(self):
-     self.calls+=1
-     return {'failed':self.calls>1,'video':False,'progress':37}
-   body={'request_id':'flow-video-fixture-once','kind':'video','model':MODEL,'prompt':prompt,
-    'references':[{'mime_type':'image/png','data':encoded}],'room_id':'room','scene_id':'scene','part':'part',
-    'confirm_send':True,'automatic':True,'selection_token':'token','prepared_request_id':report['request_id']}
-   with patch('local_engine.simple_flow.ResultObserver',StatusFixture):
-    await service.submit(body);await service.task
-   assert await page.evaluate('window.sent')==1
-   record=service.lookup(body['request_id'])
-   assert record['state']=='unknown' and record['progress']==37 and record['progress_source']=='flow_ui',record
-   network=service.diagnose(body['request_id'])['network_probe']
-   assert network['capture_state']=='stopped' and not network['association_confirmed'],network
-   assert network['click_call_returned'] and any(
-    fact['value']=='operations/provider-job-fixture'
-    for entry in network['requests'] for fact in (entry.get('response_facts') or {}).get('facts',[])),network
-   assert (service.root/(body['request_id']+'.network.json')).is_file()
-   again=await service.submit(body)
-   assert again['state']=='unknown' and await page.evaluate('window.sent')==1
-   try:await service.submit(dict(body,request_id='flow-video-fixture-second'));raise AssertionError('Retry submitted')
-   except HTTPException:pass
-   assert await page.evaluate('window.sent')==1
-   # A separate explicit fixture request verifies Stop flushes the passive trace.
-   await service.review(body['request_id'],{'confirm_no_result':True})
-   second_report=dict(report,request_id='flow-pair-second-fixture',state='inputs_sent')
-   service.pair_report=second_report;service.prepare_report=second_report
-   class WaitingStatus:
-    def __init__(self,*a):self.clicked=False
-    async def baseline(self):pass
-    async def read(self):return {'failed':False,'video':False,'progress':37}
-   second_body=dict(body,request_id='flow-video-fixture-stop',prepared_request_id=second_report['request_id'])
-   with patch('local_engine.simple_flow.ResultObserver',WaitingStatus):
-    await service.submit(second_body)
-    for _ in range(150):
-     if service.lookup(second_body['request_id']).get('phase')=='generating':break
-     await asyncio.sleep(.02)
-    else:raise AssertionError('Second fixture never reached waiting/generating')
-    await page.evaluate('window.generated')
-    await service.stop()
-   stopped=service.diagnose(second_body['request_id'])
-   assert stopped['record']['state']=='unknown' and stopped['can_retry'] is False
-   assert stopped['network_probe']['capture_state']=='stopped' and stopped['network_probe']['click_call_returned']
-   assert not service.network_probes and await page.evaluate('window.sent')==2
+   # Provider-ID sender/ledger/download cases now live in check_flow_task_integration.
    await browser.close()
- print('PASS: pair receipt guards image/prompt/scene; real ResultObserver reads 37% for multiline prompt; real ledger/sender clicks once, exposes progress, never retries unknown.')
+ print('PASS: pair receipt guards image/prompt/scene; ResultObserver reads actual DOM progress independently. Provider-ID sender is tested by check_flow_task_integration.')
 
 if __name__=='__main__':asyncio.run(main())
