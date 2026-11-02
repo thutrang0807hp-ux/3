@@ -5,7 +5,7 @@ import time
 from fastapi import HTTPException
 from .simple_flow_dom import SNAPSHOT, ResultObserver
 
-async def observer_report(observer):
+async def observer_report(observer, *, include_structure=False):
     page=observer.page
     rows=await page.evaluate(SNAPSHOT,observer.prompt)
     baseline=await page.evaluate('()=>!!window.__sfFlowOldCards')
@@ -47,12 +47,15 @@ async def observer_report(observer):
                 return {tag:e.tagName.toLowerCase(),progress:e.getAttribute('aria-valuenow'),parents};
             })};
     }''')
+    from .flow_media_structure import collect_media_structure
+    structure=await collect_media_structure(page,budget=1.8) if include_structure else None
     return {'checked_at':time.time(),'baseline_available':baseline,
             'observer_card_id':observer.card,'observer_ambiguous':observer.ambiguous,
             'expected_prompt_length':len(observer.prompt),
             'expected_prompt_sha256':hashlib.sha256(observer.prompt.encode()).hexdigest(),
             'expected_prompt_prefix':observer.prompt[:120],
             'total_card_count':len(rows),'cards':candidates,'inventory':inventory,
+            'media_structure':structure,'structure_requested':include_structure,
             'read_only':True,'generation_submitted_by_diagnostics':False}
 
 async def inspect_tracking(service,rid,body):
@@ -77,7 +80,7 @@ async def inspect_tracking(service,rid,body):
             if service.active!=rid or not service.observer:
                 raise HTTPException(409,'Đang có thao tác khác; chưa kiểm tra lượt này.')
             await service.assert_ready()
-            snapshot=await asyncio.wait_for(observer_report(service.observer),5)
+            snapshot=await asyncio.wait_for(observer_report(service.observer,include_structure=True),5)
             snapshot['session_source']='active_generation'
         else:
             if record['state']!='unknown':
@@ -97,6 +100,8 @@ async def inspect_tracking(service,rid,body):
                 while not snapshot['total_card_count'] and not snapshot['inventory']['visible_videos'] and not snapshot['inventory']['visible_progressbars'] and asyncio.get_running_loop().time()<deadline:
                     await asyncio.sleep(1);await service.assert_ready()
                     snapshot=await asyncio.wait_for(observer_report(observer),5)
+                # Heavy structural scan once, after the ordinary load checks.
+                snapshot=await asyncio.wait_for(observer_report(observer,include_structure=True),5)
                 snapshot['session_source']='reopened_for_read_only_inspection'
                 snapshot['baseline_available']=False
                 for card in snapshot['cards']:

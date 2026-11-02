@@ -38,6 +38,7 @@ async def main():
    blocker=asyncio.Event();service.task=asyncio.create_task(blocker.wait());service.active=rid;service.observer=observer
    report=await inspect_tracking(service,rid,body)
    assert report['result_tracking']['session_source']=='active_generation'
+   assert report['result_tracking']['media_structure'] is not None
    assert service.lookup(rid)['state']=='unknown' and report['can_retry'] is False
    service.task.cancel();await asyncio.gather(service.task,return_exceptions=True)
    service.active=None;service.observer=None
@@ -45,6 +46,7 @@ async def main():
    service.restore=AsyncMock(side_effect=restore)
    report=await inspect_tracking(service,rid,body)
    assert report['result_tracking']['session_source']=='reopened_for_read_only_inspection'
+   assert report['result_tracking']['structure_requested'] and report['result_tracking']['media_structure'] is not None
    assert not report['result_tracking']['baseline_available']
    assert all('baseline_unavailable' in c['rejected_because'] for c in report['result_tracking']['cards'])
    assert service.lookup(rid)['state']=='unknown' and service.lookup(rid)['result'] is None
