@@ -52,6 +52,9 @@ async def until(predicate, timeout=12):
 
 
 async def scenario(browser, root, movie, mode):
+    pipeline = mode.startswith('pipeline_')
+    if pipeline:
+        mode = 'native_' + mode.removeprefix('pipeline_')
     native = mode.startswith('native_')
     if native:
         mode = mode.removeprefix('native_')
@@ -67,8 +70,14 @@ async def scenario(browser, root, movie, mode):
         if mode != 'missing_key':
             html += '<script type="application/json" src="https://www.google.com/recaptcha/enterprise.js?render=FIXTURE_SITE_KEY"></script>'
         html += '<script>window.grecaptcha={enterprise:{ready:f=>f(),execute:()=>Promise.resolve("PRIVATE_NATIVE_TOKEN")}};</script>'
+    if pipeline:
+        # No composer, settings panel, filechooser, chip or Generate button.
+        html = '<title>Flow fixture</title><script>window.sent=0;window.WIZ_global_data={cfb2h:"fixture-build",SNlM0e:"'+SECRET+'"};window.grecaptcha={enterprise:{ready:f=>f(),execute:()=>Promise.resolve("PRIVATE_NATIVE_TOKEN")}};</script>'
+        html += '<script type="application/json" src="https://www.google.com/recaptcha/enterprise.js?render=FIXTURE_SITE_KEY"></script>'
     context = await browser.new_context()
     counts = {'generate': 0, 'status': 0, 'detail': 0, 'download': 0}
+    if pipeline:
+        counts.update(upload=0,resolve=0,warmup=0)
     async def intercepted(route):
         r = route.request
         if r.resource_type == 'document':
@@ -83,6 +92,34 @@ async def scenario(browser, root, movie, mode):
         fields = parse_qs(r.post_data or '')
         call = json.loads(fields['f.req'][0])[0][0]
         method = call[0]
+        if pipeline and method in ('NfrxTb','ve2Lsc','DTaVef','nzlxg'):
+            counts['warmup'] += 1
+            wire=response([],method)
+            await route.fulfill(body=wire,content_type='text/plain; charset=utf-8')
+            return
+        if pipeline and method == 'maseQ':
+            counts['upload'] += 1
+            upload=json.loads(call[1])
+            assert upload[0][5]==PROJECT and upload[0][10]==['PRIVATE_NATIVE_TOKEN',1]
+            assert upload[1]==encoded and upload[2]=='image/png'
+            assert upload[3:8]==[1,None,None,None,None]
+            if mode=='upload_transport_error':
+                await route.abort();return
+            if mode=='upload_rejected':
+                rows=[['wrb.fr','maseQ',None,None,None,[7,SECRET,['PUBLIC_ERROR_UNUSUAL_ACTIVITY']]]]
+                frame=json.dumps(rows).encode()
+                wire=b")]}'\n\n"+str(len(frame)).encode()+b'\n'+frame+b'\n'
+            else:
+                wire=response([[OTHER if mode=='wrong_upload_id' else IMAGE]],method)
+            if mode=='project_changed':
+                await page.evaluate('(id)=>history.replaceState({},"","/project/"+id)',OTHER)
+            await route.fulfill(body=wire,content_type='text/plain; charset=utf-8')
+            return
+        if pipeline and method==DETAIL_RPC and json.loads(call[1])==[IMAGE]:
+            counts['resolve'] += 1
+            data=[IMAGE,OTHER if mode=='wrong_image_project' else PROJECT,None,'https://flow-content.google/image/'+IMAGE+'?signature='+SECRET]
+            await route.fulfill(body=response(data,method),content_type='text/plain; charset=utf-8')
+            return
         if method == REFERENCE_RPC:
             counts['generate'] += 1
             if mode == 'transport_error':
@@ -128,8 +165,9 @@ async def scenario(browser, root, movie, mode):
     await context.route('**/*', intercepted)
     page = await context.new_page()
     await page.goto(URL)
-    await page.locator('textarea').fill(PROMPT)
-    await page.locator('#generate').evaluate(r'''(button, {endpoint, project, image, prompt, duplicate}) => {
+    if not pipeline:
+      await page.locator('textarea').fill(PROMPT)
+      await page.locator('#generate').evaluate(r'''(button, {endpoint, project, image, prompt, duplicate}) => {
         button.onclick = () => {
             window.sent++;
             const payload = [[[[null, null, [[[prompt]]]], [[null, image]], 'veo_3_1_lite', 1]], [null, 22, null, null, null, project]];
@@ -140,12 +178,19 @@ async def scenario(browser, root, movie, mode):
     }''', {'endpoint': ENDPOINT, 'project': PROJECT, 'image': IMAGE, 'prompt': PROMPT, 'duplicate': mode == 'ambiguous'})
     service = SimpleFlow(root, Vault(root), RequestLedger(root))
     service.direct_reference_enabled = native
+    service.native_pipeline_enabled = pipeline
     service.account_bridge = type('Bridge', (), {'background': True, 'selection': lambda _: {'available': True, 'token': 'token', 'account_id': 'account'}})()
     service.page = service.pair_page = page
     service.project = URL
     service.connected = True
     service.pair_trial_only = True
     service.assert_ready = AsyncMock()
+    if pipeline and mode=='account_changed':
+        from .simple_flow import SimpleStopped
+        async def check_account():
+            if counts['upload']:
+                raise SimpleStopped('Tài khoản fixture đã đổi; chưa gửi tạo.')
+        service.assert_ready=check_account
     service.disconnect_browser = AsyncMock()
     service.capture_preview = AsyncMock()
     report = {'request_id': 'flow-pair-' + mode, 'state': 'inputs_sent', 'account_id': 'account',
@@ -153,21 +198,26 @@ async def scenario(browser, root, movie, mode):
         'image_attached': True, 'prompt_filled': True, 'prompt_verified': True, 'settings_verified': True,
         'reference_sha256': hashlib.sha256(raw).hexdigest(), 'prompt_sha256': hashlib.sha256(PROMPT.encode()).hexdigest()}
     service.pair_report = report
-    await seal_pair(service, report, DEFAULTS)
-    assert report['generation_ready']
+    if not pipeline:
+        await seal_pair(service, report, DEFAULTS)
+        assert report['generation_ready']
     validation = {'prepared_request_id': report['request_id'], 'account_id': 'account',
         'room_id': 'room', 'scene_id': 'scene', 'part': 'a', 'prompt': PROMPT}
-    await validate_pair(service, validation, raw)
-    for changes in ({'prompt': 'Different'}, {'scene_id': 'wrong'}):
-        try:
-            await validate_pair(service, {**validation, **changes}, raw)
-            raise AssertionError('Changed pair accepted')
-        except PrepareStopped:
-            pass
+    if not pipeline:
+        await validate_pair(service, validation, raw)
+        for changes in ({'prompt': 'Different'}, {'scene_id': 'wrong'}):
+            try:
+                await validate_pair(service, {**validation, **changes}, raw)
+                raise AssertionError('Changed pair accepted')
+            except PrepareStopped:
+                pass
     body = {'request_id': 'flow-video-test-' + mode.replace('_', '-'), 'kind': 'video', 'model': MODEL, 'prompt': PROMPT,
         'references': [{'mime_type': 'image/png', 'data': encoded}], 'room_id': 'room',
         'scene_id': 'scene', 'part': 'a', 'confirm_send': True, 'automatic': True,
         'selection_token': 'token', 'prepared_request_id': report['request_id']}
+    if pipeline:
+        body.pop('prepared_request_id')
+        body['native_pipeline']=True
     with patch('local_engine.flow_task_tracker.FlowTaskTracker', FixtureTimer):
         await service.submit(body)
         if mode == 'stop':
@@ -177,6 +227,17 @@ async def scenario(browser, root, movie, mode):
             await asyncio.wait_for(service.task, 20)
     record = service.lookup(body['request_id'])
     assert await page.evaluate('window.sent') == (0 if native else 1)
+    if pipeline:
+        assert counts['warmup']==4 and counts['upload']==1, (record,counts)
+        if mode in ('upload_rejected','upload_transport_error','wrong_image_project','account_changed','project_changed'):
+            assert record['state']=='failed' and not service.sent and counts['generate']==0, record
+            assert record['native_inputs']['upload_attempted'] is True
+            assert not record['native_inputs']['generation_ready']
+            assert counts['upload']==1
+            await service.submit(body)
+            assert counts['upload']==1
+            await context.close()
+            return counts
     if mode in ('missing_id', 'missing_key'):
         assert record['state'] == 'failed' and counts == {'generate':0,'status':0,'detail':0,'download':0}, record
         assert not service.sent

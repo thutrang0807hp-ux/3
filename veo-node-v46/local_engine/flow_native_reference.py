@@ -136,7 +136,8 @@ async def attached_reference(page, report):
     return media
 
 
-PREFLIGHT = r'''async ({key,project}) => {
+PREFLIGHT = r'''async ({key,project,action='VIDEO_GENERATION'}) => {
+    if(!['VIDEO_GENERATION','MEDIA_GENERATION'].includes(action)) return {error:'native_action_denied'};
     const projectPath='/project/'+project;
     const current=()=>location.origin==='https://flow.google.com' &&
         location.pathname.replace(/\/$/,'')===projectPath;
@@ -162,12 +163,12 @@ PREFLIGHT = r'''async ({key,project}) => {
     try{
         const token=await Promise.race([
             new Promise((resolve,reject)=>api.ready(()=>{
-                Promise.resolve().then(()=>api.execute([...keys][0],{action:'VIDEO_GENERATION'})).then(resolve,reject);
+                Promise.resolve().then(()=>api.execute([...keys][0],{action})).then(resolve,reject);
             })),
             new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('timeout')),10000);})
         ]);
         if(!current() || typeof token!=='string' || !token) return {error:'native_verification_failed'};
-        window[key]={project,token,created:Date.now()};
+        window[key]={project,token,action,created:Date.now()};
         return {ready:true};
     }catch{return {error:'native_verification_failed'};}
     finally{clearTimeout(timer);}
@@ -176,7 +177,7 @@ PREFLIGHT = r'''async ({key,project}) => {
 
 SUBMIT = r'''async ({key,project,media,prompt}) => {
     const state=window[key]; delete window[key];
-    if(!state || state.project!==project || Date.now()-state.created>20000 ||
+    if(!state || state.project!==project || state.action!=='VIDEO_GENERATION' || Date.now()-state.created>20000 ||
        location.origin!=='https://flow.google.com' ||
        location.pathname.replace(/\/$/,'')!=='/project/'+project)
         return {not_sent:true,error:'prepared_session_expired'};
@@ -220,7 +221,13 @@ async def prepare(service, report):
     project = project_from_url(service.page.url)
     if project != project_from_url(service.project):
         raise DirectNotReady('Dự án Flow đã đổi; chưa gửi tạo.')
-    media = await attached_reference(service.page, report)
+    if report.get('preparation_method') == 'native_reference_pipeline':
+        media = report.get('uploaded_media_id')
+        if (not report.get('reference_verified') or not isinstance(media, str) or
+            not UUID.fullmatch(media) or report.get('uploaded_media_project') != project):
+            raise DirectNotReady('Lượt upload trực tiếp chưa có ID ảnh đã xác minh; chưa gửi tạo.')
+    else:
+        media = await attached_reference(service.page, report)
     key = '__sfNativeReference_' + secrets.token_hex(12)
     result = await asyncio.wait_for(service.page.evaluate(PREFLIGHT, {'key': key, 'project': project}), 12)
     if not isinstance(result, dict) or result.get('ready') is not True:
@@ -241,8 +248,12 @@ async def submit(service, rid, payload, prepared, tracker):
     tracker.mark_generate_attempt()
     tracker.bind_direct_request(prepared['media'])
     # Only the existing RequestLedger owns dispatch. No second SceneStore claim.
-    service.ledger.set_metadata(rid, {'clicked': False, 'direct_rpc_attempted': True,
-                                    'submission_method': 'native_reference_rpc'})
+    metadata={'clicked':False,'direct_rpc_attempted':True,'submission_method':'native_reference_rpc'}
+    report=getattr(service,'pair_report',None)
+    if report and report.get('preparation_method')=='native_reference_pipeline':
+        report.update(native_stage='generation_dispatching',generation_submitted=None)
+        metadata['native_inputs']=dict(report)
+    service.ledger.set_metadata(rid, metadata)
     service.sent = True  # Set before the browser call: cancellation is ambiguous.
     reply = await asyncio.wait_for(service.page.evaluate(SUBMIT, {
         **prepared, 'prompt': payload['prompt']}), 25)
@@ -255,4 +266,10 @@ async def submit(service, rid, payload, prepared, tracker):
     if type(status) is not int or not isinstance(reply.get('body'), str):
         raise DirectNotReady('Đã bắt đầu lệnh gửi nhưng chưa nhận đủ phản hồi. Giữ lượt để kiểm tra; không tự gửi lại.')
     tracker.accept_direct_response(status, reply['body'])
-    service.ledger.set_metadata(rid, {'direct_rpc_response_received': True})
+    metadata={'direct_rpc_response_received':True}
+    if report and report.get('preparation_method')=='native_reference_pipeline':
+        rejected=tracker.snapshot()['state']=='rpc_rejected'
+        report.update(native_stage='generation_accepted' if tracker.identity else 'generation_rejected' if rejected else 'generation_unconfirmed',
+                      generation_submitted=True if tracker.identity else False if rejected else None)
+        metadata['native_inputs']=dict(report)
+    service.ledger.set_metadata(rid, metadata)

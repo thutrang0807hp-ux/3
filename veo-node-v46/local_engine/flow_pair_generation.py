@@ -58,6 +58,11 @@ async def validate_pair(service,payload,raw):
     if hashlib.sha256(payload['prompt'].strip().encode()).hexdigest()!=report['prompt_sha256']:
         raise PrepareStopped('Prompt đã đổi sau khi chuẩn bị.')
     await service.assert_ready()
+    if report.get('preparation_method')=='native_reference_pipeline':
+        from .flow_native_pipeline import validate_receipt,NativePipelineStopped
+        try:await validate_receipt(service,report)
+        except NativePipelineStopped as exc:raise PrepareStopped(str(exc))from None
+        return
     panel=await settings_panel(service.page)
     try:actual=await read_settings(panel)
     finally:await service.page.keyboard.press('Escape')

@@ -130,7 +130,7 @@ def reference_request(raw, content_type, expected_prompt, project_id):
             'input_media_ids': [r[1] for r in references]}
 
 
-def rpc_payload(raw, rpc_id):
+def rpc_payload(raw, rpc_id, *, allow_empty=False, allow_project_id=False):
     """Reject incomplete framing, duplicate calls, RPC errors and missing payloads."""
     docs, meta = decode_transport(raw, 'text/plain', direction='response')
     if meta.get('decode_error') or meta.get('partial') or meta.get('truncated'):
@@ -154,9 +154,13 @@ def rpc_payload(raw, rpc_id):
     row = matches[0]
     if len(row)>5 and row[2] is None and row[5]:
         raise FlowRpcRejected(_rpc_error_details(row[5],rows))
+    if allow_empty and len(row) >= 3 and row[2] is None and not (len(row) > 5 and row[5]):
+        return []
     if len(row) < 3 or row[2] is None or (len(row) > 5 and row[5]):
         raise UnsupportedFlowPayload('rpc_rejected_or_empty')
     payload = json.loads(row[2]) if isinstance(row[2], str) else row[2]
+    if allow_project_id and rpc_id == 'jHPbke' and isinstance(payload, str) and UUID.fullmatch(payload):
+        return [payload]
     if not isinstance(payload, list):
         raise UnsupportedFlowPayload('response_payload_type')
     return payload

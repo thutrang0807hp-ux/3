@@ -30,6 +30,13 @@ def main():
     original = template.read_bytes()
     assert sha(original) == expected, 'Template checksum mismatch'
     sources = {'app/local_engine/' + name: ROOT / 'veo-node-v46/local_engine' / name for name in NAMES}
+    prior = ROOT / 'downloads/v46-native-reference/patch-build.json'
+    if prior.is_file():
+        pinned = json.loads(prior.read_text())
+        assert pinned['version'] == VERSION, 'Unexpected release metadata'
+        expected_sources = {item['path']: item['sha256'] for item in pinned['files']}
+        assert all(expected_sources.get(name) == sha(path.read_bytes()) for name,path in sources.items()), \
+            'Source changed since v46.43; use a NEW version and complete payload builder, do not overwrite the published EXE'
     manifest = {'version': VERSION, 'supported_payloads': [BASELINE],
                 'minimum_patch': '2026.11.02.4642',
                 'files': [{'path': name, 'bytes': path.stat().st_size, 'sha256': sha(path.read_bytes())}

@@ -33,19 +33,21 @@ class SimpleFlow:
   self.vault.set_secret('simple-flow-binding',{'browser':self.channel,'project':self.project,'email':self.email,'token':self.token})
  def enabled(self):return self.account_bridge is not None or (self.vault.secret('flow-transport-v2')or{}).get('mode','simple')=='simple'
  def status(self):
+  verified_key='native-flow-pipeline-verified'if getattr(self,'native_pipeline_enabled',False)else'simple-flow-verified'
   if self.account_bridge:
    selection=self.account_bridge.selection()
    message=self.message if self.busy()or self.state in ('failed','unknown')else ('Đã chọn '+str(selection.get('account_name'))+' từ tab Tài khoản. Phiên được mở nền khi tạo clip.'if selection['available']else'Đăng nhập web và chọn một tài khoản Flow tại Cài đặt → Tài khoản.')
    return {'state':self.state,'message':message,'interaction':self.pending,'active_request':self.active,'unresolved':self.unresolved(),'saved_video_reviews':self.saved_video_reviews(),
     'configured':True,'account_binding':selection['available'],'transport':'web_ui','connection_method':'account_web','shared_accounts':True,'background':bool(self.account_bridge.background),
+    'native_pipeline':bool(getattr(self,'native_pipeline_enabled',False)),
     'models':[MODEL],'model_details':[{'id':MODEL,'description':'Lite · 8s · 9:16 · tài khoản web đã chọn','accepts_images':True,'video_type':'i2v','max_images':1}],
     'per_account':1,'automatic_retry':False,'selection':selection,'project_url':self.project,'restorable':False,
-    'generation_verified':bool(self.vault.secret('simple-flow-verified'))}
+    'generation_verified':bool(self.vault.secret(verified_key))}
   return {'state':self.state,'message':self.message,'interaction':self.pending,'active_request':self.active,'unresolved':self.unresolved(),'saved_video_reviews':self.saved_video_reviews(),
    'browser':self.channel,'project_url':self.project or (self.binding()or{}).get('project'),'restorable':bool(self.binding()),
    'configured':True,'account_binding':self.connected,'transport':'web_ui','connection_method':'simple_flow',
    'models':[MODEL],'model_details':[{'id':MODEL,'description':'Lite · 8s · 9:16 · xác nhận trên Flow','accepts_images':True,'video_type':'i2v','max_images':1}],
-   'per_account':1,'automatic_retry':False,'generation_verified':bool(self.vault.secret('simple-flow-verified')),
+   'per_account':1,'automatic_retry':False,'generation_verified':bool(self.vault.secret(verified_key)),
    'selection':{'mode':'selected','account_id':self.account_id(),'account_name':self.email or (self.binding()or{}).get('email') or 'Flow · phiên đã xác nhận','available':bool(self.connected and self.page and not self.page.is_closed()),'token':self.token}}
  def unresolved(self):
   with self.ledger.connect()as db:
@@ -173,7 +175,13 @@ class SimpleFlow:
    try:
     session,binding=await self.account_bridge.attach(self.pinned_account)
     self.account_session=session;self.pinned_binding=binding;self.page=session.page;self.context=session.page.context
-    if getattr(session,'background',False):await session.ensure_project(self.vault,self.pinned_account,self.pinned_room)
+    if getattr(session,'background',False):
+     if getattr(self,'native_pipeline_enabled',False):
+      from .flow_native_pipeline import ensure_native_project,NativePipelineStopped
+      async def check_native():await self.account_bridge.check(session,binding)
+      try:await ensure_native_project(session,self.vault,self.pinned_account,self.pinned_room,check_native)
+      except NativePipelineStopped as exc:raise SimpleStopped(str(exc))from None
+     else:await session.ensure_project(self.vault,self.pinned_account,self.pinned_room)
     self.email=session.email;self.project=self.project_url();self.connected=True
     return
    except SessionUnavailable as exc:raise SimpleStopped(str(exc))from None
@@ -271,7 +279,7 @@ class SimpleFlow:
   if not row or self.ledger.metadata(rid).get('transport')!='simple_flow':raise HTTPException(404,'Không có lượt SimpleFlow này.')
   meta=self.ledger.metadata(rid)
   provider_task=meta.get('provider_task')or{};receipt=self.ledger.receipt(rid)
-  return {**receipt,'submitted':True if provider_task.get('association_confirmed')else receipt['submitted'],'state':row[0],'result':json.loads(row[1]) if row[0]=='done'else None,'message':meta.get('message',self.message if self.active==rid else ''),'phase':meta.get('phase'),'progress':meta.get('progress'),'progress_source':meta.get('progress_source'),'has_preview':bool(meta.get('has_preview')),'automatic_retry':False,'provider_task':provider_task or None,'network_probe_available':rid in self.network_probes or (self.root/(rid+'.network.json')).is_file(),'saved_video_review':meta.get('saved_video_review'),'needs_manual_review':row[0]=='unknown' and time.time()-row[2]>=180 and not meta.get('saved_video_review',{}).get('allow_new_generation')}
+  return {**receipt,'submitted':True if provider_task.get('association_confirmed')else receipt['submitted'],'state':row[0],'result':json.loads(row[1]) if row[0]=='done'else None,'message':meta.get('message',self.message if self.active==rid else ''),'phase':meta.get('phase'),'progress':meta.get('progress'),'progress_source':meta.get('progress_source'),'has_preview':bool(meta.get('has_preview')),'automatic_retry':False,'provider_task':provider_task or None,'native_inputs':meta.get('native_inputs'),'network_probe_available':rid in self.network_probes or (self.root/(rid+'.network.json')).is_file(),'saved_video_review':meta.get('saved_video_review'),'needs_manual_review':row[0]=='unknown' and time.time()-row[2]>=180 and not meta.get('saved_video_review',{}).get('allow_new_generation')}
  @staticmethod
  def valid_id(rid):
   if not isinstance(rid,str)or not re.fullmatch(r'flow-[a-zA-Z0-9-]{8,100}',rid):raise HTTPException(400,'Mã lượt Flow không hợp lệ.')
@@ -294,7 +302,9 @@ class SimpleFlow:
   return {**report,'code':code,'message':message}
  @guarded_submission
  async def submit(self,body):
-  if getattr(self,'pair_trial_only',False) and not (body.get('prepared_request_id') and body.get('prepared_request_id')==(getattr(self,'pair_report',None) or {}).get('request_id')):raise HTTPException(409,'Cần chuẩn bị ảnh + prompt bằng lượt trực tiếp trước khi tạo video.')
+  native_requested=bool(getattr(self,'native_pipeline_enabled',False) and body.get('native_pipeline')is True)
+  if native_requested and body.get('prepared_request_id'):raise HTTPException(400,'Không ghép receipt composer cũ với pipeline trực tiếp.')
+  if getattr(self,'pair_trial_only',False) and not native_requested and not (body.get('prepared_request_id') and body.get('prepared_request_id')==(getattr(self,'pair_report',None) or {}).get('request_id')):raise HTTPException(409,'Cần chuẩn bị ảnh + prompt bằng lượt trực tiếp trước khi tạo video.')
   if not self.enabled():raise HTTPException(409,'Node Veo mới cần phiên Flow đơn giản. Bấm Kết nối Flow trước.')
   rid=body.get('request_id');self.valid_id(rid)
   prompt=body.get('prompt');refs=body.get('references')
@@ -312,6 +322,9 @@ class SimpleFlow:
    if fmt not in ('image/png','image/jpeg','image/webp')or fmt!=ref.get('mime_type'):raise ValueError()
   except Exception:raise HTTPException(400,'Ảnh đầu không hợp lệ hoặc vượt 6 MB.')from None
   payload={'kind':'video','model':MODEL,'prompt':prompt,'references':refs,'room_id':str(body.get('room_id',''))[:100],'scene_id':str(body.get('scene_id',''))[:100],'part':str(body.get('part',''))[:40],'account_id':self.account_id(),'transport':'simple_flow'}
+  if native_requested:
+   if any(not isinstance(body.get(k),str)or not body[k]or len(body[k])>(40 if k=='part'else 100)for k in ('room_id','scene_id','part')):raise HTTPException(400,'Thiếu hoặc sai định danh phòng/cảnh/phần clip cho pipeline trực tiếp.')
+   payload['native_pipeline']=True
   if body.get('prepared_request_id'):
    payload['prepared_request_id']=body['prepared_request_id']
   async with self.gate:
@@ -357,6 +370,20 @@ class SimpleFlow:
    self.phase(rid,'opening','Đang mở phiên Flow nền từ tài khoản đã chọn.'if background else'Đang kiểm tra phiên Flow.')
    if not self.connected:await self.restore()
    await self.assert_ready()
+   if payload.get('native_pipeline'):
+    from .flow_native_pipeline import prepare_inputs,NativePipelineStopped
+    pair_id=rid+'-inputs'
+    report={'request_id':pair_id,'state':'running','room_id':payload['room_id'],'scene_id':payload['scene_id'],'part':payload['part'],
+     'account_id':payload['account_id'],'reference_sha256':hashlib.sha256(raw).hexdigest(),
+     'prompt_sha256':hashlib.sha256(payload['prompt'].strip().encode()).hexdigest(),'generation_submitted':False}
+    self.pair_report=report;self.pair_page=self.page
+    def save_inputs():self.ledger.set_metadata(rid,{'native_inputs':dict(report)})
+    def native_phase(code,message):self.phase(rid,code,message)
+    try:await prepare_inputs(self,report,raw,payload['references'][0]['mime_type'],payload['prompt'],
+     {'kind':'video','mode':'ingredients','ratio':'9:16','model':'lite','outputs':1},self.assert_ready,
+     on_persist=save_inputs,on_phase=native_phase)
+    except NativePipelineStopped as exc:raise SimpleStopped(str(exc))from None
+    payload['prepared_request_id']=pair_id
    if payload.get('prepared_request_id'):
     from .flow_prepare import validate_prepared,PrepareStopped
     self.phase(rid,'checking_prepared','Đang đọc lại đúng ảnh, prompt và cấu hình đã chuẩn bị; chưa gửi tạo.')
@@ -409,7 +436,11 @@ class SimpleFlow:
    if button is None and background and not direct:raise SimpleStopped('Chưa nhận diện được nút tạo trong phiên Flow nền. Chưa gửi video; xem ảnh bước đang vướng trong node.')
    self.download_waiter=asyncio.get_running_loop().create_future()
    if not background:self.page.on('download',self.on_download)
-   observer=ResultObserver(self.page,payload['prompt']);await observer.baseline();self.observer=observer
+   receipt=getattr(self,'pair_report',None)or{}
+   native_inputs=direct and receipt.get('preparation_method')=='native_reference_pipeline'
+   observer=None if native_inputs else ResultObserver(self.page,payload['prompt'])
+   if observer:await observer.baseline()
+   self.observer=observer
    if payload.get('prepared_request_id'):
     try:await validate_prepared(self,payload,raw)
     except PrepareStopped as exc:raise SimpleStopped(str(exc))from None
@@ -464,7 +495,7 @@ class SimpleFlow:
     self.sent=True
     if payload.get('prepared_request_id'):prepared['state']='submitted'
     await self.checkpoint('manual-submit','Chưa nhận diện duy nhất nút tạo. Bấm Tạo trên Flow MỘT lần rồi Tiếp tục. App không bấm lại.')
-   self.state='waiting_download';self.phase(rid,'waiting','Đã bấm tạo; chưa xác nhận Flow tiếp nhận hoặc liên kết được tác vụ.')
+   self.state='waiting_download';self.phase(rid,'waiting','Đã gửi lệnh tạo trực tiếp; đang kiểm tra phản hồi và ID tác vụ.'if direct else'Đã bấm tạo; chưa xác nhận Flow tiếp nhận hoặc liên kết được tác vụ.')
    path=await self.wait_result(rid,observer)
    if background and self.auto_download is None:raise SimpleStopped('Đã có tệp nhưng chưa xác minh được đúng lượt video. Không tạo lại; giữ lượt để đối soát.')
    if not (automatic_mode and self.auto_download is not None):
@@ -478,7 +509,7 @@ class SimpleFlow:
    provider_task=self.ledger.metadata(rid).get('provider_task')or{}
    if provider_task.get('association_confirmed'):
     result['provider_identity']={key:provider_task[key]for key in ('media_id','project_id','workflow_id')}
-   self.phase(rid,'complete','Đã nhận video về đúng cảnh.');self.ledger.finish(rid,'done',result);self.vault.set_secret('simple-flow-verified',True)
+   self.phase(rid,'complete','Đã nhận video về đúng cảnh.');self.ledger.finish(rid,'done',result);self.vault.set_secret('native-flow-pipeline-verified'if native_inputs else'simple-flow-verified',True)
    self.state='ready';self.message='Đã lưu video; node sẽ nhận về đúng cảnh.'
   except BaseException as exc:
    state='failed'if isinstance(exc,FlowGenerationFailed)else'unknown'if self.sent else'failed';self.ledger.finish(rid,state)
@@ -682,6 +713,7 @@ class SimpleFlow:
 def install_simple_flow(app,data,vault,ledger,provider):
  service=SimpleFlow(data,vault,ledger);provider.simple=service
  service.direct_reference_enabled=True
+ service.native_pipeline_enabled=True
  from .flow_account_session import AccountWebSession
  service.account_bridge=AccountWebSession(data,provider.account_service,background=True)
  from .flow_settings import register_settings_routes

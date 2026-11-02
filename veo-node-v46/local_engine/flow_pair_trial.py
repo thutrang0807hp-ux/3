@@ -289,6 +289,11 @@ async def run_pair(service,report,raw,mime,prompt,settings,token):
         reference.write_bytes(raw);report.update(phase='opening',message='Đang mở dự án Flow của phòng hiện tại.')
         await service.disconnect_browser();await service.restore();await check()
         service.pair_page=service.page
+        if getattr(service,'native_pipeline_enabled',False):
+            from .flow_native_pipeline import prepare_inputs,NativePipelineStopped
+            try:await prepare_inputs(service,report,raw,mime,prompt,settings,check)
+            except NativePipelineStopped as exc:raise PairStopped(str(exc))from None
+            return
         deadline=asyncio.get_running_loop().time()+90
         while asyncio.get_running_loop().time()<deadline:
             await check();editor,_=await reference_scope(service.page)
