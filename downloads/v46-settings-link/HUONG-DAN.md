@@ -1,10 +1,10 @@
-# SceneForge v46.37 — báo cáo cấu trúc media và iframe
+# SceneForge v46.38 — mở và đọc chi tiết video cũ
 
-1. Đóng SceneForge, chạy SceneForge-Update-20261102-v46.37-Media-Structure.exe, chọn thư mục có SceneForge.exe và install-settings.json. Yêu cầu v46.7 trở lên.
-2. Mở đúng phòng và tài khoản đã gửi video. Không chọn mã hoặc tạo lại.
-3. Trong node Veo, bấm **Tự kiểm tra video đã gửi và tải báo cáo** ở phần Video đã gửi chưa nhận được kết quả.
-4. Gửi file SceneForge-theo-doi-video.json. Báo cáo .37 thêm media_structure: vùng bao quanh thumbnail/media, nhãn và nút, từng iframe hiển thị, shadow DOM mở. Iframe ẩn/lỗi hoặc hết budget có ghi lý do riêng.
+1. Đóng SceneForge, chạy SceneForge-Update-20261102-v46.38-Video-Detail.exe, chọn thư mục có SceneForge.exe và install-settings.json. Yêu cầu v46.7 trở lên.
+2. Mở đúng phòng và tài khoản của lượt cũ. Không tạo lại video.
+3. Bấm **Tự kiểm tra video đã gửi và tải báo cáo**. Với lượt unknown đã dừng, app tự tìm thẻ flow-video-tile và chỉ mở khi có duy nhất thumbnail phù hợp đang hiển thị. Lượt đang chạy chỉ thu thập cấu trúc, không mở viewer.
+4. File SceneForge-theo-doi-video.json thêm video_detail_probe và media_structure_after_detail: vùng chi tiết, trường prompt có nhãn, kết quả đối chiếu, cấu trúc sau khi mở. Gửi file đó trong chat.
 
-Quét cấu trúc chỉ khi người dùng tải báo cáo; theo dõi định kỳ vẫn dùng snapshot nhẹ. Không click Generate, không tải hoặc tự xác nhận video nào thuộc lượt cũ, không đổi unknown hoặc mở retry. Nhiều lượt unknown được gộp một file như .36.
+Không click Reuse prompt/Generate/Download, không tự nhận video, không đổi unknown và không mở retry. Prompt khớp vẫn chưa chứng minh video thuộc chính lượt cũ. Nhiều thumbnail hoặc viewer đang mở thì không click chọn đại.
 
-Đã kiểm tra Chromium với cấu trúc mô phỏng, iframe, shadow DOM, giới hạn thời gian và ledger giữ nguyên. Chưa xác minh trên Flow thật hoặc chạy installer Windows. Đây là bản bổ sung chẩn đoán, chưa sửa dứt điểm việc nhận video.
+Đã kiểm tra Chromium với cấu trúc mô phỏng, video DOM tái sử dụng, prompt có nhãn và ledger giữ nguyên. Cấu trúc vùng chi tiết/trường prompt chưa xác minh trên Flow thật; nếu không nhận diện được thì báo cáo ghi rõ. Chưa chạy installer Windows.

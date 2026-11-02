@@ -1,4 +1,7 @@
-"""Read-only diagnostics. Never clicks Generate or marks a video as recovered."""
+"""Tracking diagnostics with an explicit optional thumbnail-open probe.
+
+Never Generate, download, import, retry or mark a historical video as recovered.
+"""
 import asyncio
 import hashlib
 import time
@@ -82,6 +85,8 @@ async def inspect_tracking(service,rid,body):
             await service.assert_ready()
             snapshot=await asyncio.wait_for(observer_report(service.observer,include_structure=True),5)
             snapshot['session_source']='active_generation'
+            if body.get('inspect_video_detail') is True:
+                snapshot['video_detail_probe']={'state':'skipped','message':'Lượt còn đang chạy; chưa mở chi tiết làm gián đoạn theo dõi.','generation_submitted':False,'download_started':False,'request_attribution_confirmed':False}
         else:
             if record['state']!='unknown':
                 raise HTTPException(409,'Chỉ mở lại dự án để kiểm tra lượt đã gửi nhưng chưa rõ kết quả.')
@@ -102,6 +107,17 @@ async def inspect_tracking(service,rid,body):
                     snapshot=await asyncio.wait_for(observer_report(observer),5)
                 # Heavy structural scan once, after the ordinary load checks.
                 snapshot=await asyncio.wait_for(observer_report(observer,include_structure=True),5)
+                if body.get('inspect_video_detail') is True:
+                    from .flow_video_detail_probe import inspect_video_details
+                    from .flow_media_structure import collect_media_structure
+                    probe={}
+                    try:
+                        await asyncio.wait_for(inspect_video_details(service.page,prompt,service.assert_ready,report=probe),20)
+                    except asyncio.TimeoutError:
+                        probe.update(state='needs_inspection',message='Hết thời gian đọc chi tiết; không tạo lại hoặc tải video.')
+                    snapshot['video_detail_probe']=probe
+                    snapshot['read_only']=not probe.get('thumbnail_clicked',False)
+                    snapshot['media_structure_after_detail']=await collect_media_structure(service.page,budget=1.8)
                 snapshot['session_source']='reopened_for_read_only_inspection'
                 snapshot['baseline_available']=False
                 for card in snapshot['cards']:
@@ -111,4 +127,4 @@ async def inspect_tracking(service,rid,body):
                 await service.disconnect_browser()
         service.ledger.set_metadata(rid,{'result_tracking':snapshot})
         return {**service.diagnose(rid,body['store_id'],body['room_id']),
-                'result_tracking':snapshot,'message':'Đã đọc cấu trúc kết quả Flow; chưa nhận hoặc xác nhận video, không gửi lượt tạo mới.'}
+                'result_tracking':snapshot,'message':'Đã thu thập báo cáo cấu trúc/chi tiết video; chưa nhận hoặc xác nhận video, không gửi lượt tạo mới.'}
