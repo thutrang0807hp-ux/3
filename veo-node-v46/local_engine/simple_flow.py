@@ -347,7 +347,7 @@ class SimpleFlow:
    self.tasks[rid]=self.task
    return self.lookup(rid)
  async def run(self,rid,payload,raw):
-  network_probe=None
+  network_probe=None;direct_prepared=None
   ext={'image/png':'.png','image/jpeg':'.jpg','image/webp':'.webp'}[payload['references'][0]['mime_type']]
   reference=self.root/(rid+'.input'+ext)
   try:
@@ -404,23 +404,30 @@ class SimpleFlow:
     else:await self.checkpoint('submit','Cảnh '+payload['scene_id']+': kiểm tra đúng ảnh, prompt, Veo Lite, 8 giây, 9:16 và x1 trên Flow. Tiếp tục cho phép bấm Tạo một lần, có thể tốn credit.')
     await self.assert_ready()
    await self.assert_ready()
-   button=await create_button(self.page)
-   if button is None and background:raise SimpleStopped('Chưa nhận diện được nút tạo trong phiên Flow nền. Chưa gửi video; xem ảnh bước đang vướng trong node.')
+   direct=bool(getattr(self,'direct_reference_enabled',False) and payload.get('prepared_request_id'))
+   button=None if direct else await create_button(self.page)
+   if button is None and background and not direct:raise SimpleStopped('Chưa nhận diện được nút tạo trong phiên Flow nền. Chưa gửi video; xem ảnh bước đang vướng trong node.')
    self.download_waiter=asyncio.get_running_loop().create_future()
    if not background:self.page.on('download',self.on_download)
    observer=ResultObserver(self.page,payload['prompt']);await observer.baseline();self.observer=observer
    if payload.get('prepared_request_id'):
     try:await validate_prepared(self,payload,raw)
     except PrepareStopped as exc:raise SimpleStopped(str(exc))from None
-   if button is not None:
+   if direct:
+    from .flow_native_reference import prepare as prepare_direct,DirectNotReady
+    self.phase(rid,'preparing_native_send','Đang kiểm tra ID ảnh và phiên gửi trực tiếp; chưa gửi tạo.')
+    try:direct_prepared=await prepare_direct(self,(getattr(self,'pair_report',None)or self.prepare_report))
+    except DirectNotReady as exc:raise SimpleStopped(str(exc))from None
+   if button is not None or direct:
     try:
      from .flow_network_probe import FlowNetworkProbe
      from .flow_task_tracker import FlowTaskTracker
      tracker=FlowTaskTracker(self.page,payload['prompt'],self.project,self.assert_ready,
       lambda snapshot:self.ledger.set_metadata(rid,{'provider_task':snapshot}))
      self.task_trackers[rid]=tracker
-     network_probe=FlowNetworkProbe(self.page,rid,payload['prompt'],self.assert_ready,context={k:payload[k]for k in ('room_id','scene_id','part','account_id')},task_tracker=tracker)
-     await network_probe.start();self.network_probes[rid]=network_probe
+     if not direct:
+      network_probe=FlowNetworkProbe(self.page,rid,payload['prompt'],self.assert_ready,context={k:payload[k]for k in ('room_id','scene_id','part','account_id')},task_tracker=tracker)
+      await network_probe.start();self.network_probes[rid]=network_probe
     except SimpleStopped:raise
     except Exception as exc:
      self.network_probe_errors[rid]=type(exc).__name__
@@ -429,12 +436,17 @@ class SimpleFlow:
       except Exception:pass
      network_probe=None
      raise SimpleStopped('Chưa mở được bộ theo dõi ID. Chưa bấm Tạo; không gửi lượt không có bộ ghi nhận.')from None
-   self.ledger.set_metadata(rid,{'clicked':False,'manual_submit_allowed':button is None})
+   self.ledger.set_metadata(rid,{'clicked':False,'manual_submit_allowed':button is None and not direct})
    if payload.get('prepared_request_id'):
     prepared=(getattr(self,'pair_report',None) or {})
     if prepared.get('request_id')!=payload['prepared_request_id']:prepared=self.prepare_report
    self.phase(rid,'submitting','Đang gửi một lượt tạo trên Flow.')
-   if button is not None:
+   if direct:
+    from .flow_native_reference import submit as submit_direct,DirectNotReady
+    try:await submit_direct(self,rid,payload,direct_prepared,tracker)
+    except DirectNotReady as exc:raise SimpleStopped(str(exc))from None
+    if payload.get('prepared_request_id'):prepared['state']='submitted'
+   elif button is not None:
     if network_probe:
      try:await network_probe.mark_generate_attempt()
      except SimpleStopped:raise
@@ -477,6 +489,9 @@ class SimpleFlow:
    if not self.connected:await self.disconnect_browser()
    if isinstance(exc,asyncio.CancelledError):raise
   finally:
+   if direct_prepared:
+    from .flow_native_reference import discard
+    await discard(self.page,direct_prepared)
    if network_probe:
     try:
      evidence=await network_probe.stop();evidence['capture_state']='stopped';self.save_network_probe(rid,evidence)
@@ -666,6 +681,7 @@ class SimpleFlow:
 
 def install_simple_flow(app,data,vault,ledger,provider):
  service=SimpleFlow(data,vault,ledger);provider.simple=service
+ service.direct_reference_enabled=True
  from .flow_account_session import AccountWebSession
  service.account_bridge=AccountWebSession(data,provider.account_service,background=True)
  from .flow_settings import register_settings_routes

@@ -12,6 +12,7 @@ from .flow_task_protocol import (
     BATCH_PATH, REFERENCE_RPC, STATUS_RPC, DETAIL_RPC, SCHEMA,
     UnsupportedFlowPayload, FlowRpcRejected, asset_video_url, batch_endpoint, media_status,
     project_from_url, reference_request, rpc_payload, submitted_media,
+    UUID,
 )
 
 
@@ -100,6 +101,23 @@ class FlowTaskTracker:
         self.attempt = self.clock()
         self.report['state'] = 'awaiting_submit_response'
         self._publish()
+
+    def bind_direct_request(self, reference_id):
+        """Own sender's single response; no passive/UI request correlation."""
+        if (self.attempt is None or self.requests or self.blocked or
+                not isinstance(reference_id, str) or not UUID.fullmatch(reference_id)):
+            raise UnsupportedFlowPayload('direct_request_binding_invalid')
+        self.requests['native-direct'] = {'input_media_ids': [reference_id]}
+        self.report.update(submission_method='native_reference_rpc',
+                           submit_http_request='native-direct')
+        self._publish()
+
+    def accept_direct_response(self, status, raw):
+        if self.report.get('submission_method') != 'native_reference_rpc':
+            raise UnsupportedFlowPayload('direct_response_without_request')
+        self.observe_response('native-direct', status, raw)
+        if self.identity:
+            self.next_poll = self.clock() + 10
 
     def observe_request(self, key, url, method, content_type, raw, after_attempt):
         if self.attempt is None or not after_attempt or not batch_endpoint(url) or method != 'POST':

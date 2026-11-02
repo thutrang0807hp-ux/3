@@ -1,0 +1,37 @@
+{
+  "version": "2026.11.03.4643",
+  "file": "SceneForge-Update-20261103-v46.43-Native-Reference-Trial.exe",
+  "bytes": 3986944,
+  "sha256": "d2a98e3235a779cff36007ebd0e93f8357c4b655d45d85bfdfec45d5826fb3aa",
+  "files": [
+    {
+      "path": "app/local_engine/simple_flow.py",
+      "bytes": 57226,
+      "sha256": "d45df2f284ba6ce1879512a63c6867a0546bf0386f83c0bef9cdf723bf70dfc2"
+    },
+    {
+      "path": "app/local_engine/flow_native_reference.py",
+      "bytes": 13048,
+      "sha256": "e5a361088dede6630f3d4c6d45fd64aa9145a826a50ac34435d581835745a5b8"
+    },
+    {
+      "path": "app/local_engine/flow_task_tracker.py",
+      "bytes": 16289,
+      "sha256": "532ea29b6c4de97cb36d86d940d3f1d45a8ebcf7d7efe95135cfcc8eec09743e"
+    },
+    {
+      "path": "app/local_engine/flow_composer_upload.py",
+      "bytes": 8390,
+      "sha256": "f0ff5d24617c9c7fabe01f93eb6c4897f3ffdaeabd1120ed9762b6820183e3fe"
+    }
+  ],
+  "minimum_patch": "2026.11.02.4642",
+  "embedded_files_verified": true,
+  "launcher_code_unchanged": true,
+  "direct_reference_submission": true,
+  "ledger": "existing_RequestLedger_only",
+  "normal_native_session_only": true,
+  "automatic_retry": false,
+  "live_flow_verified": false,
+  "windows_installer_tested": false
+}

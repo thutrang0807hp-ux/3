@@ -106,10 +106,19 @@ async def upload_into_composer_and_fill(page,image_path,prompt,check,*,report=No
         log('Đọc lại prompt khớp.' if report['prompt_verified'] else 'Đọc lại chưa khớp; xem prompt_actual.')
     try:
         await check()
+        from .flow_native_reference import UploadMediaCapture
+        capture=None
+        try:
+            capture=UploadMediaCapture(page,reference,report)
+            capture.start()
+        except ValueError:
+            report['uploaded_media_capture_error']='unsupported_project_origin'
         try:await asyncio.wait_for(attach(),45)
         except Exception as exc:
             report['upload_uncertain']=bool(report.get('file_delivery_attempted') and not report['delivered'])
             error('attachment',exc)
+        finally:
+            if capture:await capture.close()
         await check()
         # Escape dismisses the media popover before filling; no resubmission.
         try:await asyncio.wait_for(page.keyboard.press('Escape'),timeout=2)

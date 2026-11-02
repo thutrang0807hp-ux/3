@@ -52,12 +52,21 @@ async def until(predicate, timeout=12):
 
 
 async def scenario(browser, root, movie, mode):
+    native = mode.startswith('native_')
+    if native:
+        mode = mode.removeprefix('native_')
     root.mkdir()
     buffer = io.BytesIO()
     Image.new('RGB', (40, 60), 'green').save(buffer, format='PNG')
     raw = buffer.getvalue()
     encoded = base64.b64encode(raw).decode()
     html = SETTINGS + '<form><img width=40 height=60 src="data:image/png;base64,' + encoded + '"><textarea></textarea><button type=button id=generate>Generate</button></form><script>window.sent=0;window.WIZ_global_data={cfb2h:"fixture-build",SNlM0e:"' + SECRET + '"};</script>'
+    if native:
+        if mode != 'missing_id':
+            html = html.replace('<form>', '<form data-media-id="' + IMAGE + '">')
+        if mode != 'missing_key':
+            html += '<script type="application/json" src="https://www.google.com/recaptcha/enterprise.js?render=FIXTURE_SITE_KEY"></script>'
+        html += '<script>window.grecaptcha={enterprise:{ready:f=>f(),execute:()=>Promise.resolve("PRIVATE_NATIVE_TOKEN")}};</script>'
     context = await browser.new_context()
     counts = {'generate': 0, 'status': 0, 'detail': 0, 'download': 0}
     async def intercepted(route):
@@ -76,6 +85,20 @@ async def scenario(browser, root, movie, mode):
         method = call[0]
         if method == REFERENCE_RPC:
             counts['generate'] += 1
+            if mode == 'transport_error':
+                await route.abort()
+                return
+            if native:
+                sent = json.loads(call[1])
+                assert sent[0][0][2:4] == ['veo_3_1_r2v_lite', 1]
+                assert sent[0][0][1] == [[None, IMAGE]]
+                assert sent[1][5] == PROJECT
+                assert sent[1][10] == ['PRIVATE_NATIVE_TOKEN', 1]
+                from .flow_scene_job import Prepared
+                from .flow_scene_rpc import reference_payload
+                ids = iter([sent[0][0][5][4], sent[0][0][5][5], sent[2][0]])
+                assert sent == reference_payload(PROMPT, Prepared('account', PROJECT, IMAGE),
+                                                 sent[1], new_id=lambda: next(ids))
             payload = media_payload()
             if mode == 'rpc_rejected':
                 rows=[['wrb.fr',REFERENCE_RPC,None,None,None,[7,SECRET,['PUBLIC_ERROR_UNUSUAL_ACTIVITY']]],['e',4,None,None,123]]
@@ -116,6 +139,7 @@ async def scenario(browser, root, movie, mode):
         };
     }''', {'endpoint': ENDPOINT, 'project': PROJECT, 'image': IMAGE, 'prompt': PROMPT, 'duplicate': mode == 'ambiguous'})
     service = SimpleFlow(root, Vault(root), RequestLedger(root))
+    service.direct_reference_enabled = native
     service.account_bridge = type('Bridge', (), {'background': True, 'selection': lambda _: {'available': True, 'token': 'token', 'account_id': 'account'}})()
     service.page = service.pair_page = page
     service.project = URL
@@ -152,7 +176,13 @@ async def scenario(browser, root, movie, mode):
         else:
             await asyncio.wait_for(service.task, 20)
     record = service.lookup(body['request_id'])
-    assert await page.evaluate('window.sent') == 1
+    assert await page.evaluate('window.sent') == (0 if native else 1)
+    if mode in ('missing_id', 'missing_key'):
+        assert record['state'] == 'failed' and counts == {'generate':0,'status':0,'detail':0,'download':0}, record
+        assert not service.sent
+        assert not await page.evaluate('Object.keys(window).some(k=>k.startsWith("__sfNativeReference_"))')
+        await context.close()
+        return counts
     assert counts['generate'] == (2 if mode == 'ambiguous' else 1), counts
     assert record['progress'] is None and record['progress_source'] is None, record
     if mode in ('success','rpc_lines_success'):
@@ -180,6 +210,7 @@ async def scenario(browser, root, movie, mode):
     assert not service.task_trackers and not service.network_probes
     exported = json.dumps(record) + json.dumps(service.diagnose(body['request_id']))
     assert SECRET not in exported and 'signature=' not in exported
+    assert 'PRIVATE_NATIVE_TOKEN' not in exported
     # Lookup/repeat of exactly the same local request must not send again.
     again = await service.submit(body)
     assert again['state'] == record['state'] and counts['generate'] == (2 if mode == 'ambiguous' else 1)
