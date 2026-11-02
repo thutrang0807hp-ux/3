@@ -9,8 +9,8 @@ import zipfile
 import dnfile
 
 ROOT = Path(__file__).resolve().parents[3]
-VERSION = '2026.11.02.4632'
-NAME = 'SceneForge-Update-20261102-v46.32-Detail-Region.exe'
+VERSION = '2026.11.02.4633'
+NAME = 'SceneForge-Update-20261102-v46.33-Flow-Detail-Pane.exe'
 BASELINE = '8178af48a4db6180eb0fb3ef042b04ea21617c7380ca2e106d8e967990eb0c35'
 
 def main():

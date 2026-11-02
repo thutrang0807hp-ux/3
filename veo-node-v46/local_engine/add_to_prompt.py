@@ -24,7 +24,7 @@ async def click_add_to_prompt(page,log,check,report):
                 const editor=[...e.querySelectorAll('textarea,[contenteditable="true"],[role="textbox"]')].some(visible);
                 const close=[...e.querySelectorAll('button,[role="button"]')].filter(visible).some(b=>/^(close|dismiss|đóng|đóng ảnh|close image|close preview|×|✕)$/i.test((b.getAttribute('aria-label')||b.innerText||'').trim()));
                 const boundary=['body','html'].includes(tag);
-                const detail=role==='dialog'||(['fixed','absolute'].includes(style.position)&&close);
+                const detail=tag==='flow-add-menu-detail-pane'||role==='dialog'||(['fixed','absolute'].includes(style.position)&&close);
                 return {tag,role,position:style.position,images,editor,close,boundary,qualified:!boundary&&!editor&&images===1&&detail};
             }""")
             report['detail_regions'].append(probe)
@@ -45,7 +45,7 @@ async def click_add_to_prompt(page,log,check,report):
     if await scoped.count()!=1 or not await scoped.is_enabled():return False
     await check()
     await scoped.click(timeout=3000)
-    report['detail_region_method']='single_image_dialog_or_positioned_detail_with_close'
+    report['detail_region_method']='single_image_flow_detail_pane_or_bounded_overlay'
     log('Đã bấm Thêm vào câu lệnh trong vùng chi tiết một ảnh; tiếp tục chờ chip.')
     return True
 

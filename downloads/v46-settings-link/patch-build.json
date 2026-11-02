@@ -1,8 +1,8 @@
 {
-  "version": "2026.11.02.4632",
-  "file": "SceneForge-Update-20261102-v46.32-Detail-Region.exe",
+  "version": "2026.11.02.4633",
+  "file": "SceneForge-Update-20261102-v46.33-Flow-Detail-Pane.exe",
   "bytes": 3986944,
-  "sha256": "c2b79fd54b64c33dfdd1896fb2b044e2f148e3afdc9bb6a64c316cc4f0d858d5",
+  "sha256": "e6a144db4e9972fb9f78c5618c4ca272f4a63a89fce394facba446d7208c0bbc",
   "files": 8,
   "minimum_patch": "2026.11.01.467",
   "embedded_files_verified": true,

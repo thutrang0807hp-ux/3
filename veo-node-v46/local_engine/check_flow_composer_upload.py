@@ -62,6 +62,20 @@ async def main():
    # Two valid detail regions are ambiguous: neither can be clicked.
    await page.set_content('<section style="position:fixed"><button aria-label="Close">×</button><img width=40 height=40 src=a><button>Add to prompt</button></section><section style="position:absolute"><button aria-label="Close">×</button><img width=40 height=40 src=b><button>Add to prompt</button></section>')
    assert not await click_add_to_prompt(page,lambda x:None,AsyncMock(),{})
+   # Actual Flow report: relative custom detail pane, no dialog role/close.
+   # The surrounding popover contains 15 images, so qualify only the pane.
+   await page.set_content(HTML)
+   await page.evaluate("""() => {
+    const popover=document.createElement('flow-add-menu-popover-content');popover.hidden=true;
+    popover.innerHTML='<div id=gallery>'+Array(14).fill('<img width=40 height=40 src=other>').join('')+'</div><flow-add-menu-detail-pane style="position:relative"><img width=50 height=50 src=uploaded><div><button>Thêm vào câu lệnh</button></div></flow-add-menu-detail-pane>';
+    popover.querySelector('button').onclick=()=>{window.confirmed=1;document.querySelector('#chips').innerHTML='<img width=40 height=40 src=attached>';popover.hidden=true};
+    document.body.append(popover);
+    document.querySelector('#file').onchange=()=>{window.files++;document.querySelector('#menu').hidden=true;popover.hidden=false};
+   }""")
+   report=await upload_into_composer_and_fill(page,image,'Actual Flow pane prompt',AsyncMock())
+   assert report['add_to_prompt_clicked'] and report['image_attached'] and report['prompt_verified'],report
+   assert any(probe['tag']=='flow-add-menu-detail-pane' and probe['qualified'] for probe in report['detail_regions']),report
+   assert await page.evaluate('window.confirmed')==1 and await page.evaluate('window.sent')==0
    # Clicking alone is not evidence: no chip must reach timeout.
    await page.set_content('<form><textarea></textarea><button>Generate</button></form>')
    try:
