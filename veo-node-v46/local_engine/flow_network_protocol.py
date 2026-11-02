@@ -31,6 +31,43 @@ def _bytes(raw):
     return raw
 
 
+def _complete_rpc_lines(wire):
+    """Alternative batch framing, not a search for JSON substrings.
+
+    Every nonempty line must be a numeric header or a complete RPC row array.
+    A single final ['e', 4, ...] trailer is required when byte framing fails.
+    Partial documents, unknown rows and trailing text cannot confirm a task.
+    """
+    documents=[];headers=[];sizes=[];pending=None;rows=[]
+    try:
+        lines=wire.decode('utf-8').splitlines()
+        if len(lines)>256:raise ValueError()
+        for line in lines:
+            line=line.strip()
+            if not line:continue
+            if re.fullmatch(r'\d{1,10}',line):
+                if pending is not None or not 0<int(line)<=LIMIT:raise ValueError()
+                pending=int(line);continue
+            value=json.loads(line)
+            if not isinstance(value,list) or not value or len(value)>100:raise ValueError()
+            if len(documents)>=24:raise ValueError()
+            for row in value:
+                if (not isinstance(row,list) or not row or not isinstance(row[0],str) or
+                        row[0] not in ('wrb.fr','di','af.httprm','e','er')):raise ValueError()
+                rows.append(row)
+            documents.append(value);headers.append(pending);sizes.append(len(line.encode('utf-8')))
+            pending=None
+        if pending is not None or not rows or not any(r[0]=='wrb.fr' for r in rows):raise ValueError()
+        ends=[index for index,row in enumerate(rows) if row[0]=='e']
+        if ends!=[len(rows)-1] or len(rows[-1])<2 or type(rows[-1][1])is not int or rows[-1][1]!=4:raise ValueError()
+        return documents,{'format':'rpc_json_lines','frames':len(documents),
+            'fallback_from':'framing_mismatch','transport_end_marker':True,
+            'declared_lengths':headers,'json_line_utf8_bytes':sizes,
+            'length_validation':'rpc_lines_with_terminal_marker'}
+    except (ValueError,UnicodeError,RecursionError):
+        return None
+
+
 def _json_stream(raw):
     raw=_bytes(raw);meta={'anti_xssi':False,'length_prefixed':False};docs=[]
     wire=raw.lstrip(b' \t\r\n')
@@ -62,6 +99,10 @@ def _json_stream(raw):
             meta.update(format='length_prefixed_json',frames=len(docs),truncated=offset<len(wire))
             return docs,meta
         except (ValueError,UnicodeError):
+            fallback=_complete_rpc_lines(wire)
+            if fallback:
+                complete,description=fallback
+                return complete,{**meta,**description}
             return docs,{**meta,'format':'length_prefixed_json','frames':len(docs),'decode_error':'framing_mismatch','partial':bool(docs)}
     # Support a sequence of complete JSON containers, not arbitrary substring scraping.
     try:

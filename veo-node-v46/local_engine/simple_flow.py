@@ -574,6 +574,13 @@ class SimpleFlow:
    record=tracker.snapshot();state=record['state']
    if time.monotonic()-last_network>=5:
     self.save_network_probe(rid);last_network=time.monotonic()
+   if state=='rpc_rejected':
+    details=record.get('submit_rpc_error')or{}
+    codes=details.get('public_error_codes')or[]
+    suffix=' · '+', '.join(codes)if codes else ' · mã RPC '+str(details['rpc_error_code'])if 'rpc_error_code'in details else''
+    message='Flow trả phản hồi lỗi cho lệnh tạo'+suffix+'. Chưa có ID video; không tự gửi lại.'
+    self.phase(rid,'submit_rejected',message)
+    raise SimpleStopped(message)
    if state=='failed':
     message='Flow báo tạo thất bại cho đúng ID video đã gửi.'
     if record.get('failure_code'):message+=' '+record['failure_code']

@@ -22,6 +22,32 @@ class UnsupportedFlowPayload(ValueError):
     """Only fixed codes may escape; never embed raw bodies or URLs in errors."""
 
 
+class FlowRpcRejected(UnsupportedFlowPayload):
+    def __init__(self, details):
+        super().__init__('rpc_rejected')
+        self.details=details
+
+
+def _rpc_error_details(error, rows):
+    """Keep only numeric status / exact PUBLIC_ERROR_* codes, never messages."""
+    details={}
+    if isinstance(error,list) and error and type(error[0])is int and 0<=error[0]<=999:
+        details['rpc_error_code']=error[0]
+    codes=set();budget=500
+    def walk(value,depth=0):
+        nonlocal budget
+        budget-=1
+        if budget<0 or depth>10:return
+        if isinstance(value,str) and ERROR_CODE.fullmatch(value):codes.add(value)
+        elif isinstance(value,list):
+            for item in value[:80]:walk(item,depth+1)
+    walk(error)
+    if codes:details['public_error_codes']=sorted(codes)[:8]
+    statuses={row[1] for row in rows if len(row)>1 and row[0] in ('di','af.httprm') and type(row[1])is int and 400<=row[1]<=599}
+    if len(statuses)==1:details['rpc_http_status']=statuses.pop()
+    return details
+
+
 def normalize(text):
     return ' '.join(text.split())
 
@@ -109,20 +135,25 @@ def rpc_payload(raw, rpc_id):
     docs, meta = decode_transport(raw, 'text/plain', direction='response')
     if meta.get('decode_error') or meta.get('partial') or meta.get('truncated'):
         raise UnsupportedFlowPayload('response_framing')
-    matches = []
+    matches = [];rows=[]
     for _, doc, _ in docs:
         if not isinstance(doc, list):
             raise UnsupportedFlowPayload('response_container')
         for row in doc:
             if not isinstance(row, list) or not row:
                 continue
-            if row[0] in ('e', 'er'):
+            rows.append(row)
+            if row[0] == 'er':
                 raise UnsupportedFlowPayload('rpc_error_envelope')
+            if row[0] == 'e' and (len(row)<2 or type(row[1])is not int or row[1]!=4):
+                raise UnsupportedFlowPayload('rpc_transport_marker_unknown')
             if row[0] == 'wrb.fr' and len(row) > 1 and row[1] == rpc_id:
                 matches.append(row)
     if len(matches) != 1:
         raise UnsupportedFlowPayload('response_rpc_count')
     row = matches[0]
+    if len(row)>5 and row[2] is None and row[5]:
+        raise FlowRpcRejected(_rpc_error_details(row[5],rows))
     if len(row) < 3 or row[2] is None or (len(row) > 5 and row[5]):
         raise UnsupportedFlowPayload('rpc_rejected_or_empty')
     payload = json.loads(row[2]) if isinstance(row[2], str) else row[2]

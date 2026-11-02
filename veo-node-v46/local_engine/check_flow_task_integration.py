@@ -77,6 +77,10 @@ async def scenario(browser, root, movie, mode):
         if method == REFERENCE_RPC:
             counts['generate'] += 1
             payload = media_payload()
+            if mode == 'rpc_rejected':
+                rows=[['wrb.fr',REFERENCE_RPC,None,None,None,[7,SECRET,['PUBLIC_ERROR_UNUSUAL_ACTIVITY']]],['e',4,None,None,123]]
+                await route.fulfill(body=")]}'\n1\n"+json.dumps(rows),content_type='application/json')
+                return
             if mode == 'unlinked':
                 payload = [OTHER]  # Does not identify any video row.
         elif method == STATUS_RPC:
@@ -93,7 +97,11 @@ async def scenario(browser, root, movie, mode):
             payload = media_payload(url='https://flow-content.google/video/' + VIDEO + '?signature=' + SECRET)
         else:
             raise AssertionError('Unexpected RPC: ' + method)
-        await route.fulfill(body=response(payload, method), content_type='text/plain; charset=utf-8')
+        wire=response(payload,method)
+        if mode=='rpc_lines_success':
+            rows=[['wrb.fr',method,json.dumps(payload),None,None,None],['e',4,None,None,123]]
+            wire=")]}'\n1\n"+json.dumps(rows)+'\n'
+        await route.fulfill(body=wire, content_type='text/plain; charset=utf-8')
     await context.route('**/*', intercepted)
     page = await context.new_page()
     await page.goto(URL)
@@ -147,7 +155,7 @@ async def scenario(browser, root, movie, mode):
     assert await page.evaluate('window.sent') == 1
     assert counts['generate'] == (2 if mode == 'ambiguous' else 1), counts
     assert record['progress'] is None and record['progress_source'] is None, record
-    if mode == 'success':
+    if mode in ('success','rpc_lines_success'):
         assert record['state'] == 'done' and record['submitted'] is True, record
         result = record['result']
         assert result['provider_identity'] == {'media_id': VIDEO, 'project_id': PROJECT, 'workflow_id': WORKFLOW}
@@ -165,6 +173,10 @@ async def scenario(browser, root, movie, mode):
             assert record['provider_task']['read_failures'] == 3 and counts['detail'] == 0
         if mode == 'download_error':
             assert counts['download'] == 1 and not service.ledger.metadata(body['request_id'])['provider_video_downloaded']
+        if mode=='rpc_rejected':
+            assert record['provider_task']['state']=='rpc_rejected'and record['phase']=='submit_rejected'
+            assert 'PUBLIC_ERROR_UNUSUAL_ACTIVITY'in record['message']
+            assert counts['status']==counts['download']==0
     assert not service.task_trackers and not service.network_probes
     exported = json.dumps(record) + json.dumps(service.diagnose(body['request_id']))
     assert SECRET not in exported and 'signature=' not in exported

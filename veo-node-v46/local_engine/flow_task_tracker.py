@@ -10,7 +10,7 @@ import time
 from urllib.parse import parse_qs, urlsplit
 from .flow_task_protocol import (
     BATCH_PATH, REFERENCE_RPC, STATUS_RPC, DETAIL_RPC, SCHEMA,
-    UnsupportedFlowPayload, asset_video_url, batch_endpoint, media_status,
+    UnsupportedFlowPayload, FlowRpcRejected, asset_video_url, batch_endpoint, media_status,
     project_from_url, reference_request, rpc_payload, submitted_media,
 )
 
@@ -148,7 +148,8 @@ class FlowTaskTracker:
         except (ValueError, TypeError, UnicodeError, RecursionError) as error:
             code = str(error) if isinstance(error, UnsupportedFlowPayload) else 'response_decode_failed'
             self._reject(code)
-            self.report['state'] = 'submit_unconfirmed'
+            self.report['state'] = 'rpc_rejected' if isinstance(error,FlowRpcRejected) else 'submit_unconfirmed'
+            if isinstance(error,FlowRpcRejected):self.report['submit_rpc_error']=error.details
             self._publish()
             return
         if self.identity is not None and self.identity != identity:
@@ -224,6 +225,7 @@ class FlowTaskTracker:
             # No raw error messages: browser errors may embed a signed URL/body.
             code = str(error) if isinstance(error, UnsupportedFlowPayload) else type(error).__name__
             self.report['tracking_error'] = code
+            if isinstance(error,FlowRpcRejected):self.report['tracking_rpc_error']=error.details
             self.report['read_failures'] += 1
             self._publish()
 

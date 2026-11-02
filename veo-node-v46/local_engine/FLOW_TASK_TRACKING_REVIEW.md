@@ -48,3 +48,15 @@ Người dùng đã duyệt code và cho phép triển khai. Đã chạy kiểm 
 Form/XSSI/nested JSON; prompt/dự án/output sai; HTTP200 chứa lỗi RPC; duplicate RPC; framing thiếu; UUID bất kỳ; URL/video sai ID; trước click; hai lượt gửi; status của video khác; lỗi tài khoản; lỗi ghi ledger; phân biệt lỗi đọc với tạo thất bại; không xuất session marker/prompt/signed URL trong snapshot.
 
 Toàn luồng Chromium dùng fixture chặn toàn bộ HTTP: thành công (tải và ffprobe tệp MP4 thật), Flow báo thất bại, phản hồi thiếu ID, hai request phù hợp, status của video khác, HTTP503 khi đọc, HTTP403 khi tải và Dừng. Đã xác nhận đọc lại cùng request không gửi thêm lượt. Các ca rút ngắn thời gian đợi để chạy kiểm thử, không thay bộ giải mã hoặc đường tải tệp.
+
+## Sửa tiếp sau báo cáo .41 — bản thử .42
+
+Báo cáo thật ghi nhận Ingredients RPC đúng prompt, request được tracker nhận là http-1, HTTP200, phản hồi 228 byte nhưng decode_error=framing_mismatch và chưa có ID. Báo cáo đã lọc body thô nên không khôi phục được response để biết Flow trả ID hay trả lỗi. Lỗi decoder không giải thích được nguyên nhân phía Flow chưa tạo video.
+
+Bản sửa code hỗ trợ thêm toàn bộ các dòng JSON RPC khi cách chia khung theo byte không đọc được: yêu cầu mọi dòng hợp lệ, chỉ các tag RPC đã biết, không bỏ qua đoạn hỏng, có duy nhất marker e/4 cuối cùng. Phần độ dài không khớp được ghi rõ trong metadata, không coi là đã kiểm tra byte framing. Payload vẫn phải qua điều kiện đúng RPC, prompt/dự án/request, duy nhất media row và đúng các ID. Không lấy UUID tùy ý.
+
+Marker e/4 không còn bị coi là lỗi tạo. Bản ghi wrb.fr của đúng RPC có payload null và trường lỗi sẽ được báo riêng; chỉ xuất mã số và PUBLIC_ERROR_* đúng dạng, không xuất nội dung lỗi thô. Phản hồi bị từ chối chưa có ID vẫn giữ unknown và không tự retry; UI báo lỗi ngay thay vì đợi hết 60 giây.
+
+17 kiểm thử bộ đọc/tracker đã qua. Bổ sung hai ca Chromium toàn luồng: RPC JSON theo dòng có marker kết thúc -> tải đúng video mẫu; RPC lỗi trong HTTP200 -> báo mã lỗi, không poll/download/retry. Đây là fixture tổng hợp, chưa phải kiểm thử lại body của báo cáo thật vì body đó không được lưu.
+
+Người dùng đã yêu cầu đóng gói phần sửa này thành .42. Chưa xác minh lại trên Flow thật.

@@ -10,7 +10,7 @@ import unittest
 from urllib.parse import urlencode
 from .flow_task_protocol import (
     BATCH_PATH, REFERENCE_RPC, STATUS_RPC, DETAIL_RPC, UnsupportedFlowPayload,
-    asset_video_url, checked_video_url, reference_request, rpc_payload, submitted_media,
+    asset_video_url, checked_video_url, reference_request, rpc_payload, submitted_media, FlowRpcRejected,
 )
 from .flow_task_tracker import FlowTaskTracker, READ_RPC
 
@@ -48,6 +48,43 @@ def response(payload, rpc=REFERENCE_RPC):
 
 
 class ProtocolCases(unittest.TestCase):
+    def test_mismatched_length_only_accepts_complete_rpc_lines_with_end_marker(self):
+        from .flow_network_protocol import decode_transport
+        rows=[['wrb.fr',REFERENCE_RPC,json.dumps(media_payload()),None,None,None],['di',0],['e',4,None,None,123]]
+        wire=")]}'\n\n1\n"+json.dumps(rows)+'\n'
+        parsed=rpc_payload(wire,REFERENCE_RPC)
+        self.assertEqual(submitted_media(parsed,PROJECT),IDENTITY)
+        _,summary=decode_transport(wire,'application/json',direction='response')
+        self.assertEqual(summary['format'],'rpc_json_lines')
+        self.assertEqual(summary['fallback_from'],'framing_mismatch')
+        self.assertTrue(summary['transport_end_marker'])
+
+    def test_standard_byte_frame_end_marker_is_not_generation_failure(self):
+        rows=[['wrb.fr',REFERENCE_RPC,json.dumps(media_payload()),None,None,None],['e',4,None,None,123]]
+        body=json.dumps(rows).encode()
+        wire=b")]}'\n"+str(len(body)).encode()+b'\n'+body+b'\n'
+        self.assertEqual(submitted_media(rpc_payload(wire,REFERENCE_RPC),PROJECT),IDENTITY)
+
+    def test_fallback_does_not_accept_partial_or_embedded_json(self):
+        valid=[['wrb.fr',REFERENCE_RPC,json.dumps(media_payload())]]
+        end=json.dumps([['e',4,None,None,123]])
+        for tail in ('trailing text',end[:-2],'123',json.dumps([['unknown-record',123]])):
+            with self.assertRaises(UnsupportedFlowPayload):
+                rpc_payload(")]}'\n1\n"+json.dumps(valid)+'\n'+tail,REFERENCE_RPC)
+        with self.assertRaises(UnsupportedFlowPayload):
+            rpc_payload(")]}'\n1\n"+json.dumps(valid),REFERENCE_RPC)
+
+    def test_rpc_rejection_exports_only_safe_codes_not_private_message(self):
+        rows=[['wrb.fr',REFERENCE_RPC,None,None,None,[7,SECRET,['PUBLIC_ERROR_UNUSUAL_ACTIVITY']]],
+              ['di',403],['e',4,None,None,123]]
+        with self.assertRaises(FlowRpcRejected)as error:
+            rpc_payload(")]}'\n1\n"+json.dumps(rows),REFERENCE_RPC)
+        details=error.exception.details
+        self.assertEqual(details['rpc_error_code'],7)
+        self.assertEqual(details['rpc_http_status'],403)
+        self.assertEqual(details['public_error_codes'],['PUBLIC_ERROR_UNUSUAL_ACTIVITY'])
+        self.assertNotIn(SECRET,json.dumps(details))
+
     def test_form_xssi_nested_payload_and_identity(self):
         parsed = reference_request(request(), FORM_TYPE, PROMPT, PROJECT)
         self.assertEqual(parsed['input_media_ids'], [IMAGE])
@@ -114,6 +151,19 @@ class TrackerCases(unittest.IsolatedAsyncioTestCase):
         tracker.mark_generate_attempt()
         tracker.observe_request(key, ENDPOINT, 'POST', FORM_TYPE, request(), True)
         tracker.observe_response(key, 200, response(media_payload()))
+
+    async def test_create_rpc_rejection_preserves_unknown_acceptance_and_no_poll(self):
+        tracker,now,calls,persisted=self.make_tracker()
+        tracker.mark_generate_attempt()
+        tracker.observe_request('http-1',ENDPOINT,'POST',FORM_TYPE,request(),True)
+        rows=[['wrb.fr',REFERENCE_RPC,None,None,None,[7,SECRET]],['e',4,None,None,123]]
+        tracker.observe_response('http-1',200,")]}'\n1\n"+json.dumps(rows))
+        now[0]+=16
+        await tracker.tick()
+        self.assertEqual(tracker.snapshot()['state'],'rpc_rejected')
+        self.assertFalse(tracker.snapshot()['association_confirmed'])
+        self.assertEqual(calls,[])
+        self.assertNotIn(SECRET,json.dumps(persisted))
 
     async def test_one_send_id_status_detail_no_secret_export(self):
         tracker, now, calls, persisted = self.make_tracker()

@@ -9,8 +9,8 @@ import zipfile
 import dnfile
 
 ROOT = Path(__file__).resolve().parents[3]
-VERSION = '2026.11.02.4641'
-NAME = 'SceneForge-Update-20261102-v46.41-Video-ID-Tracking.exe'
+VERSION = '2026.11.02.4642'
+NAME = 'SceneForge-Update-20261102-v46.42-RPC-Response-Fix.exe'
 BASELINE = '8178af48a4db6180eb0fb3ef042b04ea21617c7380ca2e106d8e967990eb0c35'
 
 def main():
@@ -78,7 +78,7 @@ def main():
     report = {'version': VERSION, 'file': NAME, 'bytes': len(data), 'sha256': digest, 'files': len(sources),
               'minimum_patch': manifest['minimum_patch'], 'embedded_files_verified': True,
               'prompt_filled_separate_from_verified': True, 'prompt_readback_required': False,
-              'image_prompt_trial': True, 'generation_disabled': False, 'single_generation_after_pair_receipt': True, 'progress_source': 'indeterminate_for_provider_id_tracking', 'read_only_tracking_diagnostics': False, 'optional_thumbnail_detail_inspection': True, 'history_expand_prompt': True, 'explicit_saved_video_acknowledgement': True, 'unknown_review_label_after_seconds': 180, 'diagnostic_generate_or_download': False, 'passive_network_probe': True, 'provider_id_tracking': True, 'provider_task_linkage_verified': False, 'batch_rpc_decode': True, 'poll_interval_seconds': 10, 'correlation_timeout_seconds': 60, 'tracking_timeout_seconds': 600, 'no_percent_estimation': True, 'automatic_unknown_selection_by_room_and_account': True, 'media_structure_on_demand_only': True, 'preview_required': False,
+              'image_prompt_trial': True, 'generation_disabled': False, 'single_generation_after_pair_receipt': True, 'progress_source': 'indeterminate_for_provider_id_tracking', 'read_only_tracking_diagnostics': False, 'optional_thumbnail_detail_inspection': True, 'history_expand_prompt': True, 'explicit_saved_video_acknowledgement': True, 'unknown_review_label_after_seconds': 180, 'diagnostic_generate_or_download': False, 'passive_network_probe': True, 'provider_id_tracking': True, 'provider_task_linkage_verified': False, 'batch_rpc_decode': True, 'rpc_json_lines_with_end_marker': True, 'rpc_rejection_reported_separately': True, 'poll_interval_seconds': 10, 'correlation_timeout_seconds': 60, 'tracking_timeout_seconds': 600, 'no_percent_estimation': True, 'automatic_unknown_selection_by_room_and_account': True, 'media_structure_on_demand_only': True, 'preview_required': False,
               'composer_upload_timeout_seconds': 45, 'prompt_timeout_seconds': 12,
               'upload_implementation': 'composer_filechooser_v46_31', 'uploader_byte_identical_to_v46_19': True,
               'uploader_sha256': upload19_sha256,
