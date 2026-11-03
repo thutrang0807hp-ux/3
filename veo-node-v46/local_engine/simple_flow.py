@@ -33,7 +33,7 @@ class SimpleFlow:
   self.vault.set_secret('simple-flow-binding',{'browser':self.channel,'project':self.project,'email':self.email,'token':self.token})
  def enabled(self):return self.account_bridge is not None or (self.vault.secret('flow-transport-v2')or{}).get('mode','simple')=='simple'
  def status(self):
-  verified_key='native-flow-pipeline-verified'if getattr(self,'native_pipeline_enabled',False)else'simple-flow-verified'
+  verified_key='gflow-ui-verified'if getattr(self,'gflow_driver_enabled',False)else'native-flow-pipeline-verified'if getattr(self,'native_pipeline_enabled',False)else'simple-flow-verified'
   if self.account_bridge:
    selection=self.account_bridge.selection()
    message=self.message if self.busy()or self.state in ('failed','unknown')else ('Đã chọn '+str(selection.get('account_name'))+' từ tab Tài khoản. Phiên được mở nền khi tạo clip.'if selection['available']else'Đăng nhập web và chọn một tài khoản Flow tại Cài đặt → Tài khoản.')
@@ -99,6 +99,10 @@ class SimpleFlow:
   def log(text):report['logs'].append(text);report['message']=text
   try:
    reference.write_bytes(raw)
+   if getattr(self,'gflow_driver_enabled',False):
+    from .flow_gflow_adapter import generate
+    await generate(self,rid,payload,reference)
+    return
    await self.disconnect_browser();await self.restore();await self.assert_ready()
    # Only wait for an editor or file input. No Ingredients/settings/Generate check.
    deadline=time.monotonic()+90
@@ -714,6 +718,7 @@ def install_simple_flow(app,data,vault,ledger,provider):
  service=SimpleFlow(data,vault,ledger);provider.simple=service
  service.direct_reference_enabled=True
  service.native_pipeline_enabled=True
+ service.gflow_driver_enabled=True
  from .flow_account_session import AccountWebSession
  service.account_bridge=AccountWebSession(data,provider.account_service,background=True)
  from .flow_settings import register_settings_routes
