@@ -1,0 +1,32 @@
+{
+  "version": "2026.11.03.4650",
+  "file": "SceneForge-Update-20261103-v46.50-Direct-Flow-CLI.exe",
+  "bytes": 3986944,
+  "sha256": "129bb57936ed049d94005d276d73918e25ba1fe500ae7795f59435fded1eed09",
+  "files": [
+    {
+      "path": "app/local_engine/simple_flow.py",
+      "bytes": 60390,
+      "sha256": "0c14145e08c128044e364a1654b8811e8986ef0b14d0c79ffaa74e93642a7bda"
+    },
+    {
+      "path": "app/local_engine/flow_gflow_cli.py",
+      "bytes": 9733,
+      "sha256": "48f15175be573f9cc1c8f27e5dbd3bcfd429cb51cbdd458880ae96eae1685b27"
+    }
+  ],
+  "minimum_patch": "2026.11.03.4648",
+  "embedded_files_verified": true,
+  "launcher_code_unchanged": true,
+  "generation_engine": "gflow-cli-direct",
+  "runtime_auto_download": false,
+  "original_repo_cli": true,
+  "one_create_action": true,
+  "reviewed_source_commit": "4798a89",
+  "ledger": "existing_RequestLedger_only",
+  "diagnostic_update_only": false,
+  "startup_failure_fixed": false,
+  "automatic_retry": false,
+  "live_flow_verified": false,
+  "windows_installer_tested": false
+}
