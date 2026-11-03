@@ -1,0 +1,86 @@
+{
+  "version": "2026.11.03.4646",
+  "file": "SceneForge-Update-20261103-v46.46-Flow-UI-Engine.exe",
+  "bytes": 3986944,
+  "sha256": "678687e8ba51c0369bd64801583319ad79d83dbf6a83440ba3d37294f7755b4a",
+  "files": [
+    {
+      "path": "app/local_engine/simple_flow.py",
+      "bytes": 60145,
+      "sha256": "3dcb63fdd2efe09fe6949a4a19e5e5cd9625716d013d6cee946e62429a6e19eb"
+    },
+    {
+      "path": "app/local_engine/flow_native_reference.py",
+      "bytes": 12609,
+      "sha256": "0433fb3b945891f0e9794e5bf9528dcae9ca7eec5ae6fa9f30c86a0ad537d513"
+    },
+    {
+      "path": "app/local_engine/flow_native_pipeline.py",
+      "bytes": 14817,
+      "sha256": "087d25563a17b4b32ded3bac5e8695a4183ac6f659b852cdafa5bbe8096f442a"
+    },
+    {
+      "path": "app/local_engine/flow_task_tracker.py",
+      "bytes": 13867,
+      "sha256": "c5548d937ac333989272a66eed68643492f5c4ef61672624c2c077711a35447a"
+    },
+    {
+      "path": "app/local_engine/flow_gflow_adapter.py",
+      "bytes": 8289,
+      "sha256": "8326f3cdedd6ec13a5c7b97141608250b6f957b40c2ab3aedd41c829e551b49a"
+    },
+    {
+      "path": "app/local_engine/flow_gflow_runtime.py",
+      "bytes": 3283,
+      "sha256": "13999627771150caf6a3e1f72f0e044cef1a42560dd0240301ad90c822006897"
+    },
+    {
+      "path": "app/local_engine/flow_gflow_worker.py",
+      "bytes": 4660,
+      "sha256": "91f4979a3b4089c855bf93febb7e0a57c63e94ccebae352a6fa6c3250ae34e29"
+    },
+    {
+      "path": "app/local_engine/flow_batch_session.py",
+      "bytes": 7067,
+      "sha256": "328c4b14bf82a3748deccad8cfb20a8050709666c714f0e3e2d9d8bb3ddba3d7"
+    },
+    {
+      "path": "app/local_engine/flow_task_protocol.py",
+      "bytes": 10844,
+      "sha256": "717b7de472c0260cc7eb607d495ff91079859e5e83a35c304f2335fa1fc592e6"
+    },
+    {
+      "path": "app/local_engine/flow_pair_generation.py",
+      "bytes": 4270,
+      "sha256": "875f3887998c2bcb2be8d707e37e82e2a30cafccbc5a4044b4ad7ba4e1f651ea"
+    },
+    {
+      "path": "app/local_engine/flow_pair_trial.py",
+      "bytes": 25901,
+      "sha256": "d8d3ade3feefbcd02c82532d3e1e07707512c215cbb1a332b085ac58bec560fd"
+    },
+    {
+      "path": "app/local_engine/flow_composer_upload.py",
+      "bytes": 8390,
+      "sha256": "f0ff5d24617c9c7fabe01f93eb6c4897f3ffdaeabd1120ed9762b6820183e3fe"
+    },
+    {
+      "path": "app/dist/web-demo/workflow.html",
+      "bytes": 795772,
+      "sha256": "60fd867dcaaa4e103ebea520f87a068499ae6e5514c55affdd74b4ee6e948c19"
+    }
+  ],
+  "minimum_patch": "2026.11.02.4642",
+  "embedded_files_verified": true,
+  "launcher_code_unchanged": true,
+  "generation_engine": "gflow-cli-0.92.1-ui_automation",
+  "runtime_auto_download": true,
+  "runtime_archive_sha256": "03ae9541fefa55e4f917f87db794cd2b26f61d5d215a754b333b5dfc3d686292",
+  "one_create_action": true,
+  "reviewed_source_commit": "22dd88a",
+  "ledger": "existing_RequestLedger_only",
+  "normal_native_session_only": true,
+  "automatic_retry": false,
+  "live_flow_verified": false,
+  "windows_installer_tested": false
+}

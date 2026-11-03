@@ -70,3 +70,12 @@ This is source for review, following the user's request to review code before
 packaging. Published .45 executables are unchanged. A subsequent update must
 include all three new modules and the modified SimpleFlow, with a new release
 number; the old .45 builder deliberately rejects modified source.
+
+## Packaged after user approval
+
+The user subsequently requested an EXE. Version `2026.11.03.4646` is packaged
+under `downloads/v46-flow-ui-engine/`; the .45 release remains unchanged.
+All 13 embedded files were checked against the manifest, embedded Python modules
+compiled, and the 9 tests passed again against modules extracted from this EXE.
+Runtime download remains automatic on first use. Windows installation and live
+Flow generation are still unverified.
