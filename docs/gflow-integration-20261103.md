@@ -481,3 +481,34 @@ review filter, missing prompt preparation, skipped completed clips, no whole-can
 redraw during queue execution, automatic import, uncertainty stop, and manual
 approval before submitting continuity part b. Existing settings/configured import
 and download-report checks remain. No live Flow or Windows installation test.
+
+
+## v46.62 — make the legacy-history gate actionable
+
+The user's 4.2s part-a inspector was disabled by legacyUnresolved(), while the
+new inspector exposed neither the old review action nor a way to reconcile its
+receipts. Do not erase that history or assume it never submitted.
+
+Read old receipts automatically when opening the blocked clip (rate-limited),
+using read-only existing diagnostics/legacy receipt endpoints. Auto-release only
+matching request/store/room/scene/part evidence with submitted=false and terminal
+failed/not_submitted state. Refresh account status after that authoritative update.
+Missing, unknown, different-store or mismatched-scene evidence does not release it.
+Keep explicit negative receipt evidence in the old job; never delete/reuse its ID.
+The core create path also performs this read for queue callers before its guard.
+
+If legacy history is the only blocker, enable a contextual Check old attempt then
+create button. It reads first; unresolved history requires the existing user
+review/acknowledgement, followed by the normal new-generation confirmation.
+Expose read/review/history actions in the same inspector, preserving the old
+request and warning about possible additional credits. Cancelling sends nothing.
+Other prerequisites (frame, prompt binding, account, active or uncertain current
+jobs) remain enforced. Receipt updates patch controls without losing typed text.
+
+Validation: full Chromium fixture reproduces a 4.2s clip with legacy unknown jobs;
+negative receipt auto-unlocks without any POST, genuinely unknown and wrong-scene
+receipts remain unresolved, cancelling create confirmation sends nothing, explicit
+review persists without deleting history, then create submits exactly one new ID
+and imports its video. Prior queue, continuity, no-redraw, settings and receipt
+checks remain. UI-only update on .60+, no engine/runtime/session changes. Local
+fixtures only; Windows/Flow live execution not verified.

@@ -18,6 +18,9 @@ async def main():
     if '/local-api/flow/simple/files/' in url:await r.fulfill(body=video.read_bytes(),content_type='video/mp4');return
     if url.endswith('/local-api/flow/simple/jobs') and r.request.method=='POST':
      body=r.request.post_data_json;posts.append((url,body));rid=body['request_id'];records[rid]={'request_id':rid,'state':submit_mode,'result':{'room_id':body['room_id'],'scene_id':body['scene_id'],'part':body['part'],'mime_type':'video/mp4','settings':body['settings']}};await r.fulfill(json={'request_id':rid,'state':'submitted'});return
+    if '/local-api/flow/simple/diagnostics/' in url:
+     rid=url.split('/diagnostics/',1)[1].split('?',1)[0];record=records.get(rid)
+     await r.fulfill(json={'code':'found','request_id':rid,'current_store_id':record.get('store_id') if record else 'fixture-store','record':record});return
     if '/local-api/flow/simple/jobs/' in url:
      rid=url.rsplit('/',1)[1];await r.fulfill(json=records.get(rid,{'request_id':rid,'state':'missing'}));return
     if '/local-api/' in url:
@@ -96,7 +99,8 @@ await storeProject();render();await SFVeoNode.refresh();
    await expect(page.locator('#node-videos .vnTile')).to_have_count(0)
    await expect(page.locator('#node-videos [data-vn=create-ready]')).to_contain_text('Tạo toàn bộ 2')
    await page.evaluate("()=>{window.canvasRenders=0;window.canvasRenderStacks=[];window.beforeQueueRender=render;render=function(...args){canvasRenders++;canvasRenderStacks.push(new Error().stack);return beforeQueueRender(...args);};}")
-   page.on('dialog',lambda d:d.accept())
+   dialog_handler=lambda d:d.accept()
+   page.on('dialog',dialog_handler)
    await page.evaluate("document.querySelector('#node-videos [data-vn=create-ready]').click()")
    await page.wait_for_function("project.cloudJobs.some(j=>j.state==='submitted')")
    await page.evaluate('pollWorkflowResults()')
@@ -126,8 +130,40 @@ await storeProject();render();await SFVeoNode.refresh();
    await page.wait_for_function("project.cloudJobs.length===2&&project.cloudJobs.every(j=>j.state==='imported')",timeout=15000)
    assert len(posts)==2,posts
    await page.wait_for_function("!document.querySelector('#node-videos [data-vn=cancel-queue]')")
+   # Old room receipts must not permanently disable the new Create button.
+   posts.clear()
+   old=await page.evaluate('''async image=>{const s=sceneRecord(0,4.2,0,[image]);s.hasPerson=false;s.refsUsed=[];s.sourceFrame={id:'source',asset:'frame',image};s.approvedFrame='source';s.frameSelectionId='source';s.videoPromptOverrides={a:'Move gently.'};project.scenes=[s];const old={id:'flow-old-unsubmitted',provider:'flow',kind:'video',sceneId:s.id,part:'a',state:'unknown',veoNodeVersion:42,store_id:'fixture-store'};project.cloudJobs=[old];project.veoNode=undefined;await storeProject();render();await SFVeoNode.refresh();return old;}''',data)
+   records[old['id']]={'request_id':old['id'],'store_id':'fixture-store','state':'failed','submitted':False,'native_inputs':{'room_id':'node-ui','scene_id':old['sceneId'],'part':'a'}}
+   await page.evaluate('SFVeoNode.openClipDetail(SFVeoNode.slots()[0])')
+   await page.wait_for_function("project.cloudJobs[0].state==='failed'")
+   await expect(page.locator('#vnDetail [data-vn=create]')).to_be_enabled()
+   assert not posts,'Receipt inspection must never submit'
+   assert await page.evaluate('!!project.cloudJobs[0].legacyNegativeReceipt')
+   # Truly unknown history stays recorded; cancelling confirmation sends nothing.
+   unknown_id='flow-old-unknown-case'
+   records[unknown_id]={'request_id':unknown_id,'store_id':'fixture-store','state':'unknown','submitted':None}
+   records['flow-old-wrong-scene']={'request_id':'flow-old-wrong-scene','store_id':'fixture-store','state':'failed','submitted':False,'native_inputs':{'room_id':'node-ui','scene_id':'different-scene','part':'a'}}
+   await page.evaluate("()=>{project.cloudJobs.push({...project.cloudJobs[0],id:'flow-old-unknown-case',state:'unknown'},{...project.cloudJobs[0],id:'flow-old-wrong-scene',state:'unknown'});SFVeoNode.openClipDetail(SFVeoNode.slots()[0]);}")
+   await expect(page.locator('#vnDetail [data-vn=create]')).to_be_enabled()
+   await expect(page.locator('#vnDetail [data-vn=create]')).to_contain_text('Kiểm tra lượt cũ')
+   page.remove_listener('dialog',dialog_handler)
+   dismiss_handler=lambda d:d.dismiss();page.on('dialog',dismiss_handler)
+   await page.locator('#vnDetail [data-vn=create]').click()
+   await expect(page.locator('#vnDetail [data-vn=create]')).to_be_enabled()
+   assert not posts and await page.evaluate("project.cloudJobs[1].state")=='unknown'
+   assert await page.evaluate("project.cloudJobs[2].state")=='unknown','Receipt for another scene must not auto-unlock'
+   # Explicit acknowledgement unlocks one NEW request without deleting old history.
+   page.remove_listener('dialog',dismiss_handler);page.on('dialog',dialog_handler)
+   await page.locator('#vnDetail [data-vn=review-legacy]').click()
+   await expect(page.locator('#vnDetail [data-vn=create]')).to_be_enabled()
+   await page.wait_for_function("!!project.veoNode.reviewedLegacy['flow-old-unknown-case']")
+   assert not posts
+   await page.locator('#vnDetail [data-vn=create]').click()
+   await page.wait_for_function("project.cloudJobs.some(j=>j.veoNodeVersion===43&&j.state==='imported')",timeout=10000)
+   assert len(posts)==1 and posts[0][1]['request_id'] not in (old['id'],unknown_id),posts
+   assert await page.evaluate("project.cloudJobs.filter(j=>j.veoNodeVersion===42).length")==3
    assert not errors,errors
    await page.screenshot(path='/tmp/veo-v58-detail.png',full_page=False)
    await browser.close()
- print('PASS real node tiles/filter/detail/edit; live stage estimate; automatic file import + 100%; idempotency; separate approval; missing not presented as success; stable images/no writes on unchanged polls; all-missing queue prepares prompt despite filter and skips completed clips; stop on uncertainty; local intercepted generation only')
+ print('PASS real node tiles/filter/detail/edit; live stage estimate; automatic file import + 100%; idempotency; separate approval; missing not presented as success; stable images/no writes on unchanged polls; all-missing queue prepares prompt despite filter and skips completed clips; stop on uncertainty; legacy negative receipts auto-unlock, unknown confirmation cancel sends nothing, acknowledgement permits one new request; local intercepted generation only')
 if __name__=='__main__':asyncio.run(main())
