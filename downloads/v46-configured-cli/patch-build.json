@@ -1,0 +1,59 @@
+{
+  "version": "2026.11.03.4656",
+  "file": "SceneForge-Update-20261103-v46.56-Configured-Flow-CLI.exe",
+  "bytes": 3986944,
+  "sha256": "fbe2b0ddf8e437b8db23eaf62ca6213fbb4d2151ba04e8b20278f37f605e5a3c",
+  "files": [
+    {
+      "path": "app/local_engine/simple_flow.py",
+      "bytes": 61443,
+      "sha256": "ac96e95951cd16a9c883aeffd819d1385706ee1cc38cd27fbe29a40e4aad4e9b"
+    },
+    {
+      "path": "app/local_engine/flow_gflow_cli.py",
+      "bytes": 17321,
+      "sha256": "5b5db7fa45330a0a5602146071539ea0d764054da05af0107e8d2846b88d7d24"
+    },
+    {
+      "path": "app/local_engine/flow_native_pipeline.py",
+      "bytes": 16378,
+      "sha256": "2480527012fc861837cf6f8b4c88e7fb1ecd7f791a3b6611181aa3fbb46e84cb"
+    },
+    {
+      "path": "app/local_engine/flow_pair_generation.py",
+      "bytes": 4689,
+      "sha256": "88195ce8d19908d9a564afcbbcf7a18bca258ee956ac3eadbbb25f8c20e5bb97"
+    },
+    {
+      "path": "app/local_engine/flow_video_options.py",
+      "bytes": 1291,
+      "sha256": "fc1e4d878b6f6bbd1a9bb205afcbeb256bdbe73096c1f18a7be3487d216de99c"
+    },
+    {
+      "path": "app/dist/web-demo/workflow.html",
+      "bytes": 803253,
+      "sha256": "75bef105cdeb3122e4ca54a82e259b3cec3d8cf466e2b92d57fe2c2c43c5654c"
+    }
+  ],
+  "minimum_patch": "2026.11.03.4652",
+  "embedded_files_verified": true,
+  "launcher_code_unchanged": true,
+  "generation_engine": "gflow-cli-direct",
+  "runtime_auto_download": false,
+  "original_repo_cli": true,
+  "one_create_action": true,
+  "reviewed_source_commit": "3f5b3a9",
+  "ledger": "existing_RequestLedger_only",
+  "diagnostic_update_only": false,
+  "download_only_recovery": true,
+  "single_reference_upload": true,
+  "auto_settings_sync": false,
+  "settings_applied_by_cli": true,
+  "dynamic_video_settings": true,
+  "single_output_only": true,
+  "toolbar_settings_dock": true,
+  "settings_debug_buttons": false,
+  "automatic_retry": false,
+  "live_flow_verified": false,
+  "windows_installer_tested": false
+}
