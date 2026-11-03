@@ -40,6 +40,7 @@ class SimpleFlow:
    return {'state':self.state,'message':message,'interaction':self.pending,'active_request':self.active,'unresolved':self.unresolved(),'saved_video_reviews':self.saved_video_reviews(),
     'configured':True,'account_binding':selection['available'],'transport':'web_ui','connection_method':'account_web','shared_accounts':True,'background':bool(self.account_bridge.background),
     'native_pipeline':bool(getattr(self,'native_pipeline_enabled',False)),
+    'generation_engine':'gflow-ui-0.92.1'if getattr(self,'gflow_driver_enabled',False)else'legacy',
     'models':[MODEL],'model_details':[{'id':MODEL,'description':'Lite · 8s · 9:16 · tài khoản web đã chọn','accepts_images':True,'video_type':'i2v','max_images':1}],
     'per_account':1,'automatic_retry':False,'selection':selection,'project_url':self.project,'restorable':False,
     'generation_verified':bool(self.vault.secret(verified_key))}
@@ -99,10 +100,6 @@ class SimpleFlow:
   def log(text):report['logs'].append(text);report['message']=text
   try:
    reference.write_bytes(raw)
-   if getattr(self,'gflow_driver_enabled',False):
-    from .flow_gflow_adapter import generate
-    await generate(self,rid,payload,reference)
-    return
    await self.disconnect_browser();await self.restore();await self.assert_ready()
    # Only wait for an editor or file input. No Ingredients/settings/Generate check.
    deadline=time.monotonic()+90
@@ -369,6 +366,11 @@ class SimpleFlow:
   reference=self.root/(rid+'.input'+ext)
   try:
    reference.write_bytes(raw)
+   if getattr(self,'gflow_driver_enabled',False):
+    from .flow_gflow_adapter import generate
+    self.ledger.set_metadata(rid,{'engine':'gflow-ui-0.92.1'})
+    await generate(self,rid,payload,reference)
+    return
    background=bool(self.account_bridge and self.account_bridge.background)
    automatic_mode=background or self.ledger.metadata(rid).get('automatic')is True
    self.phase(rid,'opening','Đang mở phiên Flow nền từ tài khoản đã chọn.'if background else'Đang kiểm tra phiên Flow.')

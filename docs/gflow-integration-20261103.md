@@ -79,3 +79,18 @@ All 13 embedded files were checked against the manifest, embedded Python modules
 compiled, and the 9 tests passed again against modules extracted from this EXE.
 Runtime download remains automatic on first use. Windows installation and live
 Flow generation are still unverified.
+
+## v46.46 dispatch defect — corrected in v46.47
+
+The initial integration put the engine branch in `run_upload_only`, not `run`.
+Thus normal Create Video still reached the legacy RPC pipeline. The earlier
+nine adapter/worker tests did not exercise this application dispatch boundary;
+passing them did not validate that the shipped button reached the new engine.
+
+The branch now lives in `SimpleFlow.run` before browser restore/native RPC.
+Upload-only no longer references the generation payload or calls generation.
+`check_gflow_dispatch.py` exercises the real submit/run/RequestLedger chain,
+checks scene/account association and duplicate receipts for success and errors
+before/after sending, and checks that upload-only never generates. It fails
+against the actual .46 source and passes with the correction. Runtime status
+and request metadata identify the active engine. Live Flow remains unverified.
