@@ -382,7 +382,7 @@ class SimpleFlow:
     def native_phase(code,message):self.phase(rid,code,message)
     try:await prepare_inputs(self,report,raw,payload['references'][0]['mime_type'],payload['prompt'],
      {'kind':'video','mode':'ingredients','ratio':'9:16','model':'lite','outputs':1},self.assert_ready,
-     on_persist=save_inputs,on_phase=native_phase)
+     on_persist=save_inputs,on_phase=native_phase,upload_reference=not getattr(self,'cli_driver_enabled',False))
     except NativePipelineStopped as exc:raise SimpleStopped(str(exc))from None
     payload['prepared_request_id']=pair_id
    if payload.get('prepared_request_id'):

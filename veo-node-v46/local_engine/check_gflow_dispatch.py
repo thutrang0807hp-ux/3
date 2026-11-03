@@ -40,6 +40,7 @@ async def scenario(mode):
    ledger.set_metadata(rid,{'provider_task':dict(media_id='video',project_id='project',workflow_id=None,association_confirmed=True)})
    ledger.finish(rid,'done',dict(file='fixture.mp4',scene_id='scene',part='part'))
   async def prepare(actual,report,image,mime,prompt,settings,check,**callbacks):
+   assert callbacks['upload_reference'] is False
    order.append('prepare')
    report.update(preparation_method='native_reference_pipeline',native_stage='ready',reference_verified=True,uploaded_media_id='uploaded-image',uploaded_media_project='original-project')
    callbacks['on_persist']()

@@ -225,7 +225,7 @@ async def ensure_native_project(session, vault, account, room, check):
     await native.ready()
 
 
-async def prepare_inputs(service, report, raw, mime, prompt, settings, check, *, on_persist=None, on_phase=None):
+async def prepare_inputs(service, report, raw, mime, prompt, settings, check, *, on_persist=None, on_phase=None, upload_reference=True):
     if settings != DEFAULTS:
         raise NativePipelineStopped('Bản thử một cảnh chỉ hỗ trợ Ingredients · Lite · 9:16 · x1.')
     if (not isinstance(raw, bytes) or not 0 < len(raw) <= 6 * 1024**2 or
@@ -254,6 +254,15 @@ async def prepare_inputs(service, report, raw, mime, prompt, settings, check, *,
         if on_phase:on_phase('native_session',report['message'])
         persist()
         await native.warmup(project)
+        if not upload_reference:
+            await check()
+            report.update(preparation_method='cli_reference_pipeline', project_id=project,
+                native_stage='cli_upload_pending', state='cli_inputs_ready', phase='complete',
+                generation_ready=True, prompt_verified=True, prompt_evidence='bound_input_prompt_sha256',
+                message='Đã kiểm tra ảnh nguồn, prompt và dự án. CLI sẽ upload một ảnh và tạo một video.')
+            service.prepare_report = report
+            persist()
+            return
         report.update(phase='native_upload', message='Đang upload ảnh trực tiếp để nhận ID; chưa gửi tạo.')
         if on_phase:on_phase('native_upload',report['message'])
         persist()
@@ -274,6 +283,13 @@ async def prepare_inputs(service, report, raw, mime, prompt, settings, check, *,
 
 
 async def validate_receipt(service, report):
+    if report.get('preparation_method') == 'cli_reference_pipeline':
+        if (not getattr(service, 'cli_driver_enabled', False) or report.get('settings') != DEFAULTS or
+            report.get('native_stage') != 'cli_upload_pending' or report.get('upload_attempted') or
+            report.get('project_id') != project_from_url(service.page.url)):
+            raise NativePipelineStopped('Đầu vào CLI đã đổi dự án hoặc có upload khác; chưa gửi tạo.')
+        await service.assert_ready()
+        return
     if (report.get('settings') != DEFAULTS or not report.get('reference_verified') or
         report.get('native_stage') != 'ready' or not UUID.fullmatch(str(report.get('uploaded_media_id', ''))) or
         report.get('uploaded_media_project') != project_from_url(service.page.url) or

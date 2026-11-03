@@ -51,6 +51,9 @@ class CliTests(unittest.IsolatedAsyncioTestCase):
    reference=root/'reference.png';reference.write_bytes(b'image')
    payload=dict(account_id='account',room_id='room',scene_id='scene',part='part',model='lite',prompt='--a prompt as plain text',prepared_request_id='flow-fixture-inputs')
    prepared=dict(request_id=payload['prepared_request_id'],uploaded_media_project=PROJECT,uploaded_media_source_sha256=hashlib.sha256(b'image').hexdigest())
+   if mode=='cli_only_upload':
+    prepared.pop('uploaded_media_project');prepared.pop('uploaded_media_source_sha256')
+    prepared.update(preparation_method='cli_reference_pipeline',project_id=PROJECT,reference_sha256=hashlib.sha256(b'image').hexdigest())
    metadata={**payload,'engine':'gflow-cli-direct','native_inputs':prepared,'cli':{'cwd':str(repo)}};finished=[];launches=[]
    async def ready():pass
    async def validate(rid,path,suffix):return path
@@ -87,6 +90,7 @@ class CliTests(unittest.IsolatedAsyncioTestCase):
  async def test_download_error_recovers_same_media_without_regeneration(self):await self.scenario('download_error')
  async def test_existing_report_downloads_only_never_generates(self):await self.scenario('old_download_error')
  async def test_download_retry_failure_keeps_media_and_never_regenerates(self):await self.scenario('download_still_fails')
+ async def test_new_preparation_passes_one_ref_without_native_upload(self):await self.scenario('cli_only_upload')
  async def test_cli_success_and_result(self):await self.scenario('success')
  async def test_cli_stderr_and_nonzero_exit(self):await self.scenario('error')
  def test_download_discovery_normalizes_windows_line_endings(self):

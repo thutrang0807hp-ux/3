@@ -199,3 +199,27 @@ of the actual UI report handler verifying download-only opt-in and result sync.
 No real Flow calls were made, and the current user's download remains untested
 here. CLI data download --help and implementation were checked against the
 original pinned SDK.
+
+## v46.53 — one reference upload per CLI generation
+
+User confirmed .52 creates and downloads videos, but Flow lists two identical
+still assets. Source inspection found the concrete cause: native prepare_inputs
+uploads via maseQ, then the original CLI R2V driver uploads --ref again. The
+SDK's _attach_references defaults prefer_existing=False, explicitly documenting
+upload-every-time for R2V. The previous filename-reuse assumption was incorrect.
+
+For CLI mode only, keep the existing account/project/session warmup and local
+image/prompt checks but defer media upload entirely to CLI --ref. Preparation
+records a truthful cli_reference_pipeline receipt with project_id and the local
+image hash, no uploaded_media_id or remote-verification claim. Pair validation
+checks this receipt, account, scene, image/prompt hashes and current project.
+Native preparation's default upload=True behavior remains unchanged for other
+callers. The CLI still receives exactly one --ref and --count 1; SDK/CLI code is
+not changed. Completed records mark that the single-reference CLI succeeded.
+Old download-recovery records and new project_id records are both supported.
+
+Validation: actual preparation/receipt checks assert native.upload is never
+called in CLI mode, reject changed images/projects, and verify no invented image
+ID. Eight local CLI tests and existing submit/ledger/download-only recovery
+checks pass. Applied only to future requests; no existing Flow assets are deleted.
+Live Flow execution of this new change is unverified here.

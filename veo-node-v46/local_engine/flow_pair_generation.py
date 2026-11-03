@@ -44,7 +44,8 @@ async def validate_pair(service,payload,raw):
     report=getattr(service,'pair_report',None)
     if not report or payload.get('prepared_request_id')!=report.get('request_id'):
         raise PrepareStopped('Không có lượt ảnh + prompt tương ứng.')
-    if report.get('state')!='inputs_sent' or not report.get('generation_ready'):
+    expected_state='cli_inputs_ready' if report.get('preparation_method')=='cli_reference_pipeline' else 'inputs_sent'
+    if report.get('state')!=expected_state or not report.get('generation_ready'):
         raise PrepareStopped('Lượt ảnh + prompt chưa sẵn sàng hoặc đã được dùng để tạo.')
     for key in ('room_id','scene_id','part','account_id'):
         if payload.get(key)!=report.get(key):raise PrepareStopped('Lượt chuẩn bị thuộc cảnh hoặc tài khoản khác.')
@@ -58,7 +59,7 @@ async def validate_pair(service,payload,raw):
     if hashlib.sha256(payload['prompt'].strip().encode()).hexdigest()!=report['prompt_sha256']:
         raise PrepareStopped('Prompt đã đổi sau khi chuẩn bị.')
     await service.assert_ready()
-    if report.get('preparation_method')=='native_reference_pipeline':
+    if report.get('preparation_method') in ('native_reference_pipeline','cli_reference_pipeline'):
         from .flow_native_pipeline import validate_receipt,NativePipelineStopped
         try:await validate_receipt(service,report)
         except NativePipelineStopped as exc:raise PrepareStopped(str(exc))from None

@@ -107,16 +107,17 @@ async def generate(service, rid, payload, reference):
     repo, profile = matched[0]
     repo = repo.resolve()
     prepared = service.pair_report or {}
-    project = prepared.get('uploaded_media_project')
+    project = prepared.get('project_id') or prepared.get('uploaded_media_project')
+    source_hash = prepared.get('reference_sha256') if prepared.get('preparation_method') == 'cli_reference_pipeline' else prepared.get('uploaded_media_source_sha256')
     if (prepared.get('request_id') != payload.get('prepared_request_id') or
             not re.fullmatch(r'[a-fA-F0-9-]{36}', str(project)) or
-            prepared.get('uploaded_media_source_sha256') != hashlib.sha256(reference.read_bytes()).hexdigest()):
+            source_hash != hashlib.sha256(reference.read_bytes()).hexdigest()):
         raise SimpleStopped('Ảnh/dự án đã chuẩn bị không khớp; chưa gọi CLI.')
     await service.assert_ready()
     await service.disconnect_browser()
     output = (service.root / (rid + '.cli')).resolve()
     output.mkdir(exist_ok=True)
-    # Match the filename already uploaded, letting the original CLI reuse it.
+    # CLI R2V uploads this single local reference; no native pre-upload.
     image = output / (prepared['request_id'] + reference.suffix)
     shutil.copyfile(reference, image)
     args = command(repo, image, payload['prompt'], project, output, profile)
@@ -235,6 +236,8 @@ async def finish_video(service, rid, payload, path, identity):
         'provider_identity': identity, **{key: payload[key] for key in ('account_id','room_id','scene_id','part')}}
     inputs = dict(service.ledger.metadata(rid).get('native_inputs') or {})
     inputs.update(generation_submitted=True, generation_ready=False, native_stage='generation_completed', state='completed')
+    if inputs.get('preparation_method') == 'cli_reference_pipeline':
+        inputs.update(delivered=True, reference_verified=True, reference_evidence='cli_single_reference_completed')
     service.ledger.set_metadata(rid, {'native_inputs': inputs, 'provider_task': {**identity, 'association_confirmed': True, 'source': 'gflow_cli', 'state': 'complete'}})
     service.phase(rid, 'complete', 'Đã nhận video về đúng cảnh.')
     service.ledger.finish(rid, 'done', saved)
@@ -254,7 +257,8 @@ async def recover_existing(service, rid):
         selection = service.account_bridge.selection()
         binding = service.account_bridge.binding(meta.get('account_id'))
         if not binding or not selection.get('available') or selection.get('account_id') != meta.get('account_id'):return
-        project = (meta.get('native_inputs') or {}).get('uploaded_media_project')
+        inputs = meta.get('native_inputs') or {}
+        project = inputs.get('project_id') or inputs.get('uploaded_media_project')
         repo = Path((meta.get('cli') or {}).get('cwd', ''))
         profiles = matching_profile(repo, binding['email']) if repo.is_dir() else []
         if len(profiles) != 1 or not re.fullmatch(r'[a-fA-F0-9-]{36}', str(project)):return
