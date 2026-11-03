@@ -309,7 +309,12 @@ class SimpleFlow:
   if not self.enabled():raise HTTPException(409,'Node Veo mới cần phiên Flow đơn giản. Bấm Kết nối Flow trước.')
   rid=body.get('request_id');self.valid_id(rid)
   prompt=body.get('prompt');refs=body.get('references')
-  if body.get('confirm_send')is not True or body.get('kind')!='video' or body.get('model')!=MODEL:raise HTTPException(400,'Chỉ nhận video Lite I2V 8 giây đã xác nhận.')
+  options=None;expected_model=MODEL
+  if getattr(self,'cli_driver_enabled',False):
+   from .flow_video_options import normalize_settings,model_id
+   try:options=normalize_settings(body.get('settings'));expected_model=model_id(options)
+   except (ValueError,TypeError)as exc:raise HTTPException(400,str(exc))from None
+  if body.get('confirm_send')is not True or body.get('kind')!='video' or body.get('model')!=expected_model:raise HTTPException(400,'Model/cấu hình chưa khớp lượt video đã xác nhận.')
   if not isinstance(prompt,str)or not prompt.strip()or len(prompt)>20000:raise HTTPException(400,'Prompt trống hoặc quá dài.')
   if not isinstance(refs,list)or len(refs)!=1 or not isinstance(refs[0],dict):raise HTTPException(400,'Cần đúng một ảnh đầu đã duyệt.')
   ref=refs[0]
@@ -322,7 +327,8 @@ class SimpleFlow:
     image.verify();fmt=Image.MIME.get(image.format)
    if fmt not in ('image/png','image/jpeg','image/webp')or fmt!=ref.get('mime_type'):raise ValueError()
   except Exception:raise HTTPException(400,'Ảnh đầu không hợp lệ hoặc vượt 6 MB.')from None
-  payload={'kind':'video','model':MODEL,'prompt':prompt,'references':refs,'room_id':str(body.get('room_id',''))[:100],'scene_id':str(body.get('scene_id',''))[:100],'part':str(body.get('part',''))[:40],'account_id':self.account_id(),'transport':'simple_flow'}
+  payload={'kind':'video','model':expected_model,'prompt':prompt,'references':refs,'room_id':str(body.get('room_id',''))[:100],'scene_id':str(body.get('scene_id',''))[:100],'part':str(body.get('part',''))[:40],'account_id':self.account_id(),'transport':'simple_flow'}
+  if options is not None and body.get('settings') is not None:payload['settings']=options
   if native_requested:
    if any(not isinstance(body.get(k),str)or not body[k]or len(body[k])>(40 if k=='part'else 100)for k in ('room_id','scene_id','part')):raise HTTPException(400,'Thiếu hoặc sai định danh phòng/cảnh/phần clip cho pipeline trực tiếp.')
    payload['native_pipeline']=True
@@ -357,6 +363,7 @@ class SimpleFlow:
    except (ValueError,RequestConflict)as exc:raise HTTPException(409,str(exc))from None
    digest=hashlib.sha256(json.dumps({k:v for k,v in payload.items()if k!='account_id'},sort_keys=True).encode()).hexdigest()
    self.ledger.set_metadata(rid,{'transport':'simple_flow','payload_sha256':digest,'clicked':False,'automatic':body.get('automatic')is True,'phase':'preparing','progress':None,'prompt':payload['prompt'],'part':payload['part']})
+   if options is not None:self.ledger.set_metadata(rid,{'generation_settings':options})
    self.active=rid;self.pinned_account=payload['account_id'];self.pinned_room=payload['room_id'];self.cancel_reason=None;self.sent=False;self.task=asyncio.create_task(self.run(rid,payload,raw))
    self.tasks[rid]=self.task
    return self.lookup(rid)
@@ -381,7 +388,7 @@ class SimpleFlow:
     def save_inputs():self.ledger.set_metadata(rid,{'native_inputs':dict(report)})
     def native_phase(code,message):self.phase(rid,code,message)
     try:await prepare_inputs(self,report,raw,payload['references'][0]['mime_type'],payload['prompt'],
-     {'kind':'video','mode':'ingredients','ratio':'9:16','model':'lite','outputs':1},self.assert_ready,
+     payload.get('settings')or{'kind':'video','mode':'ingredients','ratio':'9:16','model':'lite','outputs':1},self.assert_ready,
      on_persist=save_inputs,on_phase=native_phase,upload_reference=not getattr(self,'cli_driver_enabled',False))
     except NativePipelineStopped as exc:raise SimpleStopped(str(exc))from None
     payload['prepared_request_id']=pair_id
@@ -693,7 +700,8 @@ class SimpleFlow:
   info=json.loads(out)if not rc else{};video=next((x for x in info.get('streams',[])if x.get('codec_type')=='video'),None)
   if not video:raise SimpleStopped('Tệp tải chưa xác minh được là video.')
   width,height=int(video.get('width',0)),int(video.get('height',0));duration=float(info.get('format',{}).get('duration',0))
-  if not height or abs(width/height-9/16)>.03 or not 7.5<=duration<=8.5:raise SimpleStopped('Video tải về không khớp 8 giây, dọc 9:16. Giữ lượt để kiểm tra trên Flow.')
+  desired=(self.ledger.metadata(rid).get('generation_settings')or{}).get('ratio','9:16');ratio=9/16 if desired=='9:16'else 16/9
+  if not height or abs(width/height-ratio)>.03 or not 7.5<=duration<=8.5:raise SimpleStopped('Video tải về không khớp 8 giây, tỉ lệ '+desired+'. Giữ lượt để kiểm tra trên Flow.')
   fmt=info.get('format',{}).get('format_name','')
   if 'webm'in fmt:suffix='.webm'
   elif 'mp4'in fmt:suffix='.mp4'

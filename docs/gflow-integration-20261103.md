@@ -265,3 +265,39 @@ placement, four controls, auto-sync from the parent document through the existin
 workflow API, verified/error statuses, absence of the two buttons, Escape/outside
 close, parked-worker isolation and narrow-screen bounds. Existing auto-settings
 and clip-recovery UI checks pass; all inline scripts parse. No live Flow calls.
+
+## v46.56 — selected settings drive the original CLI
+
+The settings panel now configures the generation request rather than trying to
+click Flow's Settings trigger. Edits save locally, with explicit text saying they
+apply when Create is pressed. No settings-only browser request is made, and an
+old Settings-trigger failure is not displayed as a failure of this new path.
+The compact dark panel uses segmented mode/aspect/output controls and a model
+selector. Unimplemented multi-output choices are disabled; duration remains
+Flow's default (workflow video validation is still eight seconds), download
+quality is original, and no unverified PRO/ULTRA credit prices are shown.
+
+Supported: Ingredients -> original CLI video r2v with one --ref; Frames -> video
+i2v with the image positional argument. Both support portrait/landscape and
+Lite/Fast. Quality is allowed only in Frames, matching the pinned CLI/SDK's
+capabilities. There is no --duration or --resolution flag. No SDK/session override.
+
+One pure options validator is shared by admission, preparation, CLI argument
+construction and result metadata. Settings are snapshotted into the existing
+request payload/ledger, checked against the prepared receipt, shown in the send
+confirmation, passed to CLI and saved with the received clip. Non-default models
+and ratios get accurate model identifiers. Backend ffprobe and frontend receive
+validate the request's ratio; a landscape result is not rejected as portrait.
+Later dropdown changes do not reinterpret an already-submitted result. Legacy
+records without a settings snapshot retain the old portrait/Lite defaults.
+Existing single-upload and download-only recovery paths are preserved.
+
+Validation: eleven direct CLI process tests (including Frames/Quality and
+Ingredients/Fast landscape, rejected Quality/Ingredients or multiple outputs);
+real submit/prepare/receipt/CLI/ffprobe/done scenarios with local provider doubles,
+including duplicate receipts and conflicts on changed settings; actual UI create
+and receive functions verifying selected options and landscape import after a
+later dropdown change; real Chromium panel tests verifying controls, capability
+disabling and local-only editing; existing completed-video recovery API/file/UI
+checks. Original pinned CLI source was consulted for argument/model support.
+No live Flow generation or Windows installation was verified in this environment.

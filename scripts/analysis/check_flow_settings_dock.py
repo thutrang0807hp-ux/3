@@ -8,12 +8,12 @@ async def main():
  code=html[html.index('let flowSettingsDock=null;'):html.index('function preparedContext(row)')]
  fixture="""let project={id:'room',mode:'reference'};let remote={selection:{available:true,account_id:'account',token:'token'}};
 let busy=false,settingsSyncTimer=null,settingsSyncPending=null,settingsSyncStarting=false,error='';
-let data={};window.calls=[];window.failSync=false;
-const state=()=>data,active=()=>false,paint=()=>paintFlowSettingsDock(),assertRoom=id=>{if(id!==project.id)throw Error('room changed')},storeProject=async()=>{},escape=s=>String(s??'').replaceAll('&','&amp;').replaceAll('<','&lt;'),button=(action,text)=>'<button data-vn="'+action+'">'+text+'</button>';
+let data={};window.calls=[];window.failSave=false;
+const state=()=>data,active=()=>false,paint=()=>paintFlowSettingsDock(),assertRoom=id=>{if(id!==project.id)throw Error('room changed')},storeProject=async()=>{if(window.failSave)throw Error('fixture save failed')},escape=s=>String(s??'').replaceAll('&','&amp;').replaceAll('<','&lt;'),button=(action,text)=>'<button data-vn="'+action+'">'+text+'</button>';
 async function workflowLocalRequest(path,body){
  window.calls.push({path,body});
  if(path==='flow/simple/status')return {selection:remote.selection,active_request:null};
- if(body){if(window.failSync)throw Error('fixture sync failed');return {request_id:'settings',state:'running',message:'Applying',room_id:'room',account_id:'account',requested:body.settings};}
+ if(body){if(window.failSync)throw Error('fixture save failed');return {request_id:'settings',state:'running',message:'Applying',room_id:'room',account_id:'account',requested:body.settings};}
  return {request_id:'settings',state:'verified',message:'Verified',room_id:'room',account_id:'account',requested:{...flowSettings()}};
 }
 """
@@ -31,16 +31,22 @@ async function workflowLocalRequest(path,body){
   assert await frame.locator('[data-vn-settings]').count()==0
   await dock.locator('summary').click()
   assert await dock.locator('.sfFlowSettingsPanel').is_visible()
-  assert await dock.locator('[data-vn-setting]').count()==4
+  assert await dock.locator('[data-vn-setting]').count()==1
+  assert await dock.locator('[data-flow-choice=outputs][data-value="2"]').is_disabled()
   assert await dock.locator('[data-vn="apply-settings"],[data-vn="settings-report"]').count()==0
-  await dock.locator('[data-vn-setting="ratio"]').select_option('16:9')
-  await page.wait_for_function("()=>document.querySelector('#sfFlowSettingsDock [role=status]')?.textContent.includes('đã khớp')")
+  await dock.locator('[data-flow-choice=ratio][data-value="16:9"]').click()
+  await frame.wait_for_function("()=>data.settingsTrial?.state==='saved'&&data.settingsTrial.requested.ratio==='16:9'")
   calls=await frame.evaluate('window.calls')
   posts=[call for call in calls if call.get('body')]
-  assert len(posts)==1 and posts[0]['body']['settings']['ratio']=='16:9',posts
-  await frame.evaluate('window.failSync=true')
-  await dock.locator('[data-vn-setting="model"]').select_option('fast')
-  await page.wait_for_function("()=>document.querySelector('#sfFlowSettingsDock [role=status]')?.textContent.includes('fixture sync failed')")
+  assert not calls,calls
+  assert await dock.locator('option[value=quality]').evaluate('e=>e.disabled')
+  await dock.locator('[data-flow-choice=mode][data-value=frames]').click()
+  await dock.locator('[data-vn-setting=model]').select_option('quality')
+  await frame.wait_for_function("()=>data.settingsTrial?.requested.model==='quality'")
+  assert await dock.locator('[data-flow-choice=mode][data-value=ingredients]').is_disabled()
+  await frame.evaluate('window.failSave=true')
+  await dock.locator('[data-flow-choice=ratio][data-value="9:16"]').click()
+  await page.wait_for_function("()=>document.querySelector('#sfFlowSettingsDock [role=status]')?.textContent.includes('fixture save failed')")
   assert await dock.get_attribute('data-sync')=='error'
   assert await dock.locator('[data-vn="apply-settings"],[data-vn="settings-report"]').count()==0
   await page.keyboard.press('Escape');assert not await dock.locator('.sfFlowSettingsPanel').is_visible()
@@ -54,6 +60,6 @@ async function workflowLocalRequest(path,body){
   assert box and box['x']>=0 and box['x']+box['width']<=600,box
   assert not errors,errors
   await browser.close()
- print('PASS actual shell/iframe dock: collapsed, parent selectors auto-sync, no removed buttons, errors visible, Escape/outside close, parked worker isolation, narrow viewport')
+ print('PASS actual shell/iframe dock: collapsed, selected settings saved for CLI without Settings endpoint calls, no removed buttons, errors visible, Escape/outside close, parked worker isolation, narrow viewport')
 
 if __name__=='__main__':asyncio.run(main())

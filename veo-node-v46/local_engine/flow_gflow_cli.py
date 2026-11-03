@@ -65,13 +65,17 @@ def matching_profile(repo, email):
     return matches
 
 
-def command(repo, reference, prompt, project, output, profile='default'):
-    repo = Path(repo)
-    python = repo / 'runtime' / 'python.exe'
-    return [str(python) if python.is_file() else 'py', '-m', 'gflow_cli',
-            'video', 'r2v', '--ref', str(reference), '--aspect', '9:16',
-            '--model', 'veo-lite', '--count', '1',
-            '--project', project, '--profile', profile, '--out-dir', str(output), '--json', '--', prompt]
+def command(repo, reference, prompt, project, output, profile='default', settings=None):
+    from .flow_video_options import normalize_settings, MODELS
+    cfg=normalize_settings(settings)
+    repo=Path(repo);python=repo/'runtime/python.exe'
+    mode='r2v' if cfg['mode']=='ingredients' else 'i2v'
+    args=[str(python) if python.is_file() else 'py','-m','gflow_cli','video',mode]
+    if mode=='r2v':args+=['--ref',str(reference)]
+    args+=['--aspect',cfg['ratio'],'--model',MODELS[cfg['model']],'--count','1',
+           '--project',project,'--profile',profile,'--out-dir',str(output),'--json','--']
+    if mode=='i2v':args.append(str(reference))
+    return args+[prompt]
 
 
 def safe_log(value, prompt):
@@ -88,7 +92,7 @@ def video_result(stdout):
     for match in re.finditer(r'(?m)^\s*\{', stdout):
         try: value, _ = decoder.raw_decode(stdout[match.end()-1:])
         except ValueError: continue
-        if isinstance(value, dict) and value.get('command') == 'video r2v' and 'succeeded' in value:
+        if isinstance(value, dict) and value.get('command') in ('video r2v','video i2v') and 'succeeded' in value:
             matches.append(value)
     if len(matches) != 1:
         raise ValueError('CLI did not return exactly one video result')
@@ -120,7 +124,11 @@ async def generate(service, rid, payload, reference):
     # CLI R2V uploads this single local reference; no native pre-upload.
     image = output / (prepared['request_id'] + reference.suffix)
     shutil.copyfile(reference, image)
-    args = command(repo, image, payload['prompt'], project, output, profile)
+    from .flow_video_options import request_settings
+    cfg=request_settings(payload)
+    if prepared.get('preparation_method')=='cli_reference_pipeline' and prepared.get('settings')!=cfg:
+        raise SimpleStopped('Cấu hình đã đổi sau chuẩn bị; chưa gửi CLI.')
+    args = command(repo, image, payload['prompt'], project, output, profile, cfg)
     env = dict(os.environ, GFLOW_CLI_UPDATE_CHECK='0', NO_COLOR='1', TERM='dumb', PYTHONUTF8='1')
     # Same environment as MO-UNG-DUNG.bat when the supplied app is portable.
     if (repo / 'runtime' / 'python.exe').is_file():
@@ -129,7 +137,7 @@ async def generate(service, rid, payload, reference):
         env['PYTHONNOUSERSITE'] = '1'
         env['GFLOW_CLI_HOME'] = str(repo / 'data' / 'profiles')
     service.ledger.set_metadata(rid, {'engine': 'gflow-cli-direct', 'clicked': True,
-        'generation_granted': True, 'cli': {'cwd': str(repo), 'entrypoint': '-m gflow_cli video r2v', 'profile': profile}})
+        'generation_granted': True, 'cli': {'cwd': str(repo), 'entrypoint': '-m gflow_cli video '+('r2v' if cfg['mode']=='ingredients' else 'i2v'), 'profile': profile}})
     service.sent = True
     service.phase(rid, 'submitting', 'Đang chạy CLI gốc để tạo video, chờ và tải kết quả.')
     options = {'creationflags': 0x08000000} if os.name == 'nt' else {}
@@ -226,13 +234,14 @@ async def download_existing(service, rid, repo, profile, env, output, media, pro
 
 async def finish_video(service, rid, payload, path, identity):
     from .simple_flow import SimpleStopped
+    from .flow_video_options import request_settings
     output = (service.root / (rid + '.cli')).resolve()
     if not path.is_file() or not path.resolve().is_relative_to(output):
         raise SimpleStopped('Tệp CLI trả về không nằm trong thư mục kết quả của lượt này.')
     path = await service.validate_video(rid, path, path.suffix)
     saved = {'file': path.name, 'mime_type': 'video/webm' if path.suffix == '.webm' else 'video/mp4',
         'sha256': hashlib.sha256(path.read_bytes()).hexdigest(), 'bytes': path.stat().st_size,
-        'kind': 'video', 'model': payload['model'], 'origin': 'flow', 'cost': None,
+        'kind': 'video', 'model': payload['model'], 'settings': request_settings(payload), 'origin': 'flow', 'cost': None,
         'provider_identity': identity, **{key: payload[key] for key in ('account_id','room_id','scene_id','part')}}
     inputs = dict(service.ledger.metadata(rid).get('native_inputs') or {})
     inputs.update(generation_submitted=True, generation_ready=False, native_stage='generation_completed', state='completed')

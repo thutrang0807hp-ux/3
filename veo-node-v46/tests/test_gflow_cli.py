@@ -24,11 +24,11 @@ if args[:2]==['data','download']:
  print(json.dumps(dict(media_id=args[2],project_id='11111111-1111-4111-8111-111111111111',profile='default',workflow_id=None,path=str(out))))
  print('fixture download stderr retained',file=sys.stderr)
  sys.exit(0)
-assert args[:2]==['video','r2v']
-assert args[-2]=='--' and args[-1]=='--a prompt as plain text'
+assert args[0]=='video' and args[1] in ('r2v','i2v')
+assert '--' in args and args[-1]=='--a prompt as plain text'
 assert '--duration' not in args
 assert args[args.index('--profile')+1]=='default'
-ref=pathlib.Path(args[args.index('--ref')+1]);assert ref.name=='flow-fixture-inputs.png' and ref.read_bytes()==b'image'
+ref=pathlib.Path(args[args.index('--ref')+1] if args[1]=='r2v' else args[args.index('--')+1]);assert ref.name=='flow-fixture-inputs.png' and ref.read_bytes()==b'image'
 assert pathlib.Path('grant.json').is_file()
 mode=pathlib.Path('mode').read_text()
 print('fixture stderr retained',file=sys.stderr)
@@ -37,11 +37,11 @@ if mode in ('download_error','download_still_fails'):
  print(json.dumps(dict(status='fail',error=dict(**{'class':'MediaDownloadError'},remediation_hint='Run gflow data download 22222222-2222-4222-8222-222222222222'))))
  sys.exit(6)
 out=pathlib.Path(args[args.index('--out-dir')+1])/'video.mp4';out.write_bytes(b'fixture video')
-print(json.dumps(dict(command='video r2v',status='ok',succeeded=True,media_id='22222222-2222-4222-8222-222222222222',local_path=str(out)),indent=2))
+print(json.dumps(dict(command='video '+args[1],status='ok',succeeded=True,media_id='22222222-2222-4222-8222-222222222222',local_path=str(out)),indent=2))
 '''
 
 class CliTests(unittest.IsolatedAsyncioTestCase):
- async def scenario(self,mode):
+ async def scenario(self,mode,settings=None):
   with tempfile.TemporaryDirectory() as folder:
    root=Path(folder);repo=root/'Downloads'/'GFlow-Studio-Portable';repo.mkdir(parents=True)
    (repo/'runtime').mkdir();(repo/'runtime/python.exe').write_bytes(b'fixture')
@@ -50,7 +50,9 @@ class CliTests(unittest.IsolatedAsyncioTestCase):
    (repo/'mode').write_text(mode)
    reference=root/'reference.png';reference.write_bytes(b'image')
    payload=dict(account_id='account',room_id='room',scene_id='scene',part='part',model='lite',prompt='--a prompt as plain text',prepared_request_id='flow-fixture-inputs')
-   prepared=dict(request_id=payload['prepared_request_id'],uploaded_media_project=PROJECT,uploaded_media_source_sha256=hashlib.sha256(b'image').hexdigest())
+   cfg=settings or dict(kind='video',mode='ingredients',ratio='9:16',model='lite',outputs=1)
+   if settings:payload['settings']=cfg
+   prepared=dict(settings=cfg,request_id=payload['prepared_request_id'],uploaded_media_project=PROJECT,uploaded_media_source_sha256=hashlib.sha256(b'image').hexdigest())
    if mode=='cli_only_upload':
     prepared.pop('uploaded_media_project');prepared.pop('uploaded_media_source_sha256')
     prepared.update(preparation_method='cli_reference_pipeline',project_id=PROJECT,reference_sha256=hashlib.sha256(b'image').hexdigest())
@@ -71,6 +73,10 @@ class CliTests(unittest.IsolatedAsyncioTestCase):
     self.assertEqual(kwargs['cwd'],str(repo))
     self.assertEqual(kwargs['stderr'],asyncio.subprocess.PIPE)
     self.assertEqual(kwargs['env']['GFLOW_CLI_HOME'],str(repo/'data/profiles'))
+    if args[3]=='video':
+     self.assertEqual(args[args.index('--aspect')+1],cfg['ratio'])
+     self.assertEqual(args[args.index('--model')+1],'veo-'+cfg['model'])
+     self.assertEqual(args[4],'i2v' if cfg['mode']=='frames' else 'r2v')
     launches.append(args)
     return await original(sys.executable,*args[1:],**kwargs)
    with patch.object(cli,'REPO_DIRECTORY',str(repo)),patch.object(asyncio,'create_subprocess_exec',launch):
@@ -83,7 +89,7 @@ class CliTests(unittest.IsolatedAsyncioTestCase):
    self.assertEqual(len(launches),2 if mode in ('download_error','download_still_fails') else 1)
    if mode!='old_download_error':self.assertIn('fixture stderr retained',metadata['engine_diagnostics']['stderr'])
    calls=(repo/'calls').read_text().splitlines()
-   self.assertEqual(calls.count('video r2v'),0 if mode=='old_download_error' else 1)
+   self.assertEqual(sum(line.startswith('video ') for line in calls),0 if mode=='old_download_error' else 1)
    if mode in ('download_error','old_download_error'):self.assertIn('data download',calls)
    self.assertEqual(len(finished),0 if mode in ('error','download_still_fails') else 1)
    if finished:self.assertEqual(finished[0][2]['provider_identity']['media_id'],MEDIA)
@@ -91,6 +97,8 @@ class CliTests(unittest.IsolatedAsyncioTestCase):
  async def test_existing_report_downloads_only_never_generates(self):await self.scenario('old_download_error')
  async def test_download_retry_failure_keeps_media_and_never_regenerates(self):await self.scenario('download_still_fails')
  async def test_new_preparation_passes_one_ref_without_native_upload(self):await self.scenario('cli_only_upload')
+ async def test_frames_quality_landscape(self):await self.scenario('cli_only_upload',dict(kind='video',mode='frames',ratio='16:9',model='quality',outputs=1))
+ async def test_ingredients_fast_landscape(self):await self.scenario('cli_only_upload',dict(kind='video',mode='ingredients',ratio='16:9',model='fast',outputs=1))
  async def test_cli_success_and_result(self):await self.scenario('success')
  async def test_cli_stderr_and_nonzero_exit(self):await self.scenario('error')
  def test_download_discovery_normalizes_windows_line_endings(self):
@@ -99,6 +107,10 @@ class CliTests(unittest.IsolatedAsyncioTestCase):
    (repo/'app/app.py').write_bytes(b'fixture\r\n')
    with patch.object(cli,'APP_SHA256',hashlib.sha256(b'fixture\n').hexdigest()):
     self.assertEqual(cli.find_repo([root/'Downloads']),[repo])
+ def test_unsupported_settings_rejected_before_cli(self):
+  for changes in (dict(outputs=2),dict(model='quality'),dict(duration=8)):
+   cfg=dict(kind='video',mode='ingredients',ratio='9:16',model='lite',outputs=1);cfg.update(changes)
+   with self.assertRaises(ValueError):cli.command('/repo','/image','prompt','project','/out',settings=cfg)
  def test_command_keeps_prompt_as_one_argument(self):
   args=cli.command('/repo','/image.png','$(not a command)','project','/out')
   self.assertEqual(args[:5],['py','-m','gflow_cli','video','r2v'])

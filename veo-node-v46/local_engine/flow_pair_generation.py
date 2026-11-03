@@ -59,6 +59,9 @@ async def validate_pair(service,payload,raw):
     if hashlib.sha256(payload['prompt'].strip().encode()).hexdigest()!=report['prompt_sha256']:
         raise PrepareStopped('Prompt đã đổi sau khi chuẩn bị.')
     await service.assert_ready()
+    if report.get('preparation_method')=='cli_reference_pipeline':
+        from .flow_video_options import request_settings
+        if request_settings(payload)!=report.get('settings'):raise PrepareStopped('Cấu hình đã đổi sau chuẩn bị; chưa gửi tạo.')
     if report.get('preparation_method') in ('native_reference_pipeline','cli_reference_pipeline'):
         from .flow_native_pipeline import validate_receipt,NativePipelineStopped
         try:await validate_receipt(service,report)
