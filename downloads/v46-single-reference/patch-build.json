@@ -1,0 +1,43 @@
+{
+  "version": "2026.11.03.4653",
+  "file": "SceneForge-Update-20261103-v46.53-Single-Reference.exe",
+  "bytes": 3986944,
+  "sha256": "bec703a815dfc65872268acc3d3234eb01cb4bb2041729d187a53618d4db59dd",
+  "files": [
+    {
+      "path": "app/local_engine/simple_flow.py",
+      "bytes": 60756,
+      "sha256": "46767cc7dbb0f89a431d3457062d82cc305684ad8d51c959ac91303ecd62e9bb"
+    },
+    {
+      "path": "app/local_engine/flow_gflow_cli.py",
+      "bytes": 16655,
+      "sha256": "f80a03b59bf5156d2dcc6e6006852477df39c7b26dd189759dabacb5bf66f482"
+    },
+    {
+      "path": "app/local_engine/flow_native_pipeline.py",
+      "bytes": 15931,
+      "sha256": "3cb928d65d3802d3a160f14e6621059684a09c5c1a076f833c3259172e411056"
+    },
+    {
+      "path": "app/local_engine/flow_pair_generation.py",
+      "bytes": 4419,
+      "sha256": "e4c19bb87c86cc71bd829979149e1bca63d57a5df764af6a211d9041e3809cdc"
+    }
+  ],
+  "minimum_patch": "2026.11.03.4652",
+  "embedded_files_verified": true,
+  "launcher_code_unchanged": true,
+  "generation_engine": "gflow-cli-direct",
+  "runtime_auto_download": false,
+  "original_repo_cli": true,
+  "one_create_action": true,
+  "reviewed_source_commit": "ef75913",
+  "ledger": "existing_RequestLedger_only",
+  "diagnostic_update_only": false,
+  "download_only_recovery": true,
+  "single_reference_upload": true,
+  "automatic_retry": false,
+  "live_flow_verified": false,
+  "windows_installer_tested": false
+}
