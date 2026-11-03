@@ -1,0 +1,37 @@
+{
+  "version": "2026.11.03.4652",
+  "file": "SceneForge-Update-20261103-v46.52-CLI-Video-Recovery.exe",
+  "bytes": 3986944,
+  "sha256": "ce111ff1713aec5f531c2111544aba0869f7a4c13ea898214ad889ec474038b8",
+  "files": [
+    {
+      "path": "app/local_engine/simple_flow.py",
+      "bytes": 60694,
+      "sha256": "1ae4dcd4e8d1febb5ccd24f0bcfda024767753614f3361bd6753b47a62a79d7c"
+    },
+    {
+      "path": "app/local_engine/flow_gflow_cli.py",
+      "bytes": 16261,
+      "sha256": "5202ff026fd99a9227d93595b5cce6fb2ac52caffbb3841a14866c9bc6d7a813"
+    },
+    {
+      "path": "app/dist/web-demo/workflow.html",
+      "bytes": 796028,
+      "sha256": "17fa838ce04ffa0dc12103898c1dca4e117355ada7015a2217ea268612065a53"
+    }
+  ],
+  "minimum_patch": "2026.11.03.4650",
+  "embedded_files_verified": true,
+  "launcher_code_unchanged": true,
+  "generation_engine": "gflow-cli-direct",
+  "runtime_auto_download": false,
+  "original_repo_cli": true,
+  "one_create_action": true,
+  "reviewed_source_commit": "73744de",
+  "ledger": "existing_RequestLedger_only",
+  "diagnostic_update_only": false,
+  "download_only_recovery": true,
+  "automatic_retry": false,
+  "live_flow_verified": false,
+  "windows_installer_tested": false
+}
