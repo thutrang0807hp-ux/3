@@ -375,3 +375,32 @@ repeated reads do not duplicate, approval remains explicit, missing is translate
 exactly two queue requests for two clips, first uncertain result stops the rest.
 Settings/configured create/import and existing download-report checks retained.
 No live Flow or Windows installer verification.
+
+
+## v46.59 — locate original GFlow and release terminal inspector controls
+
+User report: failed/checking_prepared, zero original-app candidates, no CLI or
+upload attempt. This is local installation discovery, not a Google rejection.
+The prior finder required an exact app.py digest and stopped at depth three.
+Use successful same-account ledger history before bounded scanning, verify its
+current email/profile, and recognize updated upstream wrappers using the actual
+CLI module or pinned CLI requirements. Keep original digest compatibility, search
+up to six levels/3000 folders, include both Windows Downloads registry values,
+OneDrive Downloads, current app/runtime location and Desktop. No new SDK worker,
+session override, dependency install or generation retry is introduced. Multiple
+matching installs without history remain ambiguous; never choose another account.
+If the original runtime has been deleted, discovery cannot recreate it; the error
+explicitly says to restore the known working installation.
+
+Persist discovery outcome and report submitted=false only for this proven
+pre-launch failure. The inspector previously updated its progress section but
+kept stale running labels and disabled controls. Rebuild the matching open
+inspector on a pending-to-terminal transition; show the actual failure reason.
+
+Validation: 20 CLI/local-process tests including changed wrapper/deep nesting,
+successful history outside Downloads, wrong-account history rejection, ambiguity,
+missing install and rejection of a generic wrapper without the CLI. Actual
+backend submit/lookup verifies missing install fails with submitted=false and no
+upload/CLI call; configured happy paths still complete. Actual Chromium verifies
+running-to-failed refresh exposes the error, releases buttons and removes the
+running overlay. All local fixtures; user Windows disk/Flow not directly inspected.

@@ -6,48 +6,105 @@ import os
 from pathlib import Path
 import re
 import shutil
+import sys
 
 # Set to the user's actual existing repo/portable directory once provided.
 REPO_DIRECTORY = ''
 APP_SHA256 = 'ab86f1fc7687971bf48e312c8f92cff6d1be178dbee836a7dd9e579f1a11cce4'
 
 
+def is_gflow_repo(folder):
+    """Recognize the supplied app or an installed original CLI, without executing it."""
+    folder=Path(folder)
+    for app in (folder/'app.py',folder/'app/app.py'):
+        try:
+            if app.stat().st_size>500000:continue
+            text=app.read_text(encoding='utf-8-sig')
+            if hashlib.sha256(text.encode()).hexdigest()==APP_SHA256:return True
+            # Updated portable app: original CLI entry point + actual installed module.
+            modules=(folder/'runtime/Lib/site-packages/gflow_cli',folder/'gflow_cli',folder/'src/gflow_cli')
+            requirements=folder/'requirements.txt'
+            pinned=False
+            try:pinned=bool(re.search(r'(?im)^gflow[-_]cli\s*==',requirements.read_text(encoding='utf-8')))
+            except (OSError,UnicodeError):pass
+            if 'gflow_cli' in text and 'subprocess' in text and (pinned or any((m/'__main__.py').is_file() for m in modules)):
+                return True
+        except (OSError,UnicodeError):pass
+    return False
+
+
 def find_repo(downloads):
-    """Find the supplied application, not an arbitrary executable in Downloads."""
-    found = set()
-    pending = [(Path(root), 0) for root in downloads]
-    examined = 0
-    while pending and examined < 500:
-        folder, depth = pending.pop(0)
-        examined += 1
-        for app in (folder / 'app.py', folder / 'app' / 'app.py'):
-            try:
-                if app.stat().st_size < 200000 and hashlib.sha256(app.read_text(encoding='utf-8-sig').encode()).hexdigest() == APP_SHA256:
-                    found.add(folder.resolve())
-            except (OSError, UnicodeError):
-                pass
-        if depth < 3:
-            try:
-                pending.extend((item, depth+1) for item in folder.iterdir()
-                    if item.is_dir() and not item.is_symlink() and item.name.lower() not in
-                    ('runtime', 'app', 'data', '.data', 'out', 'node_modules', '.git', '.venv'))
-            except OSError:
-                pass
-    # app/app.py also appears as a root candidate; use the portable root.
-    return sorted((path for path in found if not (path.name == 'app' and path.parent in found)), key=str)
+    """Bounded search; app content may change between upstream releases."""
+    found=set();pending=[(Path(root),0) for root in dict.fromkeys(downloads)];examined=0;seen=set()
+    while pending and examined<3000:
+        folder,depth=pending.pop(0)
+        try:
+            resolved=folder.resolve()
+            if resolved in seen:continue
+            seen.add(resolved)
+            if is_gflow_repo(folder):
+                found.add(resolved)
+                continue
+            examined+=1
+            if depth<6:
+                children=[item for item in folder.iterdir() if item.is_dir() and not item.is_symlink() and item.name.lower() not in
+                    ('runtime','app','data','.data','out','node_modules','.git','.venv','venv','windows','program files','program files (x86)')]
+                children.sort(key=lambda p:('gflow' not in p.name.lower() and '5gdfgfd' not in p.name.lower(),p.name.casefold()))
+                pending.extend((item,depth+1) for item in children)
+        except OSError:pass
+    return sorted((path for path in found if not(path.name=='app' and path.parent in found)),key=str)
 
 
 def downloads_folders():
-    values = [Path.home() / 'Downloads']
-    if os.name == 'nt':
+    values=[Path.home()/'Downloads']
+    if os.name=='nt':
         try:
             import winreg
-            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r'Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders') as key:
-                value, _ = winreg.QueryValueEx(key, '{374DE290-123F-4565-9164-39C4925E467B}')
-                values.insert(0, Path(os.path.expandvars(value)))
-        except OSError:
-            pass
-    return values
+            for subkey in ('User Shell Folders','Shell Folders'):
+                try:
+                    with winreg.OpenKey(winreg.HKEY_CURRENT_USER,r'Software\Microsoft\Windows\CurrentVersion\Explorer'+ '\\'+subkey) as key:
+                        value,_=winreg.QueryValueEx(key,'{374DE290-123F-4565-9164-39C4925E467B}')
+                        values.insert(0,Path(os.path.expandvars(value)))
+                except OSError:pass
+        except ImportError:pass
+    for name in ('USERPROFILE','OneDrive','OneDriveConsumer','OneDriveCommercial'):
+        if os.environ.get(name):values.append(Path(os.environ[name])/'Downloads')
+    values.extend((Path.cwd(),Path(sys.executable).parent,Path.home()/'Desktop'))
+    return list(dict.fromkeys(values))
+
+
+def remembered_repos(service,account):
+    """Reuse recorded successful CLI locations, still checking selected email below."""
+    values=[]
+    try:
+        for item in service.ledger.recent():
+            if item.get('state')!='done':continue
+            meta=service.ledger.metadata(item['id'])
+            value=(meta.get('cli') or {}).get('cwd')
+            if meta.get('account_id')==account and meta.get('engine')=='gflow-cli-direct' and isinstance(value,str) and value:
+                values.append(Path(value))
+    except AttributeError:pass  # Minimal test/adaptor ledgers may have no history API.
+    return list(dict.fromkeys(values))
+
+
+def resolve_repo(service,account,email):
+    override=REPO_DIRECTORY or os.environ.get('SCENEFORGE_GFLOW_REPO')
+    if override:
+        candidates=[Path(override)] if Path(override).is_dir() else []
+    else:
+        # Most recent successful location wins only if its original app and account remain valid.
+        for path in remembered_repos(service,account):
+            installed=(path/'runtime/python.exe').is_file() and (path/'runtime/Lib/site-packages/gflow_cli/__main__.py').is_file()
+            profiles=matching_profile(path,email) if is_gflow_repo(path) or installed else []
+            if len(profiles)==1:return path,profiles[0],{'source':'successful_history','candidate_count':1}
+        candidates=find_repo(downloads_folders())
+    matched=[(path,name) for path in candidates if path.is_dir() for name in matching_profile(path,email)]
+    if len(matched)!=1:
+        from .simple_flow import SimpleStopped
+        reason=('Không tìm thấy thư mục GFlow gốc. Khôi phục/giải nén bản GFlow đã chạy được vào Downloads hoặc đặt SCENEFORGE_GFLOW_REPO tới thư mục đó.' if not candidates else
+                'Tìm thấy '+str(len(candidates))+' thư mục GFlow nhưng không xác định duy nhất profile đúng tài khoản đã chọn. Kiểm tra tài khoản trong GFlow gốc.')
+        raise SimpleStopped(reason+' Chưa gọi CLI, chưa gửi tạo video.')
+    return *matched[0],{'source':'configured_path' if override else 'folder_scan','candidate_count':len(candidates)}
 
 
 def matching_profile(repo, email):
@@ -101,14 +158,14 @@ def video_result(stdout):
 
 async def generate(service, rid, payload, reference):
     from .simple_flow import SimpleStopped
-    repo_value = REPO_DIRECTORY or os.environ.get('SCENEFORGE_GFLOW_REPO')
-    candidates = [Path(repo_value)] if repo_value else await asyncio.to_thread(find_repo, downloads_folders())
-    binding = service.account_bridge.binding(payload['account_id'])
-    if not binding: raise SimpleStopped('Tài khoản đã chọn không còn hợp lệ; chưa gọi CLI.')
-    matched = [(path, name) for path in candidates if path.is_dir() for name in matching_profile(path, binding['email'])]
-    if len(matched) != 1:
-        raise SimpleStopped('Tìm thấy '+str(len(candidates))+' bản GFlow trong Downloads nhưng chưa xác định duy nhất phiên đúng tài khoản đã chọn. Chưa gọi CLI.')
-    repo, profile = matched[0]
+    binding=service.account_bridge.binding(payload['account_id'])
+    if not binding:raise SimpleStopped('Tài khoản đã chọn không còn hợp lệ; chưa gọi CLI.')
+    try:
+        repo,profile,discovery=await asyncio.to_thread(resolve_repo,service,payload['account_id'],binding['email'])
+    except SimpleStopped as exc:
+        service.ledger.set_metadata(rid,{'generation_not_started':True,'cli_discovery':{'state':'not_found_or_ambiguous'},'message':str(exc)})
+        raise
+    service.ledger.set_metadata(rid,{'cli_discovery':{'state':'resolved',**discovery}})
     repo = repo.resolve()
     prepared = service.pair_report or {}
     project = prepared.get('project_id') or prepared.get('uploaded_media_project')

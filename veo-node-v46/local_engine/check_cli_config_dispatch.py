@@ -11,7 +11,7 @@ from .flow_video_options import model_id
 from . import flow_gflow_cli as cli
 PROJECT='11111111-1111-4111-8111-111111111111'
 
-async def scenario(settings):
+async def scenario(settings,missing=False):
  with tempfile.TemporaryDirectory() as folder:
   root=Path(folder);repo=root/'repo';repo.mkdir();(repo/'runtime').mkdir();(repo/'runtime/python.exe').write_bytes(b'fixture')
   profile=repo/'data/profiles/profile_default';profile.mkdir(parents=True);(profile/'.gflow_account').write_text('selected@example.com')
@@ -43,9 +43,14 @@ print(json.dumps(dict(command='video '+args[1],succeeded=True,media_id='22222222
   async def launch(*args,**kwargs):
    if args[1:3]==('-m','gflow_cli'):return await original(sys.executable,*args[1:],**kwargs)
    return await original(*args,**kwargs)
-  with patch.object(cli,'REPO_DIRECTORY',str(repo)),patch('local_engine.flow_native_pipeline.NativeProjectSession',return_value=native),patch.object(asyncio,'create_subprocess_exec',launch):
+  with patch.object(cli,'REPO_DIRECTORY',str(root/'missing') if missing else str(repo)),patch('local_engine.flow_native_pipeline.NativeProjectSession',return_value=native),patch.object(asyncio,'create_subprocess_exec',launch):
    await service.submit(body)
    task=service.tasks[body['request_id']]
+   if missing:
+    await task;record=service.lookup(body['request_id']);assert record['state']=='failed' and record['submitted'] is False,record
+    assert record['generation_not_started'] and record['cli_discovery']['state']=='not_found_or_ambiguous'
+    assert not (repo/'calls').exists();native.upload.assert_not_called()
+    print('PASS actual missing CLI install: failed + submitted=false, zero upload/generate calls');return
    async with asyncio.timeout(4):
     while not ledger.metadata(body['request_id']).get('provider_task'):await asyncio.sleep(.01)
    early=service.lookup(body['request_id']);assert early['submitted'] is True and not task.done(),early
@@ -65,4 +70,5 @@ print(json.dumps(dict(command='video '+args[1],succeeded=True,media_id='22222222
 
 async def main():
  for mode,model,ratio in [('ingredients','fast','16:9'),('frames','quality','9:16')]:await scenario(dict(kind='video',mode=mode,model=model,ratio=ratio,outputs=1))
+ await scenario(dict(kind='video',mode='frames',model='lite',ratio='9:16',outputs=1),missing=True)
 if __name__=='__main__':asyncio.run(main())

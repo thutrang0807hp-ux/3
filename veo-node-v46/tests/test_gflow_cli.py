@@ -138,6 +138,41 @@ class CliTests(unittest.IsolatedAsyncioTestCase):
    (repo/'app/app.py').write_bytes(b'fixture\r\n')
    with patch.object(cli,'APP_SHA256',hashlib.sha256(b'fixture\n').hexdigest()):
     self.assertEqual(cli.find_repo([root/'Downloads']),[repo])
+ def portable(self,path,email='selected@example.com'):
+  (path/'app').mkdir(parents=True);(path/'app/app.py').write_text('import subprocess\n# original -m gflow_cli, updated upstream wrapper\n')
+  (path/'runtime/Lib/site-packages/gflow_cli').mkdir(parents=True);(path/'runtime/Lib/site-packages/gflow_cli/__main__.py').write_text('# CLI')
+  (path/'runtime/python.exe').write_bytes(b'fixture');profile=path/'data/profiles/profile_default';profile.mkdir(parents=True);(profile/'.gflow_account').write_text(email)
+ def test_generic_wrapper_without_cli_is_not_a_repo(self):
+  with tempfile.TemporaryDirectory() as folder:
+   path=Path(folder);(path/'app.py').write_text('import subprocess\n# gflow_cli\n');self.assertFalse(cli.is_gflow_repo(path))
+ def test_updated_wrapper_and_deeper_download_layout(self):
+  with tempfile.TemporaryDirectory() as folder:
+   root=Path(folder);repo=root/'Downloads'/'one'/'two'/'three'/'four'/'GFlow';self.portable(repo)
+   self.assertEqual(cli.find_repo([root/'Downloads']),[repo])
+ def test_prefer_previous_success_outside_downloads(self):
+  with tempfile.TemporaryDirectory() as folder:
+   root=Path(folder);repo=root/'elsewhere/GFlow';self.portable(repo)
+   service=types.SimpleNamespace(ledger=types.SimpleNamespace(recent=lambda:[dict(id='old',state='done')],metadata=lambda rid:dict(account_id='account',engine='gflow-cli-direct',cli=dict(cwd=str(repo)))))
+   with patch.object(cli,'REPO_DIRECTORY',''),patch.dict(os.environ,{'SCENEFORGE_GFLOW_REPO':''}),patch.object(cli,'downloads_folders',return_value=[root/'Downloads']):
+    selected,profile,info=cli.resolve_repo(service,'account','selected@example.com');self.assertEqual(selected,repo);self.assertEqual(profile,'default');self.assertEqual(info['source'],'successful_history')
+ def test_wrong_account_history_is_not_adopted(self):
+  with tempfile.TemporaryDirectory() as folder:
+   root=Path(folder);old=root/'old';new=root/'Downloads/GFlow';self.portable(old,'other@example.com');self.portable(new)
+   service=types.SimpleNamespace(ledger=types.SimpleNamespace(recent=lambda:[dict(id='old',state='done')],metadata=lambda rid:dict(account_id='account',engine='gflow-cli-direct',cli=dict(cwd=str(old)))))
+   with patch.object(cli,'REPO_DIRECTORY',''),patch.dict(os.environ,{'SCENEFORGE_GFLOW_REPO':''}),patch.object(cli,'downloads_folders',return_value=[root/'Downloads']):
+    self.assertEqual(cli.resolve_repo(service,'account','selected@example.com')[0],new)
+ def test_ambiguous_matching_installs_are_not_guessed(self):
+  with tempfile.TemporaryDirectory() as folder:
+   root=Path(folder);self.portable(root/'one');self.portable(root/'two')
+   service=types.SimpleNamespace(ledger=types.SimpleNamespace(recent=lambda:[]))
+   with patch.object(cli,'REPO_DIRECTORY',''),patch.dict(os.environ,{'SCENEFORGE_GFLOW_REPO':''}),patch.object(cli,'downloads_folders',return_value=[root]):
+    with self.assertRaises(Stopped):cli.resolve_repo(service,'account','selected@example.com')
+ def test_missing_install_does_not_launch(self):
+  with tempfile.TemporaryDirectory() as folder:
+   service=types.SimpleNamespace(ledger=types.SimpleNamespace(recent=lambda:[]))
+   with patch.object(cli,'REPO_DIRECTORY',''),patch.dict(os.environ,{'SCENEFORGE_GFLOW_REPO':''}),patch.object(cli,'downloads_folders',return_value=[Path(folder)]),patch.object(asyncio,'create_subprocess_exec') as launch:
+    with self.assertRaisesRegex(Stopped,'Chưa gọi CLI'):cli.resolve_repo(service,'account','selected@example.com')
+    launch.assert_not_called()
  def test_unsupported_settings_rejected_before_cli(self):
   for changes in (dict(outputs=2),dict(model='quality'),dict(duration=8)):
    cfg=dict(kind='video',mode='ingredients',ratio='9:16',model='lite',outputs=1);cfg.update(changes)

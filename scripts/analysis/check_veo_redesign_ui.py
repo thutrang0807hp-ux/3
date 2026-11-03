@@ -49,6 +49,13 @@ await storeProject();render();await SFVeoNode.refresh();
    await page.evaluate("document.querySelector('#node-videos .vnTile').click()")
    await expect(page.locator('#vnDetail [data-vn-generation] progress')).to_have_attribute('value','60')
    await expect(page.locator('#vnDetail [data-vn-generation]')).to_contain_text('Ước tính theo bước')
+   # A pre-CLI failure must release disabled controls and replace stale running labels.
+   records[job['id']]={'request_id':job['id'],'state':'failed','message':'Không tìm thấy GFlow gốc. Chưa gọi CLI.','submitted':False}
+   await page.evaluate("SFVeoNode.sync('flow-ui-fixture')")
+   await expect(page.locator('#vnDetail [data-vn-generation]')).to_contain_text('Không tìm thấy GFlow gốc')
+   await expect(page.locator('#vnDetail [data-vn=create]')).to_be_enabled()
+   await expect(page.locator('#vnDetail [data-vn=write]')).to_be_enabled()
+   assert 'Đang tạo' not in await page.locator('#vnDetail .vnDetailPlayer').inner_text()
    records[job['id']]={'request_id':job['id'],'state':'done','result':{'room_id':'node-ui','scene_id':job['sceneId'],'part':job['part'],'mime_type':'video/mp4','settings':job['settings']}}
    await page.evaluate("SFVeoNode.sync('flow-ui-fixture')")
    await expect(page.locator('#vnDetail video')).to_have_count(1)
