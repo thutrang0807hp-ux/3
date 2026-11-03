@@ -1,0 +1,75 @@
+{
+  "version": "2026.11.04.4659",
+  "file": "SceneForge-Update-20261104-v46.59-GFlow-Discovery-Fix.exe",
+  "bytes": 3986944,
+  "sha256": "e2d33bacc6616f41b2e7131bd04015cc796aebb587f1b5e9f4f8e15bdd76cb41",
+  "files": [
+    {
+      "path": "app/local_engine/simple_flow.py",
+      "bytes": 61600,
+      "sha256": "0701d970babe5f23f940a685cb309e133b7b27a5431c031d04b84db706056589"
+    },
+    {
+      "path": "app/local_engine/flow_gflow_cli.py",
+      "bytes": 21686,
+      "sha256": "3c8d8f223b1034c5519202218c4bf5fd2847f4eb5e51924ff6b220067acfabf0"
+    },
+    {
+      "path": "app/local_engine/flow_native_pipeline.py",
+      "bytes": 16378,
+      "sha256": "2480527012fc861837cf6f8b4c88e7fb1ecd7f791a3b6611181aa3fbb46e84cb"
+    },
+    {
+      "path": "app/local_engine/flow_pair_generation.py",
+      "bytes": 4689,
+      "sha256": "88195ce8d19908d9a564afcbbcf7a18bca258ee956ac3eadbbb25f8c20e5bb97"
+    },
+    {
+      "path": "app/local_engine/flow_video_options.py",
+      "bytes": 1291,
+      "sha256": "fc1e4d878b6f6bbd1a9bb205afcbeb256bdbe73096c1f18a7be3487d216de99c"
+    },
+    {
+      "path": "app/local_engine/flow_cli_progress.py",
+      "bytes": 7035,
+      "sha256": "10f9c0ad9b90b7ab5adfae5d29f99d90f7791aedc212a41f8cc77f119e4fd16c"
+    },
+    {
+      "path": "app/dist/web-demo/workflow.html",
+      "bytes": 820370,
+      "sha256": "068594dd473d3c1f843d933732b679b2c0b472a1786d0f6a69dc658c82ad5a9e"
+    }
+  ],
+  "minimum_patch": "2026.11.03.4652",
+  "embedded_files_verified": true,
+  "launcher_code_unchanged": true,
+  "generation_engine": "gflow-cli-direct",
+  "runtime_auto_download": false,
+  "original_repo_cli": true,
+  "one_create_per_clip": true,
+  "reviewed_source_commit": "46d71d5",
+  "ledger": "existing_RequestLedger_only",
+  "diagnostic_update_only": false,
+  "download_only_recovery": true,
+  "single_reference_upload": true,
+  "auto_settings_sync": false,
+  "settings_applied_by_cli": true,
+  "dynamic_video_settings": true,
+  "single_output_only": true,
+  "toolbar_settings_dock": true,
+  "settings_debug_buttons": false,
+  "automatic_retry": false,
+  "live_cli_stages": true,
+  "early_video_id": true,
+  "provider_percent_fabricated": false,
+  "historical_cli_location": true,
+  "updated_wrapper_discovery": true,
+  "failed_inspector_refresh": true,
+  "labelled_stage_estimate": true,
+  "automatic_receipt": true,
+  "explicit_quality_approval": true,
+  "clip_grid_inspector": true,
+  "sequential_user_queue": true,
+  "live_flow_verified": false,
+  "windows_installer_tested": false
+}
