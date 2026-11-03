@@ -334,3 +334,44 @@ submitted IDs before process exit; actual UI sync/progress rendering and existin
 configuration/old-download recovery checks. These use local fixtures, not live
 Flow or Windows. Classic-host terminal events are supported, but early IDs rely
 on the migrated-host events emitted by the user's pinned Flow CLI.
+
+
+## v46.58 — clip grid, automatic receipt and explicit step estimates
+
+Redesign only the reference-workflow node and its inspector. The original CLI,
+account binding, request ledger, single-reference upload and download recovery
+are unchanged. Existing clip planning supplies scene parts; no new splitting or
+unsupported model/duration/watermark controls are added.
+
+Group parts by scene, use small tiles above six clips, filter clips needing review,
+and open a video/prompt inspector with version/source playback, 0.5x and loop.
+Keep all imported versions. Warnings with timestamps are shown only when present
+in existing local-review data, never invented identity detection. Quality approval
+continues to check frame, prompt, timing and continuity; receiving a file is not
+an automatic quality approval. The inspector's previous receive action is now
+labelled approval, because verified files already attach to the originating scene.
+Mark automatic receipt, display the video immediately in an open matching inspector,
+and continue polling when the workflow document is hidden. Closed inspectors are
+not reopened by receipt. Failed saves leave the job awaiting import instead of
+claiming persisted success.
+
+A per-clip percentage is explicitly labelled an estimate by stage (image 20,
+submit 30, waiting 40, generating 60, download 85, verification 95). Real UI
+percentages are labelled as such and capped below 100 until imported. Unknown,
+missing, failed and stale states receive no fabricated completion bar. 100 means
+the verified file was imported/saved. Aggregate count is based on actual clips.
+
+A user-confirmed session-only queue sends ready clips one at a time, retaining the
+original once-only per-request generation. It stops after uncertain or failed
+results, changed room/account/settings/inputs, or user cancellation; it never
+replays a generation. Continuity-dependent parts wait for their normal prerequisite
+approval. No queue is silently resumed after restart. Credit amounts and logo
+removal are not presented as working capabilities without provider evidence.
+
+Validation: actual full workflow in Chromium with intercepted API responses and
+real local 8s MP4: tile/filter/detail edits do not submit, durable IDs/stages are
+rendered, receive attaches automatically to the right scene without approval,
+repeated reads do not duplicate, approval remains explicit, missing is translated,
+exactly two queue requests for two clips, first uncertain result stops the rest.
+Settings/configured create/import and existing download-report checks retained.
+No live Flow or Windows installer verification.

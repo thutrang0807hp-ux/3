@@ -6,7 +6,7 @@ const handler=html.slice(html.indexOf("document.addEventListener('change',event=
 function fixture(){let next=0,listener;const timers=new Map(),states={};
 const ctx={project:{id:'room'},remote:{selection:{available:true,account_id:'account'}},busy:false,settingsSyncTimer:null,settingsSyncPending:null,settingsSyncStarting:false,error:'',state:()=>states[ctx.project.id]??={},active:()=>false,paint:()=>{},storeProject:async()=>{},assertRoom:id=>assert.equal(id,ctx.project.id),escape:String,
 setTimeout:(fn,ms)=>{const id=++next;timers.set(id,{fn,ms});return id},clearTimeout:id=>timers.delete(id),document:{addEventListener:(event,fn)=>listener=fn},workflowLocalRequest:()=>{throw Error('Old settings endpoint must not be called')}};
-vm.createContext(ctx);vm.runInContext(code+handler+html.slice(html.indexOf('function createReason(row){'),html.indexOf('function unresolvedTrackingTargets(){')),ctx);
+vm.createContext(ctx);vm.runInContext(code+handler+html.slice(html.indexOf('function createReason(row,ignoreBusy=false){'),html.indexOf('function unresolvedTrackingTargets(){')),ctx);
 return{ctx,timers,change:(key,value)=>listener({target:{matches:()=>true,dataset:{vnSetting:key},value}}),flush:async()=>{for(const[id,t]of [...timers]){timers.delete(id);await t.fn()}}};}
 (async()=>{
 let f=fixture();f.change('model','fast');f.change('ratio','16:9');assert(f.ctx.createReason({}).includes('Đang lưu'));assert.equal(f.timers.size,1);await f.flush();assert.equal(f.ctx.state().settingsTrial.state,'saved');assert.equal(f.ctx.state().settingsTrial.requested.model,'fast');assert.equal(f.ctx.state().settingsTrial.requested.ratio,'16:9');console.log('PASS latest choices saved once for CLI; no Settings-trigger API');
