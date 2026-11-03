@@ -29,6 +29,7 @@ class CliProgress:
     def observe(self,value):
         if not isinstance(value,dict):return
         event=value.get('event')
+        if not isinstance(event,str):return
         if event=='migrated.dispatch':
             if value.get('project_id')!=self.project:raise ProgressMismatch('CLI báo dự án khác lượt đã gửi; dừng theo dõi, không tự tạo lại.')
             self.dispatched=True
@@ -82,7 +83,7 @@ async def communicate_live(process,monitor):
                 monitor.observe(value)
                 if value.get('level') in ('info','debug'):
                     # Retain only the monitor's public event/ID/status fields, never raw INFO payloads.
-                    if value.get('event') in STARTED|{'migrated.dispatch','migrated.status','migrated.result','migrated.download','migrated.submit_clicked','migrated.frame_uploaded','migrated.references_attached','migrated.frame_bound','ui_automation_video.poll_terminal'}:
+                    if isinstance(value.get('event'),str) and value.get('event') in STARTED|{'migrated.dispatch','migrated.status','migrated.result','migrated.download','migrated.submit_clicked','migrated.frame_uploaded','migrated.references_attached','migrated.frame_bound','ui_automation_video.poll_terminal'}:
                         public={'event':value['event'],'level':value['level']}
                         for key in ('media_id','workflow_id','project_id'):
                             if isinstance(value.get(key),str) and UUID.fullmatch(value[key]):public[key]=value[key]
