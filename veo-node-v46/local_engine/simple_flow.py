@@ -33,14 +33,14 @@ class SimpleFlow:
   self.vault.set_secret('simple-flow-binding',{'browser':self.channel,'project':self.project,'email':self.email,'token':self.token})
  def enabled(self):return self.account_bridge is not None or (self.vault.secret('flow-transport-v2')or{}).get('mode','simple')=='simple'
  def status(self):
-  verified_key='gflow-ui-verified'if getattr(self,'gflow_driver_enabled',False)else'native-flow-pipeline-verified'if getattr(self,'native_pipeline_enabled',False)else'simple-flow-verified'
+  verified_key='gflow-cli-verified'if getattr(self,'cli_driver_enabled',False)else'native-flow-pipeline-verified'if getattr(self,'native_pipeline_enabled',False)else'simple-flow-verified'
   if self.account_bridge:
    selection=self.account_bridge.selection()
    message=self.message if self.busy()or self.state in ('failed','unknown')else ('Đã chọn '+str(selection.get('account_name'))+' từ tab Tài khoản. Phiên được mở nền khi tạo clip.'if selection['available']else'Đăng nhập web và chọn một tài khoản Flow tại Cài đặt → Tài khoản.')
    return {'state':self.state,'message':message,'interaction':self.pending,'active_request':self.active,'unresolved':self.unresolved(),'saved_video_reviews':self.saved_video_reviews(),
     'configured':True,'account_binding':selection['available'],'transport':'web_ui','connection_method':'account_web','shared_accounts':True,'background':bool(self.account_bridge.background),
     'native_pipeline':bool(getattr(self,'native_pipeline_enabled',False)),
-    'generation_engine':'gflow-ui-0.92.1'if getattr(self,'gflow_driver_enabled',False)else'legacy',
+    'generation_engine':'gflow-cli-direct'if getattr(self,'cli_driver_enabled',False)else'legacy',
     'models':[MODEL],'model_details':[{'id':MODEL,'description':'Lite · 8s · 9:16 · tài khoản web đã chọn','accepts_images':True,'video_type':'i2v','max_images':1}],
     'per_account':1,'automatic_retry':False,'selection':selection,'project_url':self.project,'restorable':False,
     'generation_verified':bool(self.vault.secret(verified_key))}
@@ -432,9 +432,9 @@ class SimpleFlow:
     else:await self.checkpoint('submit','Cảnh '+payload['scene_id']+': kiểm tra đúng ảnh, prompt, Veo Lite, 8 giây, 9:16 và x1 trên Flow. Tiếp tục cho phép bấm Tạo một lần, có thể tốn credit.')
     await self.assert_ready()
    await self.assert_ready()
-   if getattr(self,'gflow_driver_enabled',False):
-    from .flow_gflow_adapter import generate
-    self.ledger.set_metadata(rid,{'engine':'gflow-ui-0.92.1'})
+   if getattr(self,'cli_driver_enabled',False):
+    from .flow_gflow_cli import generate
+    self.ledger.set_metadata(rid,{'engine':'gflow-cli-direct'})
     await generate(self,rid,payload,reference)
     return
    direct=bool(getattr(self,'direct_reference_enabled',False) and payload.get('prepared_request_id'))
@@ -720,7 +720,7 @@ def install_simple_flow(app,data,vault,ledger,provider):
  service=SimpleFlow(data,vault,ledger);provider.simple=service
  service.direct_reference_enabled=True
  service.native_pipeline_enabled=True
- service.gflow_driver_enabled=True
+ service.cli_driver_enabled=True
  from .flow_account_session import AccountWebSession
  service.account_bridge=AccountWebSession(data,provider.account_service,background=True)
  from .flow_settings import register_settings_routes

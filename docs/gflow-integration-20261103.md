@@ -139,3 +139,33 @@ all HTTP intercepted. Startup reached ready; the test canceled without granting
 generation. Also checked the real SDK redactor removes fixture bearer/cookie/
 signed-URL secrets. This Linux fixture does not reproduce or identify the user's
 Windows error. **This is a diagnostic update, not a claimed fix for that error.**
+
+## v46.50 — direct original CLI, per explicit user instruction
+
+User rejected the SDK worker and requested the original `python -m gflow_cli
+video r2v` invocation, with cwd pointing at their working copy, located somewhere
+in Downloads. Production create dispatch now imports only `flow_gflow_cli`;
+it no longer invokes the worker, imports the SDK, subclasses FlowApiClient,
+overrides session methods, or downloads a second runtime.
+
+The adapter searches Downloads (including the Windows known-folder override)
+with bounded depth, recognizes the supplied app.py by its normalized source
+hash, and selects an existing profile recording the same selected account email.
+For the portable application it invokes that folder's `runtime/python.exe` and
+uses precisely the GFLOW_CLI_HOME layout from its MO-UNG-DUNG.bat. For a plain
+repo it uses `py`. Both execute `-m gflow_cli video r2v` with the repo as cwd.
+The CLI uses its own existing session unchanged. No profile is copied or created.
+
+The CLI requires --ref (confirmed with the actual original CLI's --help). The
+adapter passes the approved image with the already-uploaded filename, same
+project, Lite, portrait, 8 seconds, one output, output directory and --json.
+Prompt is one argument after --; no shell is used. stdout and stderr are both
+captured and their scrubbed contents retained in engine_diagnostics. CLI JSON
+completion is parsed, output location/video validated, and saved to the original
+scene using the existing ledger. Nonzero exit is reported, never auto-retried.
+
+The .50 update contains only SimpleFlow and this direct CLI adapter and requires
+.48 or newer. Earlier preparation modules and frontend are not replaced.
+Four direct CLI local process tests and four real application dispatch scenarios
+pass. Original CLI help also ran successfully in the isolated Linux environment.
+Windows execution with the user's Downloads copy and live Flow remains unverified.
