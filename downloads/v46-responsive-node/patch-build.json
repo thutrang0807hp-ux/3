@@ -1,0 +1,29 @@
+{
+  "version": "2026.11.04.4661",
+  "file": "SceneForge-Update-20261104-v46.61-Responsive-Veo-Node.exe",
+  "bytes": 3986944,
+  "sha256": "bbcea3522688812f31f075268cca45c0e8e95a3cbce53523742829e927fcd2f4",
+  "files": [
+    {
+      "path": "app/dist/web-demo/workflow.html",
+      "bytes": 827883,
+      "sha256": "5da8a3174faa5dde3da0194a4b6e63af61b44515e04060ddfeae9e9e2b02d663"
+    }
+  ],
+  "minimum_patch": "2026.11.04.4660",
+  "embedded_files_verified": true,
+  "launcher_code_unchanged": true,
+  "reviewed_source_commit": "90b0bbd",
+  "ui_only": true,
+  "installed_runtime_preserved": true,
+  "single_settings_dock": true,
+  "all_missing_clip_queue": true,
+  "missing_prompt_preparation": true,
+  "keyed_dom_updates": true,
+  "unchanged_poll_saves_skipped": true,
+  "legacy_duplicate_polling_removed": true,
+  "durable_intent_preserved": true,
+  "automatic_retry": false,
+  "live_flow_verified": false,
+  "windows_installer_tested": false
+}
