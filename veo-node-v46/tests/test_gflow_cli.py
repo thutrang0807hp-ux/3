@@ -1,5 +1,6 @@
 """Direct -m gflow_cli process integration; local CLI fixture, zero Google calls."""
 import asyncio,hashlib,importlib.util,json,os
+from contextlib import ExitStack
 from pathlib import Path
 import sys,tempfile,types,unittest
 from unittest.mock import patch
@@ -52,10 +53,10 @@ print(json.dumps(dict(command='video '+args[1],status='ok',succeeded=True,media_
 '''
 
 class CliTests(unittest.IsolatedAsyncioTestCase):
- async def scenario(self,mode,settings=None):
+ async def scenario(self,mode,settings=None,bundled=False):
   with tempfile.TemporaryDirectory() as folder:
    root=Path(folder);repo=root/'Downloads'/'GFlow-Studio-Portable';repo.mkdir(parents=True)
-   (repo/'runtime').mkdir();(repo/'runtime/python.exe').write_bytes(b'fixture')
+   (repo/'runtime').mkdir();(repo/('python.exe' if bundled else 'runtime/python.exe')).write_bytes(b'fixture')
    profile=repo/'data/profiles/profile_default';profile.mkdir(parents=True);(profile/'.gflow_account').write_text('selected@example.com')
    module=repo/'gflow_cli';module.mkdir();(module/'__main__.py').write_text(FIXTURE)
    (repo/'mode').write_text(mode)
@@ -73,7 +74,7 @@ class CliTests(unittest.IsolatedAsyncioTestCase):
    def save(rid,value):
     metadata.update(value)
     if value.get('generation_granted'):(repo/'grant.json').write_text('durable')
-   service=types.SimpleNamespace(pair_report=prepared,root=root,sent=False,
+   service=types.SimpleNamespace(pair_report=prepared,root=root,data=root,sent=False,
     account_bridge=types.SimpleNamespace(binding=lambda aid:dict(email='selected@example.com'),selection=lambda:dict(available=True,account_id='account')),
     gate=asyncio.Lock(),task=None,active=None,busy=lambda:False,lookup=lambda rid:dict(state='unknown'),
     assert_ready=ready,disconnect_browser=ready,phase=lambda rid,phase,message:save(rid,{'phase':phase,'message':message}),validate_video=validate,
@@ -90,7 +91,17 @@ class CliTests(unittest.IsolatedAsyncioTestCase):
      self.assertEqual(args[4],'i2v' if cfg['mode']=='frames' else 'r2v')
     launches.append(args)
     return await original(sys.executable,*args[1:],**kwargs)
-   with patch.object(cli,'REPO_DIRECTORY',str(repo)),patch.object(asyncio,'create_subprocess_exec',launch):
+   with ExitStack() as stack:
+    stack.enter_context(patch.object(cli,'REPO_DIRECTORY','' if bundled else str(repo)))
+    stack.enter_context(patch.dict(os.environ,{'SCENEFORGE_GFLOW_REPO':''}))
+    stack.enter_context(patch.object(asyncio,'create_subprocess_exec',launch))
+    if bundled:
+     import importlib
+     bundle=importlib.import_module(PACKAGE+'.flow_cli_bundle')
+     stack.enter_context(patch.object(bundle,'bundled_runtime',return_value=repo))
+     stack.enter_context(patch.object(bundle,'prepare_profile',return_value=(repo/'data/profiles','default')))
+     stack.enter_context(patch.object(cli,'resolve_repo',side_effect=AssertionError('must not discover Downloads')))
+     self.assertEqual(cli.command(repo,reference,'prompt',PROJECT,root)[0],str(repo/'python.exe'))
     if mode in ('error','download_still_fails','live_mismatch'):
      with self.assertRaises(Stopped):await cli.generate(service,'flow-fixture',payload,reference)
     elif mode=='old_download_error':
@@ -127,6 +138,8 @@ class CliTests(unittest.IsolatedAsyncioTestCase):
  async def test_new_preparation_passes_one_ref_without_native_upload(self):await self.scenario('cli_only_upload')
  async def test_frames_quality_landscape(self):await self.scenario('cli_only_upload',dict(kind='video',mode='frames',ratio='16:9',model='quality',outputs=1))
  async def test_ingredients_fast_landscape(self):await self.scenario('cli_only_upload',dict(kind='video',mode='ingredients',ratio='16:9',model='fast',outputs=1))
+ async def test_bundled_cli_without_downloads(self):await self.scenario('success',bundled=True)
+ async def test_bundled_download_recovery_uses_bundled_python(self):await self.scenario('download_error',bundled=True)
  async def test_live_workflow_id_survives_download_recovery(self):await self.scenario('live_download_error')
  async def test_live_id_arrives_before_cli_exit(self):await self.scenario('live_progress')
  async def test_final_id_must_match_live_id(self):await self.scenario('live_mismatch')
@@ -181,5 +194,26 @@ class CliTests(unittest.IsolatedAsyncioTestCase):
   args=cli.command('/repo','/image.png','$(not a command)','project','/out')
   self.assertEqual(args[:5],['py','-m','gflow_cli','video','r2v'])
   self.assertEqual(args[-2:],['--','$(not a command)'])
+
+class BundleProfileTests(unittest.TestCase):
+ def test_existing_selected_profile_is_aliased_without_cookie_copy(self):
+  import importlib
+  bundle=importlib.import_module(PACKAGE+'.flow_cli_bundle')
+  with tempfile.TemporaryDirectory() as folder:
+   root=Path(folder);target=root/'managed';target.mkdir();(target/'Cookies').write_bytes(b'do not export')
+   login=types.ModuleType(PACKAGE+'.google_login');login.flow_profile_path=lambda *args:target;login.installed_browser=lambda:'chrome.exe'
+   with patch.dict(sys.modules,{login.__name__:login}):
+    home,name=bundle.prepare_profile(root,'account',dict(email='selected@example.com',profile_key='key'))
+    alias=home/('profile_'+name);self.assertEqual(alias.resolve(),target);self.assertEqual((alias/'Cookies').read_bytes(),b'do not export')
+    self.assertEqual(bundle.existing_profile(root,'account',dict(email='selected@example.com'),dict(home=str(home),profile=name)),(home,name))
+    self.assertEqual(bundle.prepare_profile(root,'account',dict(email='selected@example.com')),(home,name))
+    with self.assertRaisesRegex(RuntimeError,'Email'):bundle.prepare_profile(root,'account',dict(email='wrong@example.com'))
+ def test_alias_to_other_account_is_never_replaced(self):
+  import importlib
+  bundle=importlib.import_module(PACKAGE+'.flow_cli_bundle')
+  with tempfile.TemporaryDirectory() as folder:
+   root=Path(folder);one=root/'one';two=root/'two';one.mkdir();two.mkdir();alias=root/'alias';alias.symlink_to(one,target_is_directory=True)
+   with self.assertRaises(RuntimeError):bundle.directory_alias(alias,two)
+   self.assertEqual(alias.resolve(),one)
 
 if __name__=='__main__':unittest.main()

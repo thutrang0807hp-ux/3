@@ -126,6 +126,7 @@ def command(repo, reference, prompt, project, output, profile='default', setting
     from .flow_video_options import normalize_settings, MODELS
     cfg=normalize_settings(settings)
     repo=Path(repo);python=repo/'runtime/python.exe'
+    if not python.is_file() and (repo/'python.exe').is_file():python=repo/'python.exe'
     mode='r2v' if cfg['mode']=='ingredients' else 'i2v'
     args=[str(python) if python.is_file() else 'py','-m','gflow_cli','video',mode]
     if mode=='r2v':args+=['--ref',str(reference)]
@@ -160,11 +161,19 @@ async def generate(service, rid, payload, reference):
     from .simple_flow import SimpleStopped
     binding=service.account_bridge.binding(payload['account_id'])
     if not binding:raise SimpleStopped('Tài khoản đã chọn không còn hợp lệ; chưa gọi CLI.')
+    bundled=not(REPO_DIRECTORY or os.environ.get('SCENEFORGE_GFLOW_REPO'))
+    cli_home=None
     try:
-        repo,profile,discovery=await asyncio.to_thread(resolve_repo,service,payload['account_id'],binding['email'])
-    except SimpleStopped as exc:
-        service.ledger.set_metadata(rid,{'generation_not_started':True,'cli_discovery':{'state':'not_found_or_ambiguous'},'message':str(exc)})
-        raise
+        if bundled:
+            from .flow_cli_bundle import bundled_runtime
+            service.phase(rid,'opening','Đang chuẩn bị CLI gốc đi kèm SceneForge.')
+            repo=await asyncio.to_thread(bundled_runtime,service.data)
+            profile='';discovery={'source':'bundled_offline','candidate_count':1}
+        else:
+            repo,profile,discovery=await asyncio.to_thread(resolve_repo,service,payload['account_id'],binding['email'])
+    except (SimpleStopped,RuntimeError,ValueError,OSError) as exc:
+        service.ledger.set_metadata(rid,{'generation_not_started':True,'cli_discovery':{'state':'bundle_unavailable' if bundled else 'not_found_or_ambiguous'},'message':str(exc)})
+        raise SimpleStopped(str(exc)) from None
     service.ledger.set_metadata(rid,{'cli_discovery':{'state':'resolved',**discovery}})
     repo = repo.resolve()
     prepared = service.pair_report or {}
@@ -176,6 +185,12 @@ async def generate(service, rid, payload, reference):
         raise SimpleStopped('Ảnh/dự án đã chuẩn bị không khớp; chưa gọi CLI.')
     await service.assert_ready()
     await service.disconnect_browser()
+    if bundled:
+        from .flow_cli_bundle import prepare_profile
+        try:cli_home,profile=await asyncio.to_thread(prepare_profile,service.data,payload['account_id'],binding)
+        except (RuntimeError,OSError) as exc:
+            service.ledger.set_metadata(rid,{'generation_not_started':True})
+            raise SimpleStopped(str(exc)) from None
     output = (service.root / (rid + '.cli')).resolve()
     output.mkdir(exist_ok=True)
     # CLI R2V uploads this single local reference; no native pre-upload.
@@ -188,13 +203,13 @@ async def generate(service, rid, payload, reference):
     args = command(repo, image, payload['prompt'], project, output, profile, cfg)
     env = dict(os.environ, GFLOW_CLI_UPDATE_CHECK='0', NO_COLOR='1', TERM='dumb', PYTHONUTF8='1', PYTHONUNBUFFERED='1', GFLOW_CLI_LOG_LEVEL='INFO', GFLOW_CLI_LOG_FORMAT='json')
     # Same environment as MO-UNG-DUNG.bat when the supplied app is portable.
-    if (repo / 'runtime' / 'python.exe').is_file():
+    if bundled or (repo / 'runtime' / 'python.exe').is_file():
         env.pop('PYTHONHOME', None)
         env.pop('PYTHONPATH', None)
         env['PYTHONNOUSERSITE'] = '1'
-        env['GFLOW_CLI_HOME'] = str(repo / 'data' / 'profiles')
+        env['GFLOW_CLI_HOME'] = str(cli_home if bundled else repo / 'data' / 'profiles')
     service.ledger.set_metadata(rid, {'engine': 'gflow-cli-direct', 'clicked': True,
-        'generation_granted': True, 'cli': {'cwd': str(repo), 'entrypoint': '-m gflow_cli video '+('r2v' if cfg['mode']=='ingredients' else 'i2v'), 'profile': profile}})
+        'generation_granted': True, 'cli': {'cwd': str(repo), 'entrypoint': '-m gflow_cli video '+('r2v' if cfg['mode']=='ingredients' else 'i2v'), 'profile': profile, 'bundled':bundled, 'home':str(cli_home) if bundled else None}})
     service.sent = True
     service.phase(rid, 'submitting', 'Đang chạy CLI gốc để tạo video, chờ và tải kết quả.')
     options = {'creationflags': 0x08000000} if os.name == 'nt' else {}
@@ -266,6 +281,7 @@ async def download_existing(service, rid, repo, profile, env, output, media, pro
         'source': 'gflow_cli_download_error', 'state': 'downloading'}})
     service.phase(rid, 'downloading', 'Video đã tạo xong; đang tải lại đúng ID bằng CLI, không tạo video mới.')
     python = repo / 'runtime' / 'python.exe'
+    if not python.is_file() and (repo/'python.exe').is_file():python=repo/'python.exe'
     args = [str(python) if python.is_file() else 'py', '-m', 'gflow_cli', 'data', 'download',
             media, '--profile', profile, '--out', str(output), '--json']
     options = {'creationflags': 0x08000000} if os.name == 'nt' else {}
@@ -333,13 +349,21 @@ async def recover_existing(service, rid):
         inputs = meta.get('native_inputs') or {}
         project = inputs.get('project_id') or inputs.get('uploaded_media_project')
         repo = Path((meta.get('cli') or {}).get('cwd', ''))
-        profiles = matching_profile(repo, binding['email']) if repo.is_dir() else []
-        if len(profiles) != 1 or not re.fullmatch(r'[a-fA-F0-9-]{36}', str(project)):return
-        output = (service.root / (rid + '.cli')).resolve();output.mkdir(exist_ok=True)
-        env = dict(os.environ, GFLOW_CLI_UPDATE_CHECK='0', NO_COLOR='1', TERM='dumb', PYTHONUTF8='1')
-        if (repo/'runtime/python.exe').is_file():
-            env.pop('PYTHONHOME', None);env.pop('PYTHONPATH', None)
-            env.update(PYTHONNOUSERSITE='1', GFLOW_CLI_HOME=str(repo/'data/profiles'))
+        bundled=(meta.get('cli') or {}).get('bundled') is True
+        if bundled:
+            from .flow_cli_bundle import existing_profile
+            pair=existing_profile(service.data,meta['account_id'],binding,meta['cli'])
+            if not pair or not (repo/'python.exe').is_file():return
+            cli_home,profile=pair;profiles=[profile]
+        else:
+            cli_home=repo/'data/profiles'
+            profiles=matching_profile(repo,binding['email']) if repo.is_dir() else []
+        if len(profiles)!=1 or not re.fullmatch(r'[a-fA-F0-9-]{36}',str(project)):return
+        output=(service.root/(rid+'.cli')).resolve();output.mkdir(exist_ok=True)
+        env=dict(os.environ,GFLOW_CLI_UPDATE_CHECK='0',NO_COLOR='1',TERM='dumb',PYTHONUTF8='1')
+        if bundled or (repo/'runtime/python.exe').is_file():
+            env.pop('PYTHONHOME',None);env.pop('PYTHONPATH',None)
+            env.update(PYTHONNOUSERSITE='1',GFLOW_CLI_HOME=str(cli_home))
         old_task, old_active = service.task, service.active
         service.task = asyncio.current_task();service.active = rid
         try:

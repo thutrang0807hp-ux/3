@@ -404,3 +404,38 @@ backend submit/lookup verifies missing install fails with submitted=false and no
 upload/CLI call; configured happy paths still complete. Actual Chromium verifies
 running-to-failed refresh exposes the error, releases buttons and removes the
 running overlay. All local fixtures; user Windows disk/Flow not directly inspected.
+
+
+## v46.60 — offline original CLI/runtime in the updater
+
+Default generation no longer resolves a GFlow installation in Downloads or uses
+system Python. The update embeds the exact original Windows portable archive
+(revision 09ab05b190ddad0b3bbed80439ecbc6739d5abce, SHA256
+03ae9541fefa55e4f917f87db794cd2b26f61d5d215a754b333b5dfc3d686292).
+The archive has only application/runtime files, no account/profile data. All
+upstream package files and licenses remain intact. The existing verifier extracts
+runtime only from the LOCAL embedded archive; no network/pip/install step occurs
+at application runtime. Explicit developer path overrides remain optional; normal
+UI usage never scans Downloads.
+
+Invoke the unmodified original `python.exe -m gflow_cli` with the existing argument,
+stdout/stderr, progress, identity and file-validation paths. Release the managed
+browser before granting the CLI ownership of the same selected profile. An NTFS
+junction (ordinary filesystem alias, no cmd/shell/admin) maps its profile name
+under private Data/flow-cli to the existing managed profile. POSIX fixtures use a
+symlink. Validate profile/email and never replace an alias pointing elsewhere.
+Write only the original CLI's account/browser-strategy metadata, not cookies or
+session tokens; existing session files are never copied or rewritten. This CLI
+uses system Google Chrome for these existing Chrome profiles; unsupported browser
+strategies fail before generation rather than overriding SDK session methods.
+No custom SDK worker, session override or executable-path monkeypatch is used.
+Download-only recovery for new bundled requests uses its saved private home and
+bundled interpreter, with the same ID association checks.
+
+The generic managed updater originally had a small fixed resource slot. Append a
+new readable data resource to its final PE section and update only section/CLR
+resource sizes and pointers. Preserve all original code, entry point, imports,
+metadata and old resource bytes. Validate the resulting PE, exact resource ZIP,
+all embedded hashes and unmodified upstream archive. Windows execution remains
+unverified in this Linux environment; local process/real-backend fixtures verify
+bundled selection, no Downloads calls, account isolation and download recovery.
