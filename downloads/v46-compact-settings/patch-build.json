@@ -1,0 +1,51 @@
+{
+  "version": "2026.11.03.4655",
+  "file": "SceneForge-Update-20261103-v46.55-Compact-Flow-Settings.exe",
+  "bytes": 3986944,
+  "sha256": "bc75590f09fb6d64b45e143c19ce569feacac898e10482f96367aeb81fd04649",
+  "files": [
+    {
+      "path": "app/local_engine/simple_flow.py",
+      "bytes": 60756,
+      "sha256": "46767cc7dbb0f89a431d3457062d82cc305684ad8d51c959ac91303ecd62e9bb"
+    },
+    {
+      "path": "app/local_engine/flow_gflow_cli.py",
+      "bytes": 16655,
+      "sha256": "f80a03b59bf5156d2dcc6e6006852477df39c7b26dd189759dabacb5bf66f482"
+    },
+    {
+      "path": "app/local_engine/flow_native_pipeline.py",
+      "bytes": 15931,
+      "sha256": "3cb928d65d3802d3a160f14e6621059684a09c5c1a076f833c3259172e411056"
+    },
+    {
+      "path": "app/local_engine/flow_pair_generation.py",
+      "bytes": 4419,
+      "sha256": "e4c19bb87c86cc71bd829979149e1bca63d57a5df764af6a211d9041e3809cdc"
+    },
+    {
+      "path": "app/dist/web-demo/workflow.html",
+      "bytes": 803613,
+      "sha256": "7f7d4c8b07245441a170156d4ecf3378e7a2502190feef7aa9d88f38ceb9c5a7"
+    }
+  ],
+  "minimum_patch": "2026.11.03.4652",
+  "embedded_files_verified": true,
+  "launcher_code_unchanged": true,
+  "generation_engine": "gflow-cli-direct",
+  "runtime_auto_download": false,
+  "original_repo_cli": true,
+  "one_create_action": true,
+  "reviewed_source_commit": "d534c2d",
+  "ledger": "existing_RequestLedger_only",
+  "diagnostic_update_only": false,
+  "download_only_recovery": true,
+  "single_reference_upload": true,
+  "auto_settings_sync": true,
+  "toolbar_settings_dock": true,
+  "settings_debug_buttons": false,
+  "automatic_retry": false,
+  "live_flow_verified": false,
+  "windows_installer_tested": false
+}
