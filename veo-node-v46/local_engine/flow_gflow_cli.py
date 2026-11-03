@@ -129,7 +129,7 @@ async def generate(service, rid, payload, reference):
     if prepared.get('preparation_method')=='cli_reference_pipeline' and prepared.get('settings')!=cfg:
         raise SimpleStopped('Cấu hình đã đổi sau chuẩn bị; chưa gửi CLI.')
     args = command(repo, image, payload['prompt'], project, output, profile, cfg)
-    env = dict(os.environ, GFLOW_CLI_UPDATE_CHECK='0', NO_COLOR='1', TERM='dumb', PYTHONUTF8='1')
+    env = dict(os.environ, GFLOW_CLI_UPDATE_CHECK='0', NO_COLOR='1', TERM='dumb', PYTHONUTF8='1', PYTHONUNBUFFERED='1', GFLOW_CLI_LOG_LEVEL='INFO', GFLOW_CLI_LOG_FORMAT='json')
     # Same environment as MO-UNG-DUNG.bat when the supplied app is portable.
     if (repo / 'runtime' / 'python.exe').is_file():
         env.pop('PYTHONHOME', None)
@@ -151,7 +151,10 @@ async def generate(service, rid, payload, reference):
             'engine_diagnostics': {'error_type': type(exc).__name__, 'detail': safe_log(str(exc), payload['prompt'])}})
         raise SimpleStopped('Không khởi chạy được CLI gốc: '+type(exc).__name__+'. Chưa gửi tạo.') from None
     try:
-        stdout, stderr = await asyncio.wait_for(process.communicate(), 1200)
+        from .flow_cli_progress import CliProgress,communicate_live,ProgressMismatch
+        monitor=CliProgress(service,rid,project)
+        try:stdout, stderr = await asyncio.wait_for(communicate_live(process,monitor), 1200)
+        except ProgressMismatch as exc:raise SimpleStopped(str(exc)) from None
         stdout = stdout.decode('utf-8', errors='replace')
         stderr = stderr.decode('utf-8', errors='replace')
         logs = {'exit_code': process.returncode, 'stdout': safe_log(stdout, payload['prompt']),
@@ -160,6 +163,7 @@ async def generate(service, rid, payload, reference):
         if process.returncode:
             media = recovery_media(logs)
             if media:
+                if monitor.identity and monitor.identity['media_id']!=media:raise SimpleStopped('ID tải lại khác ID đã theo dõi; chưa nhập clip, không tạo lại.')
                 path, identity = await download_existing(service,rid,repo,profile,env,output,media,project,payload['prompt'])
                 await finish_video(service,rid,payload,path,identity)
                 return
@@ -169,7 +173,8 @@ async def generate(service, rid, payload, reference):
         media = result.get('media_id')
         if result.get('succeeded') is not True or not re.fullmatch(r'[a-fA-F0-9-]{36}', str(media)):
             raise SimpleStopped('CLI chưa xác nhận video thành công; không tự tạo lại.')
-        identity = {'media_id': media, 'project_id': project, 'workflow_id': None}
+        if monitor.identity and monitor.identity['media_id']!=media:raise SimpleStopped('ID kết quả khác ID đã theo dõi; chưa nhập clip, không tạo lại.')
+        identity = {'media_id': media, 'project_id': project, 'workflow_id': (monitor.identity or {}).get('workflow_id')}
         service.ledger.set_metadata(rid, {'provider_task': {**identity, 'association_confirmed': True, 'source': 'gflow_cli'}})
         prepared.update(generation_submitted=True, generation_ready=False, native_stage='generation_completed', state='completed')
         service.ledger.set_metadata(rid, {'native_inputs': dict(prepared)})
@@ -206,7 +211,8 @@ async def download_existing(service, rid, repo, profile, env, output, media, pro
     args = [str(python) if python.is_file() else 'py', '-m', 'gflow_cli', 'data', 'download',
             media, '--profile', profile, '--out', str(output), '--json']
     options = {'creationflags': 0x08000000} if os.name == 'nt' else {}
-    process = await asyncio.create_subprocess_exec(*args, cwd=str(repo), env=env,
+    download_env=dict(env, GFLOW_CLI_LOG_LEVEL='WARNING')
+    process = await asyncio.create_subprocess_exec(*args, cwd=str(repo), env=download_env,
         stdin=asyncio.subprocess.DEVNULL, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, **options)
     try:
         stdout, stderr = await asyncio.wait_for(process.communicate(), 180)

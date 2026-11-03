@@ -301,3 +301,36 @@ later dropdown change; real Chromium panel tests verifying controls, capability
 disabling and local-only editing; existing completed-video recovery API/file/UI
 checks. Original pinned CLI source was consulted for argument/model support.
 No live Flow generation or Windows installation was verified in this environment.
+
+## v46.57 — early video IDs and live CLI stages
+
+Original CLI defaults to WARNING logs, and SceneForge previously waited for
+communicate() before examining any output. Enable the supported INFO/JSON log
+settings and drain stdout/stderr concurrently while the same original CLI runs.
+The pinned SDK already emits migrated.dispatch, submit_observed (or its adopted
+submit variants), status, result and download events. No SDK/session override,
+catalog guessing, extra Google RPC polling or generation command is introduced.
+
+Only allowlisted events from this owned process are accepted. Confirm the
+expected project from dispatch before adopting a migrated video ID; never treat
+uploaded reference-image IDs as video IDs. Persist media/workflow IDs immediately
+and expose them through existing job lookups while the CLI is still running.
+Persist real status stages (submitted 6, running 2, done 3 per the pinned parser),
+show the ID and real elapsed wait in the node, and keep the progress bar
+indeterminate when the source provides no percentage. A late running event cannot
+regress a completed stage. Final/download-recovery IDs must match the live ID.
+
+INFO diagnostics are projected onto public event/ID/status fields; arbitrary
+session/signed-URL fields are not retained. Warnings/errors and stdout remain
+captured as before. Both pipe readers are canceled/awaited on errors so owned
+process shutdown cannot race an outstanding read. Download-only recovery keeps
+WARNING verbosity and its existing behavior.
+
+Validation: 13 CLI cases, including a real child blocked before exit while its
+video ID/status is observed, ignored image IDs and rejected mismatched final ID;
+four monitor/pipe checks for project scoping, monotonic stages and sensitive-field
+projection; actual submit/prepare/CLI/ffprobe/lookup scenarios proving durable
+submitted IDs before process exit; actual UI sync/progress rendering and existing
+configuration/old-download recovery checks. These use local fixtures, not live
+Flow or Windows. Classic-host terminal events are supported, but early IDs rely
+on the migrated-host events emitted by the user's pinned Flow CLI.

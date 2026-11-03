@@ -12,7 +12,7 @@ class Stopped(RuntimeError):pass
 simple=types.ModuleType(PACKAGE+'.simple_flow');simple.SimpleStopped=Stopped;sys.modules[simple.__name__]=simple
 PROJECT='11111111-1111-4111-8111-111111111111'
 MEDIA='22222222-2222-4222-8222-222222222222'
-FIXTURE=r'''import json,pathlib,sys
+FIXTURE=r'''import json,pathlib,sys,time
 args=sys.argv[1:]
 mode=pathlib.Path('mode').read_text()
 with pathlib.Path('calls').open('a') as log:log.write(' '.join(args[:2])+'\n')
@@ -32,6 +32,17 @@ ref=pathlib.Path(args[args.index('--ref')+1] if args[1]=='r2v' else args[args.in
 assert pathlib.Path('grant.json').is_file()
 mode=pathlib.Path('mode').read_text()
 print('fixture stderr retained',file=sys.stderr)
+if mode in ('live_progress','live_mismatch'):
+ def event(name,**fields):print(json.dumps(dict(event=name,level='info',**fields)),file=sys.stderr,flush=True)
+ event('migrated.dispatch',project_id='11111111-1111-4111-8111-111111111111')
+ event('migrated.frame_uploaded',media_id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa')
+ if mode=='live_progress':
+  while not pathlib.Path('allow_video').exists():time.sleep(.01)
+ event('migrated.submit_observed',media_id='22222222-2222-4222-8222-222222222222' if mode=='live_progress' else '44444444-4444-4444-8444-444444444444',workflow_id='33333333-3333-4333-8333-333333333333',status=6)
+ event('migrated.status',status=2)
+ if mode=='live_progress':
+  while not pathlib.Path('release').exists():time.sleep(.01)
+ event('migrated.status',status=3)
 if mode=='error':sys.exit(3)
 if mode in ('download_error','download_still_fails'):
  print(json.dumps(dict(status='fail',error=dict(**{'class':'MediaDownloadError'},remediation_hint='Run gflow data download 22222222-2222-4222-8222-222222222222'))))
@@ -65,7 +76,7 @@ class CliTests(unittest.IsolatedAsyncioTestCase):
    service=types.SimpleNamespace(pair_report=prepared,root=root,sent=False,
     account_bridge=types.SimpleNamespace(binding=lambda aid:dict(email='selected@example.com'),selection=lambda:dict(available=True,account_id='account')),
     gate=asyncio.Lock(),task=None,active=None,busy=lambda:False,lookup=lambda rid:dict(state='unknown'),
-    assert_ready=ready,disconnect_browser=ready,phase=lambda *args:None,validate_video=validate,
+    assert_ready=ready,disconnect_browser=ready,phase=lambda rid,phase,message:save(rid,{'phase':phase,'message':message}),validate_video=validate,
     ledger=types.SimpleNamespace(metadata=lambda rid:metadata,set_metadata=save,finish=lambda *args:finished.append(args)))
    original=asyncio.create_subprocess_exec
    async def launch(*args,**kwargs):
@@ -80,18 +91,34 @@ class CliTests(unittest.IsolatedAsyncioTestCase):
     launches.append(args)
     return await original(sys.executable,*args[1:],**kwargs)
    with patch.object(cli,'REPO_DIRECTORY',str(repo)),patch.object(asyncio,'create_subprocess_exec',launch):
-    if mode in ('error','download_still_fails'):
+    if mode in ('error','download_still_fails','live_mismatch'):
      with self.assertRaises(Stopped):await cli.generate(service,'flow-fixture',payload,reference)
     elif mode=='old_download_error':
      metadata['engine_diagnostics']=dict(exit_code=6,stdout='MediaDownloadError: Run gflow data download '+MEDIA,stderr='')
      await cli.recover_existing(service,'flow-fixture')
+    elif mode=='live_progress':
+     async def until(predicate):
+      async with asyncio.timeout(4):
+       while not predicate():await asyncio.sleep(.01)
+     task=asyncio.create_task(cli.generate(service,'flow-fixture',payload,reference))
+     try:
+      await until(lambda:metadata.get('phase')=='uploading')
+      self.assertNotIn('provider_task',metadata)
+      (repo/'allow_video').touch()
+      await until(lambda:(metadata.get('provider_task')or{}).get('state')=='generating')
+      self.assertFalse(task.done())
+      self.assertEqual(metadata['provider_task']['media_id'],MEDIA)
+      self.assertEqual(metadata['provider_task']['workflow_id'],'33333333-3333-4333-8333-333333333333')
+      (repo/'release').touch();await task
+     finally:
+      if not task.done():task.cancel();await asyncio.gather(task,return_exceptions=True)
     else:await cli.generate(service,'flow-fixture',payload,reference)
    self.assertEqual(len(launches),2 if mode in ('download_error','download_still_fails') else 1)
    if mode!='old_download_error':self.assertIn('fixture stderr retained',metadata['engine_diagnostics']['stderr'])
    calls=(repo/'calls').read_text().splitlines()
    self.assertEqual(sum(line.startswith('video ') for line in calls),0 if mode=='old_download_error' else 1)
    if mode in ('download_error','old_download_error'):self.assertIn('data download',calls)
-   self.assertEqual(len(finished),0 if mode in ('error','download_still_fails') else 1)
+   self.assertEqual(len(finished),0 if mode in ('error','download_still_fails','live_mismatch') else 1)
    if finished:self.assertEqual(finished[0][2]['provider_identity']['media_id'],MEDIA)
  async def test_download_error_recovers_same_media_without_regeneration(self):await self.scenario('download_error')
  async def test_existing_report_downloads_only_never_generates(self):await self.scenario('old_download_error')
@@ -99,6 +126,8 @@ class CliTests(unittest.IsolatedAsyncioTestCase):
  async def test_new_preparation_passes_one_ref_without_native_upload(self):await self.scenario('cli_only_upload')
  async def test_frames_quality_landscape(self):await self.scenario('cli_only_upload',dict(kind='video',mode='frames',ratio='16:9',model='quality',outputs=1))
  async def test_ingredients_fast_landscape(self):await self.scenario('cli_only_upload',dict(kind='video',mode='ingredients',ratio='16:9',model='fast',outputs=1))
+ async def test_live_id_arrives_before_cli_exit(self):await self.scenario('live_progress')
+ async def test_final_id_must_match_live_id(self):await self.scenario('live_mismatch')
  async def test_cli_success_and_result(self):await self.scenario('success')
  async def test_cli_stderr_and_nonzero_exit(self):await self.scenario('error')
  def test_download_discovery_normalizes_windows_line_endings(self):

@@ -19,13 +19,15 @@ async def scenario(settings):
   ff=await asyncio.create_subprocess_exec('ffmpeg','-loglevel','error','-f','lavfi','-i','color=c=blue:s='+shape+':r=12','-t','8','-c:v','libx264','-pix_fmt','yuv420p',str(repo/'ready.mp4'))
   assert await ff.wait()==0
   (repo/'expected.json').write_text(json.dumps(settings))
-  package=repo/'gflow_cli';package.mkdir();(package/'__main__.py').write_text("""import sys,json,pathlib,shutil
+  package=repo/'gflow_cli';package.mkdir();(package/'__main__.py').write_text("""import sys,json,pathlib,shutil,time
 args=sys.argv[1:];cfg=json.loads(pathlib.Path('expected.json').read_text())
 assert args[:2]==['video','i2v' if cfg['mode']=='frames' else 'r2v']
 assert args[args.index('--aspect')+1]==cfg['ratio'] and args[args.index('--model')+1]=='veo-'+cfg['model']
 assert '--duration' not in args and args[args.index('--count')+1]=='1'
 image=pathlib.Path(args[args.index('--ref')+1] if cfg['mode']=='ingredients' else args[-2]);assert image.is_file()
 with pathlib.Path('calls').open('a') as log:log.write('generate\\n')
+for event in [dict(event='migrated.dispatch',project_id='11111111-1111-4111-8111-111111111111'),dict(event='migrated.submit_observed',media_id='22222222-2222-4222-8222-222222222222',workflow_id='33333333-3333-4333-8333-333333333333',status=6),dict(event='migrated.status',status=2)]:print(json.dumps(dict(level='info',**event)),file=sys.stderr,flush=True)
+time.sleep(.5)
 out=pathlib.Path(args[args.index('--out-dir')+1])/'video.mp4';shutil.copyfile('ready.mp4',out)
 print(json.dumps(dict(command='video '+args[1],succeeded=True,media_id='22222222-2222-4222-8222-222222222222',local_path=str(out))))
 """)
@@ -42,7 +44,13 @@ print(json.dumps(dict(command='video '+args[1],succeeded=True,media_id='22222222
    if args[1:3]==('-m','gflow_cli'):return await original(sys.executable,*args[1:],**kwargs)
    return await original(*args,**kwargs)
   with patch.object(cli,'REPO_DIRECTORY',str(repo)),patch('local_engine.flow_native_pipeline.NativeProjectSession',return_value=native),patch.object(asyncio,'create_subprocess_exec',launch):
-   await service.submit(body);await service.tasks[body['request_id']]
+   await service.submit(body)
+   task=service.tasks[body['request_id']]
+   async with asyncio.timeout(4):
+    while not ledger.metadata(body['request_id']).get('provider_task'):await asyncio.sleep(.01)
+   early=service.lookup(body['request_id']);assert early['submitted'] is True and not task.done(),early
+   assert early['provider_task']['media_id']=='22222222-2222-4222-8222-222222222222'
+   await task
    record=service.lookup(body['request_id']);assert record['state']=='done',record
    assert record['result']['settings']==settings and record['result']['model']==model_id(settings)
    assert ledger.metadata(body['request_id'])['generation_settings']==settings
@@ -53,7 +61,7 @@ print(json.dumps(dict(command='video '+args[1],succeeded=True,media_id='22222222
    try:await service.submit(changed)
    except HTTPException as exc:assert exc.status_code==409
    else:raise AssertionError('Changed settings reused request ID')
-  print('PASS actual submit -> prepared snapshot -> CLI -> ffprobe -> done; pinned settings, no duplicate:',settings)
+  print('PASS actual submit -> prepared snapshot -> CLI -> ffprobe -> done; early durable ID before exit, pinned settings, no duplicate:',settings)
 
 async def main():
  for mode,model,ratio in [('ingredients','fast','16:9'),('frames','quality','9:16')]:await scenario(dict(kind='video',mode=mode,model=model,ratio=ratio,outputs=1))

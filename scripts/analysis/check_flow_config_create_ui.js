@@ -19,4 +19,9 @@ const job=ctx.project.cloudJobs[0];stateValue.flowSettings={kind:'video',mode:'f
 const result={room_id:'room',scene_id:'scene',part:'a',model:posts[0].model,settings:posts[0].settings,mime_type:'video/mp4'};
 await ctx.receive(job,{request_id:job.id,result},'room');assert.equal(job.state,'imported');assert.equal(row.s.clips[0].model,'veo-3.1-fast-i2v-8s-landscape');assert.equal(row.s.clips[0].width,160);assert.equal(row.s.clips[0].settings.ratio,'16:9');
 console.log('PASS actual UI create posts selected settings/model, and imports landscape using pinned result after dropdown changes');
+job.state='submitted';ctx.polling=false;ctx.jobs=()=>[job];ctx.shouldPoll=()=>true;ctx.schedule=()=>{};ctx.pendingStates=['submitted','running','downloading'];ctx.clip=()=>null;ctx.latestJob=()=>job;ctx.savedVideoAcknowledged=()=>false;ctx.escape=String;ctx.button=(action,text)=>'<button>'+text+'</button>';
+ctx.workflowLocalRequest=async()=>({request_id:job.id,state:'submitted',message:'Flow đang tạo video',progress:null,provider_task:{media_id:'22222222-2222-4222-8222-222222222222',association_confirmed:true,state:'generating'}});
+vm.runInContext(html.slice(html.indexOf('async function sync(only=null){'),html.indexOf('async function receive(job,record,room){'))+html.slice(html.indexOf('function videoProgressView(row){'),html.indexOf('function prepareView(row,blocked){')),ctx);
+await ctx.sync(job.id);const markup=ctx.videoProgressView(row);assert(markup.includes('22222222-2222-4222-8222-222222222222'));assert(markup.includes('Flow đang tạo video'));assert(!markup.includes('value=\"'));
+console.log('PASS actual UI sync exposes early video ID and real stage with an indeterminate percentage');
 })().catch(e=>{console.error(e);process.exitCode=1});
