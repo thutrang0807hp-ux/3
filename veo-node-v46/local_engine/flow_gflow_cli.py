@@ -201,7 +201,8 @@ def recovery_media(logs):
 
 async def download_existing(service, rid, repo, profile, env, output, media, project, prompt):
     from .simple_flow import SimpleStopped
-    identity = {'media_id': media, 'project_id': project, 'workflow_id': None}
+    known=service.ledger.metadata(rid).get('provider_task')or{}
+    identity = {'media_id': media, 'project_id': project, 'workflow_id': known.get('workflow_id') if known.get('media_id')==media else None}
     inputs = dict(service.ledger.metadata(rid).get('native_inputs') or {})
     inputs.update(generation_submitted=True, generation_ready=False, native_stage='video_ready_downloading', state='submitted')
     service.ledger.set_metadata(rid, {'native_inputs': inputs, 'provider_task': {**identity, 'association_confirmed': True,
@@ -231,7 +232,7 @@ async def download_existing(service, rid, repo, profile, env, output, media, pro
         path = Path(values[0]['path']).resolve()
         if not path.is_relative_to(output.resolve()) or not path.is_file():
             raise SimpleStopped('Đường dẫn clip tải lại không hợp lệ.')
-        identity['workflow_id'] = values[0].get('workflow_id')
+        identity['workflow_id'] = values[0].get('workflow_id') or identity['workflow_id']
         return path, identity
     finally:
         if process.returncode is None:

@@ -32,19 +32,19 @@ ref=pathlib.Path(args[args.index('--ref')+1] if args[1]=='r2v' else args[args.in
 assert pathlib.Path('grant.json').is_file()
 mode=pathlib.Path('mode').read_text()
 print('fixture stderr retained',file=sys.stderr)
-if mode in ('live_progress','live_mismatch'):
+if mode in ('live_progress','live_mismatch','live_download_error'):
  def event(name,**fields):print(json.dumps(dict(event=name,level='info',**fields)),file=sys.stderr,flush=True)
  event('migrated.dispatch',project_id='11111111-1111-4111-8111-111111111111')
  event('migrated.frame_uploaded',media_id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa')
  if mode=='live_progress':
   while not pathlib.Path('allow_video').exists():time.sleep(.01)
- event('migrated.submit_observed',media_id='22222222-2222-4222-8222-222222222222' if mode=='live_progress' else '44444444-4444-4444-8444-444444444444',workflow_id='33333333-3333-4333-8333-333333333333',status=6)
+ event('migrated.submit_observed',media_id='22222222-2222-4222-8222-222222222222' if mode!='live_mismatch' else '44444444-4444-4444-8444-444444444444',workflow_id='33333333-3333-4333-8333-333333333333',status=6)
  event('migrated.status',status=2)
  if mode=='live_progress':
   while not pathlib.Path('release').exists():time.sleep(.01)
  event('migrated.status',status=3)
 if mode=='error':sys.exit(3)
-if mode in ('download_error','download_still_fails'):
+if mode in ('download_error','download_still_fails','live_download_error'):
  print(json.dumps(dict(status='fail',error=dict(**{'class':'MediaDownloadError'},remediation_hint='Run gflow data download 22222222-2222-4222-8222-222222222222'))))
  sys.exit(6)
 out=pathlib.Path(args[args.index('--out-dir')+1])/'video.mp4';out.write_bytes(b'fixture video')
@@ -113,19 +113,21 @@ class CliTests(unittest.IsolatedAsyncioTestCase):
      finally:
       if not task.done():task.cancel();await asyncio.gather(task,return_exceptions=True)
     else:await cli.generate(service,'flow-fixture',payload,reference)
-   self.assertEqual(len(launches),2 if mode in ('download_error','download_still_fails') else 1)
+   self.assertEqual(len(launches),2 if mode in ('download_error','download_still_fails','live_download_error') else 1)
    if mode!='old_download_error':self.assertIn('fixture stderr retained',metadata['engine_diagnostics']['stderr'])
    calls=(repo/'calls').read_text().splitlines()
    self.assertEqual(sum(line.startswith('video ') for line in calls),0 if mode=='old_download_error' else 1)
-   if mode in ('download_error','old_download_error'):self.assertIn('data download',calls)
+   if mode in ('download_error','old_download_error','live_download_error'):self.assertIn('data download',calls)
    self.assertEqual(len(finished),0 if mode in ('error','download_still_fails','live_mismatch') else 1)
    if finished:self.assertEqual(finished[0][2]['provider_identity']['media_id'],MEDIA)
+   if mode=='live_download_error':self.assertEqual(finished[0][2]['provider_identity']['workflow_id'],'33333333-3333-4333-8333-333333333333')
  async def test_download_error_recovers_same_media_without_regeneration(self):await self.scenario('download_error')
  async def test_existing_report_downloads_only_never_generates(self):await self.scenario('old_download_error')
  async def test_download_retry_failure_keeps_media_and_never_regenerates(self):await self.scenario('download_still_fails')
  async def test_new_preparation_passes_one_ref_without_native_upload(self):await self.scenario('cli_only_upload')
  async def test_frames_quality_landscape(self):await self.scenario('cli_only_upload',dict(kind='video',mode='frames',ratio='16:9',model='quality',outputs=1))
  async def test_ingredients_fast_landscape(self):await self.scenario('cli_only_upload',dict(kind='video',mode='ingredients',ratio='16:9',model='fast',outputs=1))
+ async def test_live_workflow_id_survives_download_recovery(self):await self.scenario('live_download_error')
  async def test_live_id_arrives_before_cli_exit(self):await self.scenario('live_progress')
  async def test_final_id_must_match_live_id(self):await self.scenario('live_mismatch')
  async def test_cli_success_and_result(self):await self.scenario('success')
