@@ -35,17 +35,26 @@ await storeProject();render();await SFVeoNode.refresh();
    # Tiles, grouping, detail, editing does not submit.
    await page.locator('#node-videos').screenshot(path='/tmp/veo-v58-grid.png')
    await expect(page.locator('#node-videos .vnTile')).to_have_count(9)
+   assert await page.locator('#node-videos [data-vn=show-settings]').count()==0
+   assert await page.locator('#node-videos [data-vn-advanced-body] > *').count()==0
+   assert await page.locator('#sfFlowSettingsDock').count()==1
    await page.evaluate("document.querySelector('#node-videos .vnTile').click()")
    await expect(page.locator('#vnDetail')).to_be_visible()
    await page.locator('#vnDetail [data-vn-prompt]').fill('A slow turn toward the camera.')
    await page.wait_for_timeout(350)
    assert not posts,'Editing must not submit'
+   await page.locator('#vnDetail [data-vn=next]').click()
+   await expect(page.locator('#vnDetail [data-vn-prompt]')).to_be_enabled()
+   await page.locator('#vnDetail [data-vn=prev]').click()
+   await expect(page.locator('#vnDetail [data-vn-prompt]')).to_have_value('A slow turn toward the camera.')
+   await expect(page.locator('#vnDetail [data-vn-prompt]')).to_be_enabled()
    await expect(page.locator('#vnDetail [data-vn=create]')).to_be_enabled()
    await page.locator('#modal [data-action=close-modal]').first.click()
    # Real receive + actual video metadata; pending -> imported with zero approval clicks.
    job=await page.evaluate('''async()=>{const row=SFVeoNode.slots()[0];const job={id:'flow-ui-fixture',provider:'flow',kind:'video',sceneId:row.s.id,part:row.p.id,settings:{kind:'video',mode:'ingredients',ratio:'9:16',model:'lite',outputs:1},signature:await directSignature(row.s,row.p.id,'video'),prompt:makePrompt(row.s,row.p),state:'submitted',at:Date.now(),veoNodeVersion:43};project.cloudJobs=[job];await storeProject();render();return job;}''')
    records[job['id']]={'request_id':job['id'],'state':'running','message':'Flow đang tạo video','phase':'generating','provider_task':{'media_id':'22222222-2222-4222-8222-222222222222','state':'generating'}}
    await page.evaluate("SFVeoNode.sync('flow-ui-fixture')")
+   assert await page.evaluate("""async()=>{const image=document.querySelector('#node-videos .vnTile img'),save=storeProject;let writes=0;storeProject=async()=>{writes++;return save();};try{await SFVeoNode.sync('flow-ui-fixture');await SFVeoNode.sync('flow-ui-fixture');return writes===0&&image===document.querySelector('#node-videos .vnTile img');}finally{storeProject=save;}}""")
    await page.evaluate("document.querySelector('#node-videos .vnTile').click()")
    await expect(page.locator('#vnDetail [data-vn-generation] progress')).to_have_attribute('value','60')
    await expect(page.locator('#vnDetail [data-vn-generation]')).to_contain_text('Ước tính theo bước')
@@ -82,11 +91,21 @@ await storeProject();render();await SFVeoNode.refresh();
    assert not posts,posts
    # Full actual create path: queue uses two original API requests, one per scene.
    await page.locator('#modal [data-action=close-modal]').first.click()
-   await page.evaluate('''async()=>{project.scenes=project.scenes.slice(1,3);project.cloudJobs=[];project.veoNode=undefined;await storeProject();render();await SFVeoNode.refresh();}''')
+   await page.evaluate('''async()=>{project.scenes=project.scenes.slice(0,3);project.cloudJobs[0].state='imported';project.cloudJobs[0].phaseMessage='';project.veoNode=undefined;delete project.scenes[1].videoPromptOverrides;window.queuePromptCalls=0;SFPromptPipeline.rewriteVideo=async(s,p)=>{queuePromptCalls++;s.videoPromptOverrides??={};s.videoPromptOverrides[p.id]='A queue-generated movement.';};await storeProject();render();await SFVeoNode.refresh();}''')
+   await page.evaluate("document.querySelector('#node-videos [data-vn=filter-review]').click()")
+   await expect(page.locator('#node-videos .vnTile')).to_have_count(0)
+   await expect(page.locator('#node-videos [data-vn=create-ready]')).to_contain_text('Tạo toàn bộ 2')
+   await page.evaluate("()=>{window.canvasRenders=0;window.canvasRenderStacks=[];window.beforeQueueRender=render;render=function(...args){canvasRenders++;canvasRenderStacks.push(new Error().stack);return beforeQueueRender(...args);};}")
    page.on('dialog',lambda d:d.accept())
    await page.evaluate("document.querySelector('#node-videos [data-vn=create-ready]').click()")
-   await page.wait_for_function("project.cloudJobs.length===2&&project.cloudJobs.every(j=>j.state==='imported')",timeout=15000)
+   await page.wait_for_function("project.cloudJobs.some(j=>j.state==='submitted')")
+   await page.evaluate('pollWorkflowResults()')
+   await page.wait_for_function("project.cloudJobs.length===3&&project.cloudJobs.every(j=>j.state==='imported')",timeout=15000)
    assert len(posts)==2,posts
+   assert await page.evaluate('canvasRenders')==0,await page.evaluate('canvasRenderStacks')
+   await page.evaluate('()=>{render=beforeQueueRender;}')
+   assert await page.evaluate('queuePromptCalls')==1
+   assert await page.evaluate('project.scenes[0].clips.length')==1
    assert all(p[1]['settings']['outputs']==1 for p in posts)
    await page.wait_for_function("!document.querySelector('#node-videos [data-vn=cancel-queue]')")
    # Uncertain first job stops the rest, without any replay.
@@ -96,8 +115,19 @@ await storeProject();render();await SFVeoNode.refresh();
    await page.wait_for_function("project.cloudJobs.length===1&&project.cloudJobs[0].state==='unknown'",timeout=10000)
    await page.wait_for_function("!document.querySelector('#node-videos [data-vn=cancel-queue]')")
    assert len(posts)==1,posts
+   # Continuity keeps its quality gate: no second command until part a is approved.
+   submit_mode='done';posts.clear()
+   await page.evaluate('''async image=>{const s=sceneRecord(0,16,0,[image]);s.hasPerson=false;s.refsUsed=[];s.sourceFrame={id:'source',asset:'frame',image};s.approvedFrame='source';s.frameSelectionId='source';s.clipPlanning={mode:'legacy',continuity:true};s.videoPromptOverrides={a:'Move gently.',b:'Continue the movement.'};project.scenes=[s];project.cloudJobs=[];project.veoNode=undefined;await storeProject();render();await SFVeoNode.refresh();}''',data)
+   await page.evaluate("document.querySelector('#node-videos [data-vn=create-ready]').click()")
+   await page.wait_for_function("project.cloudJobs.length===1&&project.cloudJobs[0].state==='imported'",timeout=10000)
+   await expect(page.locator('#node-videos')).to_contain_text('Đợi duyệt phần trước')
+   assert len(posts)==1
+   await page.evaluate("SFVeoNode.acceptClip(SFVeoNode.slots()[0])")
+   await page.wait_for_function("project.cloudJobs.length===2&&project.cloudJobs.every(j=>j.state==='imported')",timeout=15000)
+   assert len(posts)==2,posts
+   await page.wait_for_function("!document.querySelector('#node-videos [data-vn=cancel-queue]')")
    assert not errors,errors
    await page.screenshot(path='/tmp/veo-v58-detail.png',full_page=False)
    await browser.close()
- print('PASS real node tiles/filter/detail/edit; live stage estimate; automatic file import + 100%; idempotency; separate approval; missing not presented as success; sequential queue + stop on uncertainty; local intercepted generation only')
+ print('PASS real node tiles/filter/detail/edit; live stage estimate; automatic file import + 100%; idempotency; separate approval; missing not presented as success; stable images/no writes on unchanged polls; all-missing queue prepares prompt despite filter and skips completed clips; stop on uncertainty; local intercepted generation only')
 if __name__=='__main__':asyncio.run(main())

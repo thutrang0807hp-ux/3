@@ -439,3 +439,45 @@ metadata and old resource bytes. Validate the resulting PE, exact resource ZIP,
 all embedded hashes and unmodified upstream archive. Windows execution remains
 unverified in this Linux environment; local process/real-backend fixtures verify
 bundled selection, no Downloads calls, account isolation and download recovery.
+
+
+## v46.61 — one settings location, all missing clips and responsive node updates
+
+UI-only patch requiring .60; bundled CLI/runtime/session integration remains byte
+for byte unchanged. Remove the node's duplicate settings footer/button. Keep the
+single shared Flow settings dock in the workflow toolbar.
+
+The node's create-all action targets missing, never-attempted clips across the
+whole node, independent of the current filter. It confirms once, writes missing
+prompts through the existing Gemini pipeline, then uses the existing durable
+intent/signature/configuration checks and single-send CLI path sequentially.
+Completed clips and uncertain/previous failed requests are not regenerated.
+Continuity parts remain queued until the previous clip has been manually approved;
+room/account/frame/timing/settings/user-prompt changes stop further submission.
+No silent draft rebinding or retry is added.
+
+Fix redraw costs rather than introduce a new canvas framework. Compute row state
+once per paint, keep keyed thumbnail elements, patch changed DOM only, and skip
+identical view snapshots. Materialize diagnostics only when the user opens them;
+keep their selected scene in sync. Preserve video playback and image nodes during
+status polling. Identical job responses no longer clone/write the whole project
+and assets into IndexedDB. Changed states and durable pre-submit intent are still
+saved. Actions yield a browser frame for immediate button feedback and update only
+the Veo node; receipt/approval updates editor readiness without rebuilding all
+canvas nodes. Layout/wires update only when node height changes. The old 12-second general
+workflow poller also considered managed Veo jobs active, then called an empty
+legacy recovery pass that redrew the canvas. Exclude managed Veo jobs there; the
+Veo poller remains their sole polling owner.
+
+Reproducible local Chromium benchmark (`scripts/analysis/measure_veo_node.py`):
+18 distinct ~284 KB base64 JPEG references. Baseline refresh 62.9/64.3/65.2/69.5 ms,
+click handler 42.7 ms, thumbnail elements replaced. Optimized refresh
+6.6/4.1/4.4/2.7 ms, click handler 0.9 ms, thumbnails preserved. These are local
+fixture measurements, not a claim about the user's machine or Google latency.
+
+Actual browser tests cover unchanged polls with zero saves and preserved images,
+lazy diagnostics, the sole toolbar settings control, create-all from an empty
+review filter, missing prompt preparation, skipped completed clips, no whole-canvas
+redraw during queue execution, automatic import, uncertainty stop, and manual
+approval before submitting continuity part b. Existing settings/configured import
+and download-report checks remain. No live Flow or Windows installation test.
