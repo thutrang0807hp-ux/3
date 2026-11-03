@@ -169,3 +169,33 @@ The .50 update contains only SimpleFlow and this direct CLI adapter and requires
 Four direct CLI local process tests and four real application dispatch scenarios
 pass. Original CLI help also ran successfully in the isolated Linux environment.
 Windows execution with the user's Downloads copy and live Flow remains unverified.
+
+## v46.52 — download recovery after confirmed generation
+
+The uploaded .51 report contains CLI exit 6 / MediaDownloadError, signed-media
+HTTP 302, and a recommendation to run `gflow data download` for a specific video
+ID. This is a failed download after creation, not missing generation status.
+The two uploaded reports are duplicates. The parser identifies the exact existing
+video ID from the report; no generation retry is appropriate.
+
+Keep the working generation command unchanged. On this specific error, record
+the video ID before attempting one CLI `data download <ID> --profile ... --out
+... --json` operation. Validate the returned media, project, profile, local path
+and actual video before finishing the original request and scene. Preserve both
+generation and download diagnostics. If downloading still fails, retain the ID;
+never issue another `video r2v` command automatically.
+
+For already-stored failed-download requests, the existing Check old video /
+Download report action now opts into download-only recovery. The backend checks
+store/room/account, shares the submission gate, and ignores already-completed
+requests. The UI reads the completed record and invokes its existing receive
+path; no new create action is introduced. No preparation/login changes.
+
+Validation: seven local CLI process cases, including auto recovery, existing
+request download-only recovery and repeated download failure; a real FastAPI
+report route + RequestLedger + ffprobe + file download test with a local CLI
+fixture; wrong-room rejection and completed-request deduplication; and execution
+of the actual UI report handler verifying download-only opt-in and result sync.
+No real Flow calls were made, and the current user's download remains untested
+here. CLI data download --help and implementation were checked against the
+original pinned SDK.

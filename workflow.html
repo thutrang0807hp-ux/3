@@ -2082,7 +2082,7 @@ async function trackingReport(){
    let report,record;
    try{
     record=await workflowLocalRequest('flow/simple/jobs/'+encodeURIComponent(job.id));assertRoom(room);
-    if(record.native_inputs||remote?.native_pipeline&&job.id===current?.id){const query=new URLSearchParams({store_id:record.store_id||job.store_id||'',room_id:room});report=await workflowLocalRequest('flow/simple/diagnostics/'+encodeURIComponent(job.id)+'?'+query);}else{report=await workflowLocalRequest('flow/simple/tracking-diagnostics/'+encodeURIComponent(job.id),{store_id:record.store_id,room_id:room,prompt:job.prompt||'',inspect_video_detail:true});}assertRoom(room);
+    if(record.native_inputs||remote?.native_pipeline&&job.id===current?.id){const query=new URLSearchParams({store_id:record.store_id||job.store_id||'',room_id:room,download_existing:'true'});report=await workflowLocalRequest('flow/simple/diagnostics/'+encodeURIComponent(job.id)+'?'+query);}else{report=await workflowLocalRequest('flow/simple/tracking-diagnostics/'+encodeURIComponent(job.id),{store_id:record.store_id,room_id:room,prompt:job.prompt||'',inspect_video_detail:true});}assertRoom(room);
    }catch(e){
     assertRoom(room);
     const query=new URLSearchParams({store_id:record?.store_id||job.store_id||'',room_id:room});
@@ -2090,10 +2090,10 @@ async function trackingReport(){
     catch{report={request_id:job.id,record:record||null};}
     report={...report,tracking_capture_error:e.message};
    }
-   assertRoom(room);job.diagnostics=report;reports.push(report);
+   assertRoom(room);job.diagnostics=report;reports.push(report);if(report.record?.state==='done'){jobReadRecord(job,report.record);delete job.error;delete job.importError;await sync(job.id);}
   }
   const report=reports.length===1?reports[0]:{auto_selected:true,request_ids:targets.map(j=>j.id),reports,can_retry:false};
-  state().trackingReportMessage='Đã kiểm tra '+reports.length+' lượt đã gửi. Gửi file báo cáo vừa tải trong chat; chưa tạo lại video.';
+  state().trackingReportMessage=reports.some(r=>r.record?.state==='done')?'Đã tải clip có sẵn về máy; đang cập nhật cảnh, không tạo video mới.':'Đã kiểm tra '+reports.length+' lượt đã gửi. Xem báo cáo; chưa tạo lại video.';
   const url=URL.createObjectURL(new Blob([JSON.stringify({app:'SceneForge',report},null,2)],{type:'application/json'}));
   const a=document.createElement('a');a.href=url;a.download='SceneForge-theo-doi-video.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
  }catch(e){if(project.id===room)state().trackingReportMessage=e.message;}

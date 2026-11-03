@@ -128,7 +128,7 @@ async def generate(service, rid, payload, reference):
         env['PYTHONNOUSERSITE'] = '1'
         env['GFLOW_CLI_HOME'] = str(repo / 'data' / 'profiles')
     service.ledger.set_metadata(rid, {'engine': 'gflow-cli-direct', 'clicked': True,
-        'generation_granted': True, 'cli': {'cwd': str(repo), 'entrypoint': '-m gflow_cli video r2v'}})
+        'generation_granted': True, 'cli': {'cwd': str(repo), 'entrypoint': '-m gflow_cli video r2v', 'profile': profile}})
     service.sent = True
     service.phase(rid, 'submitting', 'Đang chạy CLI gốc để tạo video, chờ và tải kết quả.')
     options = {'creationflags': 0x08000000} if os.name == 'nt' else {}
@@ -149,6 +149,11 @@ async def generate(service, rid, payload, reference):
                 'stderr': safe_log(stderr, payload['prompt'])}
         service.ledger.set_metadata(rid, {'engine_diagnostics': logs})
         if process.returncode:
+            media = recovery_media(logs)
+            if media:
+                path, identity = await download_existing(service,rid,repo,profile,env,output,media,project,payload['prompt'])
+                await finish_video(service,rid,payload,path,identity)
+                return
             raise SimpleStopped('CLI gốc dừng, mã thoát '+str(process.returncode)+'. stdout và stderr đã ghi trong báo cáo; không tự tạo lại.')
         try: result = video_result(stdout)
         except ValueError as exc: raise SimpleStopped(str(exc)) from None
@@ -162,18 +167,110 @@ async def generate(service, rid, payload, reference):
         path = Path(result.get('local_path') or '').resolve()
         if not path.is_file() or not path.is_relative_to(output):
             raise SimpleStopped('Tệp CLI trả về không nằm trong thư mục kết quả của lượt này.')
-        path = await service.validate_video(rid, path, path.suffix)
-        saved = {'file': path.name, 'mime_type': 'video/webm' if path.suffix == '.webm' else 'video/mp4',
-            'sha256': hashlib.sha256(path.read_bytes()).hexdigest(), 'bytes': path.stat().st_size,
-            'kind': 'video', 'model': payload['model'], 'origin': 'flow', 'cost': None,
-            'provider_identity': identity, **{key: payload[key] for key in ('account_id','room_id','scene_id','part')}}
-        service.phase(rid, 'complete', 'CLI đã trả video về đúng cảnh.')
-        service.ledger.finish(rid, 'done', saved)
-        try: service.vault.set_secret('gflow-cli-verified', True)
-        except Exception: pass
-        service.state = 'ready'
-        service.message = 'Đã nhận video từ CLI gốc.'
+        await finish_video(service,rid,payload,path,identity)
     finally:
         if process.returncode is None:
             process.kill()
             await process.communicate()
+
+
+def recovery_media(logs):
+    """Only the CLI's download-error recommendation identifies a recoverable clip."""
+    if logs.get('exit_code') != 6:
+        return None
+    text = str(logs.get('stdout', '')) + '\n' + str(logs.get('stderr', ''))
+    if 'MediaDownloadError' not in text:
+        return None
+    found = set(re.findall(r'gflow\s+data\s+download\s+([a-fA-F0-9]{8}-(?:[a-fA-F0-9]{4}-){3}[a-fA-F0-9]{12})(?![a-fA-F0-9-])', text))
+    return next(iter(found)).lower() if len(found) == 1 else None
+
+
+async def download_existing(service, rid, repo, profile, env, output, media, project, prompt):
+    from .simple_flow import SimpleStopped
+    identity = {'media_id': media, 'project_id': project, 'workflow_id': None}
+    inputs = dict(service.ledger.metadata(rid).get('native_inputs') or {})
+    inputs.update(generation_submitted=True, generation_ready=False, native_stage='video_ready_downloading', state='submitted')
+    service.ledger.set_metadata(rid, {'native_inputs': inputs, 'provider_task': {**identity, 'association_confirmed': True,
+        'source': 'gflow_cli_download_error', 'state': 'downloading'}})
+    service.phase(rid, 'downloading', 'Video đã tạo xong; đang tải lại đúng ID bằng CLI, không tạo video mới.')
+    python = repo / 'runtime' / 'python.exe'
+    args = [str(python) if python.is_file() else 'py', '-m', 'gflow_cli', 'data', 'download',
+            media, '--profile', profile, '--out', str(output), '--json']
+    options = {'creationflags': 0x08000000} if os.name == 'nt' else {}
+    process = await asyncio.create_subprocess_exec(*args, cwd=str(repo), env=env,
+        stdin=asyncio.subprocess.DEVNULL, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, **options)
+    try:
+        stdout, stderr = await asyncio.wait_for(process.communicate(), 180)
+        text = stdout.decode('utf-8', errors='replace')
+        service.ledger.set_metadata(rid, {'cli_download_diagnostics': {'exit_code': process.returncode,
+            'stdout': safe_log(text, prompt), 'stderr': safe_log(stderr.decode('utf-8', errors='replace'), prompt)}})
+        if process.returncode:
+            raise SimpleStopped('Video đã có ID nhưng CLI tải lại vẫn lỗi '+str(process.returncode)+'. Không tạo lại video; có thể kiểm tra tải clip cũ.')
+        values = []
+        for match in re.finditer(r'(?m)^\s*\{', text):
+            try: value, _ = json.JSONDecoder().raw_decode(text[match.end()-1:])
+            except ValueError: continue
+            if isinstance(value, dict) and 'path' in value and 'media_id' in value:values.append(value)
+        if len(values) != 1 or values[0].get('media_id') != media or values[0].get('project_id') != project or values[0].get('profile') != profile:
+            raise SimpleStopped('Kết quả tải CLI không khớp video/dự án/tài khoản cũ; chưa nhập.')
+        path = Path(values[0]['path']).resolve()
+        if not path.is_relative_to(output.resolve()) or not path.is_file():
+            raise SimpleStopped('Đường dẫn clip tải lại không hợp lệ.')
+        identity['workflow_id'] = values[0].get('workflow_id')
+        return path, identity
+    finally:
+        if process.returncode is None:
+            process.kill();await process.communicate()
+
+
+async def finish_video(service, rid, payload, path, identity):
+    from .simple_flow import SimpleStopped
+    output = (service.root / (rid + '.cli')).resolve()
+    if not path.is_file() or not path.resolve().is_relative_to(output):
+        raise SimpleStopped('Tệp CLI trả về không nằm trong thư mục kết quả của lượt này.')
+    path = await service.validate_video(rid, path, path.suffix)
+    saved = {'file': path.name, 'mime_type': 'video/webm' if path.suffix == '.webm' else 'video/mp4',
+        'sha256': hashlib.sha256(path.read_bytes()).hexdigest(), 'bytes': path.stat().st_size,
+        'kind': 'video', 'model': payload['model'], 'origin': 'flow', 'cost': None,
+        'provider_identity': identity, **{key: payload[key] for key in ('account_id','room_id','scene_id','part')}}
+    inputs = dict(service.ledger.metadata(rid).get('native_inputs') or {})
+    inputs.update(generation_submitted=True, generation_ready=False, native_stage='generation_completed', state='completed')
+    service.ledger.set_metadata(rid, {'native_inputs': inputs, 'provider_task': {**identity, 'association_confirmed': True, 'source': 'gflow_cli', 'state': 'complete'}})
+    service.phase(rid, 'complete', 'Đã nhận video về đúng cảnh.')
+    service.ledger.finish(rid, 'done', saved)
+    try: service.vault.set_secret('gflow-cli-verified', True)
+    except Exception: pass
+    service.state = 'ready';service.message = 'Đã nhận video từ CLI gốc.'
+
+
+async def recover_existing(service, rid):
+    """Existing report/check action may download an old clip; never calls video r2v."""
+    from .simple_flow import SimpleStopped
+    async with service.gate:
+        meta = service.ledger.metadata(rid)
+        if service.busy() or service.lookup(rid)['state'] != 'unknown' or meta.get('engine') != 'gflow-cli-direct':return
+        media = (meta.get('provider_task') or {}).get('media_id') or recovery_media(meta.get('engine_diagnostics') or {})
+        if not media:return
+        selection = service.account_bridge.selection()
+        binding = service.account_bridge.binding(meta.get('account_id'))
+        if not binding or not selection.get('available') or selection.get('account_id') != meta.get('account_id'):return
+        project = (meta.get('native_inputs') or {}).get('uploaded_media_project')
+        repo = Path((meta.get('cli') or {}).get('cwd', ''))
+        profiles = matching_profile(repo, binding['email']) if repo.is_dir() else []
+        if len(profiles) != 1 or not re.fullmatch(r'[a-fA-F0-9-]{36}', str(project)):return
+        output = (service.root / (rid + '.cli')).resolve();output.mkdir(exist_ok=True)
+        env = dict(os.environ, GFLOW_CLI_UPDATE_CHECK='0', NO_COLOR='1', TERM='dumb', PYTHONUTF8='1')
+        if (repo/'runtime/python.exe').is_file():
+            env.pop('PYTHONHOME', None);env.pop('PYTHONPATH', None)
+            env.update(PYTHONNOUSERSITE='1', GFLOW_CLI_HOME=str(repo/'data/profiles'))
+        old_task, old_active = service.task, service.active
+        service.task = asyncio.current_task();service.active = rid
+        try:
+            await service.disconnect_browser()
+            path, identity = await download_existing(service,rid,repo,profiles[0],env,output,media,project,meta.get('prompt',''))
+            await finish_video(service,rid,meta,path,identity)
+        except Exception as exc:
+            message = str(exc) if isinstance(exc,SimpleStopped) else 'Tải clip cũ dừng: '+type(exc).__name__+'. Không tạo lại.'
+            service.ledger.set_metadata(rid,{'message':message});service.state='unknown';service.message=message
+        finally:
+            service.task, service.active = old_task, old_active

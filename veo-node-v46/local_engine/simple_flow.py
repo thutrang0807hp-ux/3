@@ -280,7 +280,7 @@ class SimpleFlow:
   if not row or self.ledger.metadata(rid).get('transport')!='simple_flow':raise HTTPException(404,'Không có lượt SimpleFlow này.')
   meta=self.ledger.metadata(rid)
   provider_task=meta.get('provider_task')or{};receipt=self.ledger.receipt(rid)
-  return {**receipt,'submitted':True if provider_task.get('association_confirmed')else receipt['submitted'],'state':row[0],'result':json.loads(row[1]) if row[0]=='done'else None,'message':meta.get('message',self.message if self.active==rid else ''),'phase':meta.get('phase'),'progress':meta.get('progress'),'progress_source':meta.get('progress_source'),'has_preview':bool(meta.get('has_preview')),'automatic_retry':False,'provider_task':provider_task or None,'native_inputs':meta.get('native_inputs'),'generation_engine':meta.get('engine'),'engine_diagnostics':meta.get('engine_diagnostics'),'network_probe_available':rid in self.network_probes or (self.root/(rid+'.network.json')).is_file(),'saved_video_review':meta.get('saved_video_review'),'needs_manual_review':row[0]=='unknown' and time.time()-row[2]>=180 and not meta.get('saved_video_review',{}).get('allow_new_generation')}
+  return {**receipt,'submitted':True if provider_task.get('association_confirmed')else receipt['submitted'],'state':row[0],'result':json.loads(row[1]) if row[0]=='done'else None,'message':meta.get('message',self.message if self.active==rid else ''),'phase':meta.get('phase'),'progress':meta.get('progress'),'progress_source':meta.get('progress_source'),'has_preview':bool(meta.get('has_preview')),'automatic_retry':False,'provider_task':provider_task or None,'native_inputs':meta.get('native_inputs'),'generation_engine':meta.get('engine'),'engine_diagnostics':meta.get('engine_diagnostics'),'cli_download_diagnostics':meta.get('cli_download_diagnostics'),'network_probe_available':rid in self.network_probes or (self.root/(rid+'.network.json')).is_file(),'saved_video_review':meta.get('saved_video_review'),'needs_manual_review':row[0]=='unknown' and time.time()-row[2]>=180 and not meta.get('saved_video_review',{}).get('allow_new_generation')}
  @staticmethod
  def valid_id(rid):
   if not isinstance(rid,str)or not re.fullmatch(r'flow-[a-zA-Z0-9-]{8,100}',rid):raise HTTPException(400,'Mã lượt Flow không hợp lệ.')
@@ -747,7 +747,13 @@ def install_simple_flow(app,data,vault,ledger,provider):
  @app.get('/local-api/flow/simple/jobs/{rid}')
  async def lookup(rid:str):return service.lookup(rid)
  @app.get('/local-api/flow/simple/diagnostics/{rid}')
- async def diagnostics(rid:str,store_id:str='',room_id:str=''):return service.diagnose(rid,store_id,room_id)
+ async def diagnostics(rid:str,store_id:str='',room_id:str='',download_existing:bool=False):
+  report=service.diagnose(rid,store_id,room_id)
+  if download_existing and report.get('code')=='found':
+   from .flow_gflow_cli import recover_existing
+   await recover_existing(service,rid)
+   report=service.diagnose(rid,store_id,room_id)
+  return report
  @app.post('/local-api/flow/simple/tracking-diagnostics/{rid}')
  async def tracking_diagnostics(rid:str,body:dict):
   from .flow_tracking_diagnostics import inspect_tracking

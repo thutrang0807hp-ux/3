@@ -12,8 +12,18 @@ class Stopped(RuntimeError):pass
 simple=types.ModuleType(PACKAGE+'.simple_flow');simple.SimpleStopped=Stopped;sys.modules[simple.__name__]=simple
 PROJECT='11111111-1111-4111-8111-111111111111'
 MEDIA='22222222-2222-4222-8222-222222222222'
-FIXTURE='''import json,pathlib,sys
+FIXTURE=r'''import json,pathlib,sys
 args=sys.argv[1:]
+mode=pathlib.Path('mode').read_text()
+with pathlib.Path('calls').open('a') as log:log.write(' '.join(args[:2])+'\n')
+if args[:2]==['data','download']:
+ assert args[2]=='22222222-2222-4222-8222-222222222222'
+ assert '--ref' not in args and 'r2v' not in args
+ if mode=='download_still_fails':sys.exit(6)
+ out=pathlib.Path(args[args.index('--out')+1])/'recovered.mp4';out.write_bytes(b'fixture video')
+ print(json.dumps(dict(media_id=args[2],project_id='11111111-1111-4111-8111-111111111111',profile='default',workflow_id=None,path=str(out))))
+ print('fixture download stderr retained',file=sys.stderr)
+ sys.exit(0)
 assert args[:2]==['video','r2v']
 assert args[-2]=='--' and args[-1]=='--a prompt as plain text'
 assert '--duration' not in args
@@ -23,6 +33,9 @@ assert pathlib.Path('grant.json').is_file()
 mode=pathlib.Path('mode').read_text()
 print('fixture stderr retained',file=sys.stderr)
 if mode=='error':sys.exit(3)
+if mode in ('download_error','download_still_fails'):
+ print(json.dumps(dict(status='fail',error=dict(**{'class':'MediaDownloadError'},remediation_hint='Run gflow data download 22222222-2222-4222-8222-222222222222'))))
+ sys.exit(6)
 out=pathlib.Path(args[args.index('--out-dir')+1])/'video.mp4';out.write_bytes(b'fixture video')
 print(json.dumps(dict(command='video r2v',status='ok',succeeded=True,media_id='22222222-2222-4222-8222-222222222222',local_path=str(out)),indent=2))
 '''
@@ -38,16 +51,17 @@ class CliTests(unittest.IsolatedAsyncioTestCase):
    reference=root/'reference.png';reference.write_bytes(b'image')
    payload=dict(account_id='account',room_id='room',scene_id='scene',part='part',model='lite',prompt='--a prompt as plain text',prepared_request_id='flow-fixture-inputs')
    prepared=dict(request_id=payload['prepared_request_id'],uploaded_media_project=PROJECT,uploaded_media_source_sha256=hashlib.sha256(b'image').hexdigest())
-   metadata={};finished=[];launches=[]
+   metadata={**payload,'engine':'gflow-cli-direct','native_inputs':prepared,'cli':{'cwd':str(repo)}};finished=[];launches=[]
    async def ready():pass
    async def validate(rid,path,suffix):return path
    def save(rid,value):
     metadata.update(value)
     if value.get('generation_granted'):(repo/'grant.json').write_text('durable')
    service=types.SimpleNamespace(pair_report=prepared,root=root,sent=False,
-    account_bridge=types.SimpleNamespace(binding=lambda aid:dict(email='selected@example.com')),
+    account_bridge=types.SimpleNamespace(binding=lambda aid:dict(email='selected@example.com'),selection=lambda:dict(available=True,account_id='account')),
+    gate=asyncio.Lock(),task=None,active=None,busy=lambda:False,lookup=lambda rid:dict(state='unknown'),
     assert_ready=ready,disconnect_browser=ready,phase=lambda *args:None,validate_video=validate,
-    ledger=types.SimpleNamespace(set_metadata=save,finish=lambda *args:finished.append(args)))
+    ledger=types.SimpleNamespace(metadata=lambda rid:metadata,set_metadata=save,finish=lambda *args:finished.append(args)))
    original=asyncio.create_subprocess_exec
    async def launch(*args,**kwargs):
     self.assertEqual(args[1:3],('-m','gflow_cli'))
@@ -57,13 +71,22 @@ class CliTests(unittest.IsolatedAsyncioTestCase):
     launches.append(args)
     return await original(sys.executable,*args[1:],**kwargs)
    with patch.object(cli,'REPO_DIRECTORY',str(repo)),patch.object(asyncio,'create_subprocess_exec',launch):
-    if mode=='error':
+    if mode in ('error','download_still_fails'):
      with self.assertRaises(Stopped):await cli.generate(service,'flow-fixture',payload,reference)
+    elif mode=='old_download_error':
+     metadata['engine_diagnostics']=dict(exit_code=6,stdout='MediaDownloadError: Run gflow data download '+MEDIA,stderr='')
+     await cli.recover_existing(service,'flow-fixture')
     else:await cli.generate(service,'flow-fixture',payload,reference)
-   self.assertEqual(len(launches),1)
-   self.assertIn('fixture stderr retained',metadata['engine_diagnostics']['stderr'])
-   self.assertEqual(len(finished),0 if mode=='error' else 1)
+   self.assertEqual(len(launches),2 if mode in ('download_error','download_still_fails') else 1)
+   if mode!='old_download_error':self.assertIn('fixture stderr retained',metadata['engine_diagnostics']['stderr'])
+   calls=(repo/'calls').read_text().splitlines()
+   self.assertEqual(calls.count('video r2v'),0 if mode=='old_download_error' else 1)
+   if mode in ('download_error','old_download_error'):self.assertIn('data download',calls)
+   self.assertEqual(len(finished),0 if mode in ('error','download_still_fails') else 1)
    if finished:self.assertEqual(finished[0][2]['provider_identity']['media_id'],MEDIA)
+ async def test_download_error_recovers_same_media_without_regeneration(self):await self.scenario('download_error')
+ async def test_existing_report_downloads_only_never_generates(self):await self.scenario('old_download_error')
+ async def test_download_retry_failure_keeps_media_and_never_regenerates(self):await self.scenario('download_still_fails')
  async def test_cli_success_and_result(self):await self.scenario('success')
  async def test_cli_stderr_and_nonzero_exit(self):await self.scenario('error')
  def test_download_discovery_normalizes_windows_line_endings(self):
