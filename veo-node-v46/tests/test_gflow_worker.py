@@ -33,6 +33,9 @@ class WorkerTests(unittest.IsolatedAsyncioTestCase):
    async def __aexit__(self,*args):closed.append(True)
    async def generate_video(self,**kwargs):
     requests.append(kwargs)
+    assert kwargs['project_id']=='project'
+    assert kwargs['req'].ref_names==('flow-fixture-inputs.png',)
+    assert not hasattr(kwargs['req'],'reference_images')
     started=types.SimpleNamespace(media_id='media',project_id='project',workflow_id=None)
     kwargs['on_started'](started)
     return types.SimpleNamespace(status=types.SimpleNamespace(succeeded=True,media_id='media'),local_path=Path('clip.mp4'),project_id='project',workflow_id=None)
@@ -49,7 +52,7 @@ class WorkerTests(unittest.IsolatedAsyncioTestCase):
   with tempfile.TemporaryDirectory() as folder:
    root=Path(folder);image=root/'input.png';image.write_bytes(b'image')
    browser=root/'chrome.exe';browser.write_bytes(b'fixture')
-   values=dict(profile=folder,image=str(image),output=folder,prompt='prompt',browser=str(browser),expected_email='user@example.com')
+   values=dict(profile=folder,image=str(image),output=folder,prompt='prompt',browser=str(browser),expected_email='user@example.com',project_id='project',reference_name='flow-fixture-inputs.png')
    try:
     with patch.dict(sys.modules,modules),patch.object(importlib.metadata,'version',return_value='0.92.1'),patch.object(sys,'stdin',controls),patch.object(worker,'emit',emit):
      if actual!='user@example.com':

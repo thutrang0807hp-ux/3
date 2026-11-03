@@ -53,7 +53,7 @@ async def run(spec):
             return options
     request = GenerateVideoRequest(prompt=spec['prompt'], mode=Mode.R2V,
         aspect=Aspect.PORTRAIT, model=VideoModel.VEO_3_1_LITE,
-        duration=8, count=1, reference_images=(image,))
+        duration=8, count=1, ref_names=(spec['reference_name'],))
     task = asyncio.current_task()
     loop = asyncio.get_running_loop()
     grants = asyncio.Queue()

@@ -15,7 +15,10 @@ async def scenario(mode):
   service=SimpleFlow(root,SimpleNamespace(secret=lambda key:None,set_secret=lambda *args:None),ledger)
   service.account_bridge=SimpleNamespace(background=True,selection=lambda:dict(available=True,account_id='selected',token='selected-token'))
   service.gflow_driver_enabled=True;service.native_pipeline_enabled=True
-  service.restore=AsyncMock(side_effect=AssertionError('Old browser/native RPC path reached'))
+  order=[]
+  async def restore():order.append('restore')
+  service.restore=AsyncMock(side_effect=restore)
+  service.assert_ready=AsyncMock()
   service.capture_preview=AsyncMock()
   buffer=io.BytesIO();Image.new('RGB',(32,48),'green').save(buffer,format='PNG')
   raw=buffer.getvalue();rid='flow-dispatch-'+mode
@@ -28,20 +31,30 @@ async def scenario(mode):
    assert actual is service and request==rid and reference.read_bytes()==raw
    assert ledger.metadata(rid)['engine']=='gflow-ui-0.92.1'
    assert (payload['room_id'],payload['scene_id'],payload['part'],payload['account_id'])==('room','scene','part','selected')
-   calls.append(request)
+   assert order==['restore','prepare','validate'],order
+   order.append('engine');calls.append(request)
    if mode=='before':raise SimpleStopped('fixture stopped before grant')
    service.sent=True
    ledger.set_metadata(rid,dict(engine='gflow-ui-0.92.1',generation_granted=True))
    if mode=='after':raise SimpleStopped('fixture stopped after grant')
    ledger.set_metadata(rid,{'provider_task':dict(media_id='video',project_id='project',workflow_id=None,association_confirmed=True)})
    ledger.finish(rid,'done',dict(file='fixture.mp4',scene_id='scene',part='part'))
-  with patch('local_engine.flow_gflow_adapter.generate',engine):
+  async def prepare(actual,report,image,mime,prompt,settings,check,**callbacks):
+   order.append('prepare')
+   report.update(preparation_method='native_reference_pipeline',native_stage='ready',reference_verified=True,uploaded_media_id='uploaded-image',uploaded_media_project='original-project')
+   callbacks['on_persist']()
+  async def validate(actual,payload,image):
+   order.append('validate')
+   assert actual.pair_report['uploaded_media_id']=='uploaded-image'
+  with patch('local_engine.flow_native_pipeline.prepare_inputs',prepare),patch('local_engine.flow_prepare.validate_prepared',validate),patch('local_engine.flow_gflow_adapter.generate',engine):
    await service.submit(body)
    await service.tasks[rid]
    row=service.lookup(rid);expected={'success':'done','before':'failed','after':'unknown'}[mode]
    assert row['state']==expected,row
    assert service.active is None and service.task.done()
-   service.restore.assert_not_called()
+   service.restore.assert_awaited_once()
+   assert order==['restore','prepare','validate','engine'],order
+   assert ledger.metadata(rid)['native_inputs']['uploaded_media_id']=='uploaded-image'
    if mode=='success':assert row['provider_task']['media_id']=='video' and row['result']['scene_id']=='scene'
    again=await service.submit(body)
    assert again['state']==expected and calls==[rid],(again,calls)

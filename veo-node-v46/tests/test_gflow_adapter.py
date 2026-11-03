@@ -2,6 +2,7 @@
 import asyncio
 import importlib.util
 import json
+import hashlib
 from pathlib import Path
 import sys
 import tempfile
@@ -34,7 +35,9 @@ assert command['action']=='generate'
 assert pathlib.Path(spec['profile']).joinpath('grant.json').is_file(), 'grant not durable'
 if mode=='after':
  emit(event='error',public_error_codes=['PUBLIC_ERROR_UNUSUAL_ACTIVITY','SECRET_INVALID']);sys.exit(1)
-identity=dict(media_id='media-1',project_id='project-1',workflow_id=None)
+assert spec['reference_name']=='flow-fixture-inputs.png'
+assert spec['project_id']=='11111111-1111-4111-8111-111111111111'
+identity=dict(media_id='media-1',project_id=spec['project_id'],workflow_id=None)
 emit(event='started',**identity)
 if mode=='cancel':
  assert json.loads(sys.stdin.readline())['action']=='cancel';sys.exit(0)
@@ -44,12 +47,12 @@ emit(event='complete',file=str(output),**identity)
 '''
 
 class AdapterTests(unittest.IsolatedAsyncioTestCase):
- async def scenario(self, mode, *, grant_error=False):
+ async def scenario(self, mode, *, grant_error=False, invalid_prepared=False):
   with tempfile.TemporaryDirectory() as folder:
    root=Path(folder);profile=root/'profile';profile.mkdir()
    image=root/'image.png';image.write_bytes(b'image')
    fixture=root/'fixture.py';fixture.write_text(FIXTURE)
-   payload=dict(account_id='account',model='lite',room_id='room',scene_id='scene',part='part',prompt='prompt')
+   payload=dict(account_id='account',model='lite',room_id='room',scene_id='scene',part='part',prompt='prompt',prepared_request_id='flow-fixture-inputs')
    binding=dict(account_id='account',profile_key='key',email='user@example.com')
    metadata={};finished=[];children=[]
    def set_metadata(rid,value):
@@ -59,7 +62,10 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
     metadata.update(value)
    async def validate(rid,path,suffix):return path
    async def disconnect():pass
-   service=types.SimpleNamespace(data=root,root=root,sent=False,
+   prepared={key:payload[key] for key in ('account_id','room_id','scene_id','part')}
+   prepared.update(request_id=payload['prepared_request_id'],preparation_method='native_reference_pipeline',native_stage='ready',reference_verified=True,uploaded_media_source_sha256=hashlib.sha256(image.read_bytes()).hexdigest(),prompt_sha256=hashlib.sha256(b'prompt').hexdigest(),uploaded_media_project='11111111-1111-4111-8111-111111111111')
+   if invalid_prepared:prepared['uploaded_media_source_sha256']='wrong-image'
+   service=types.SimpleNamespace(data=root,root=root,sent=False,pair_report=prepared,
     account_bridge=types.SimpleNamespace(binding=lambda aid:binding,selection=lambda:dict(account_id='account',available=True)),
     phase=lambda *args:None,disconnect_browser=disconnect,validate_video=validate,
     ledger=types.SimpleNamespace(set_metadata=set_metadata,finish=lambda *args:finished.append(args)),
@@ -96,6 +102,7 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
     self.assertEqual(result['scene_id'],'scene')
     self.assertEqual(result['provider_identity']['media_id'],'media-1')
     self.assertEqual(result['bytes'],13)
+ async def test_changed_prepared_image_never_starts_worker(self):await self.scenario('before',invalid_prepared=True)
  async def test_success(self):await self.scenario('success')
  async def test_error_before_grant(self):await self.scenario('before')
  async def test_error_after_grant(self):await self.scenario('after')

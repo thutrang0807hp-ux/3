@@ -12,6 +12,16 @@ async def generate(service, rid, payload, reference):
     from .simple_flow import SimpleStopped
     from .google_login import flow_profile_path, installed_browser
     from .flow_gflow_runtime import ensure_runtime
+    prepared = getattr(service, 'pair_report', None) or {}
+    project = prepared.get('uploaded_media_project')
+    if (prepared.get('request_id') != payload.get('prepared_request_id') or
+            any(prepared.get(key) != payload.get(key) for key in ('room_id', 'scene_id', 'part', 'account_id')) or
+            prepared.get('preparation_method') != 'native_reference_pipeline' or
+            prepared.get('native_stage') != 'ready' or not prepared.get('reference_verified') or
+            prepared.get('uploaded_media_source_sha256') != hashlib.sha256(reference.read_bytes()).hexdigest() or
+            prepared.get('prompt_sha256') != hashlib.sha256(payload['prompt'].strip().encode()).hexdigest() or
+            not isinstance(project, str) or not re.fullmatch(r'[a-fA-F0-9-]{36}', project)):
+        raise SimpleStopped('Đầu vào đã chuẩn bị không khớp lượt tạo; chưa gửi video.')
     if sys.platform != 'win32':
         raise SimpleStopped('Engine Flow tích hợp hiện chỉ hỗ trợ bản Windows.')
     bridge = service.account_bridge
@@ -37,7 +47,8 @@ async def generate(service, rid, payload, reference):
     output.mkdir(exist_ok=True)
     spec = {'profile': str(profile), 'browser': str(installed_browser()),
             'expected_email': binding['email'], 'image': str(reference.resolve()),
-            'output': str(output.resolve()), 'prompt': payload['prompt']}
+            'output': str(output.resolve()), 'prompt': payload['prompt'],
+            'project_id': project, 'reference_name': prepared['request_id'] + reference.suffix}
     worker = Path(__file__).with_name('flow_gflow_worker.py')
     env = {k: v for k, v in os.environ.items()
            if not k.startswith(('PYTHON', 'GFLOW_', 'VEO3_'))}
@@ -60,7 +71,7 @@ async def generate(service, rid, payload, reference):
         values = {key: event.get(key) for key in ('media_id', 'project_id', 'workflow_id')}
         if any(value is not None and (not isinstance(value, str) or not re.fullmatch(r'[A-Za-z0-9_./:-]{1,512}', value)) for value in values.values()):
             raise SimpleStopped('Engine trả định danh không hợp lệ; giữ lượt để kiểm tra.')
-        if not values['media_id'] or not values['project_id']:
+        if not values['media_id'] or values['project_id'] != project:
             raise SimpleStopped('Engine chưa ghi đủ định danh clip; không tự tạo lại.')
         return values
     try:
@@ -78,6 +89,9 @@ async def generate(service, rid, payload, reference):
                     service.ledger.set_metadata(rid, {'clicked': True, 'engine': 'gflow-ui-0.92.1', 'generation_granted': True})
                     service.sent = True
                     granted = True
+                    prepared.update(generation_submitted=True, generation_ready=False,
+                                    native_stage='generation_granted', state='submitted')
+                    service.ledger.set_metadata(rid, {'native_inputs': dict(prepared)})
                     service.phase(rid, 'submitting', 'Đang tải ảnh và gửi một lượt tạo qua giao diện Flow.')
                     await command({'action': 'generate'})
                 elif kind == 'started':

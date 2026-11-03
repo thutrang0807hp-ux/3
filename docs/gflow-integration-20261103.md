@@ -94,3 +94,25 @@ checks scene/account association and duplicate receipts for success and errors
 before/after sending, and checks that upload-only never generates. It fails
 against the actual .46 source and passes with the correction. Runtime status
 and request metadata identify the active engine. Live Flow remains unverified.
+
+## v46.48 — limit replacement to the create/send boundary
+
+User clarified that the preparation steps already work and must remain intact.
+The .47 early engine branch bypassed those steps. This revision moves the branch
+to after existing preparation and validation, immediately before legacy sender
+selection. An AST comparison with .45 confirms the rest of `run` is unchanged.
+Account/login, native workspace warmup/upload, prompt/config validation and UI
+source are unchanged.
+
+The adapter requires the existing preparation receipt to match the room, scene,
+part, account, image hash and prompt hash. It passes that receipt's project ID
+and unique uploaded filename to the SDK. The SDK request uses R2V `ref_names`,
+not local `reference_images`, so it selects the uploaded asset in the existing
+project rather than creating another project or taking the upload path. Returned
+video IDs must belong to that same project. Reports now include the engine name.
+
+Ten adapter/worker checks pass, including a changed prepared image being rejected
+before worker launch. Four application-dispatch scenarios check the ordering
+restore -> existing prepare -> validate -> new engine, durable receipts and the
+upload-only path. These are local fixtures; live Flow and Windows remain
+unverified. This revision does not replay earlier failed/unknown requests.
