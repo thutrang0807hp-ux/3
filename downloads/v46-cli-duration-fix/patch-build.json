@@ -1,0 +1,27 @@
+{
+  "version": "2026.11.03.4651",
+  "file": "SceneForge-Update-20261103-v46.51-CLI-Duration-Fix.exe",
+  "bytes": 3986944,
+  "sha256": "353ecf21f827d506592a9a71e4f39f4bc591b638652604d9c97e4961863db40d",
+  "files": [
+    {
+      "path": "app/local_engine/flow_gflow_cli.py",
+      "bytes": 9714,
+      "sha256": "aee6013c039dbf03609b3cbe202415ecd7dede5cd4e835495a8daf83462be22d"
+    }
+  ],
+  "minimum_patch": "2026.11.03.4650",
+  "embedded_files_verified": true,
+  "launcher_code_unchanged": true,
+  "generation_engine": "gflow-cli-direct",
+  "runtime_auto_download": false,
+  "original_repo_cli": true,
+  "one_create_action": true,
+  "reviewed_source_commit": "95412cf",
+  "ledger": "existing_RequestLedger_only",
+  "diagnostic_update_only": false,
+  "startup_failure_fixed": false,
+  "automatic_retry": false,
+  "live_flow_verified": false,
+  "windows_installer_tested": false
+}
