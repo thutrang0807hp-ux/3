@@ -1,8 +1,8 @@
 // Actual UI change handler + settings functions, controlled local API/timers only.
 const fs=require('fs'),vm=require('vm'),assert=require('assert');
 const html=fs.readFileSync('workflow.html','utf8');
-const code=html.slice(html.indexOf('const flowSettings=()=>'),html.indexOf('function preparedContext(row)'));
-const handler=html.slice(html.indexOf("document.addEventListener('change',event=>{if(!event.target.matches('#node-videos [data-vn-setting]'))"),html.indexOf("document.addEventListener('change',event=>{if(!event.target.matches('#node-videos [data-vn-select]'))"));
+const code=html.slice(html.indexOf('function changeFlowSetting(event){'),html.indexOf('function preparedContext(row)'));
+const handler=html.slice(html.indexOf("document.addEventListener('change',event=>{if(event.target.matches('#node-videos [data-vn-setting]'))"),html.indexOf("document.addEventListener('change',event=>{if(!event.target.matches('#node-videos [data-vn-select]'))"));
 function fixture(){
  let next=0;const timers=new Map(),states={},posts=[];let listener;
  const selection={available:true,account_id:'account',token:'token'};
@@ -31,8 +31,8 @@ function fixture(){
  console.log('PASS changed account cannot receive stale queued settings');
  f=fixture();f.ctx.busy=true;f.change('model','fast');await f.flush(500);assert.equal(f.posts.length,0);
  console.log('PASS setting changes during an active operation never post');
- f=fixture();f.ctx.workflowLocalRequest=async()=>{throw Error('fixture unavailable')};f.change('model','fast');await f.flush(500);assert.equal(f.ctx.state().settingsTrial.state,'failed');assert(f.ctx.settingsView().includes('Thử đồng bộ lại'));assert.equal(f.ctx.settingsSyncPending,null);
- console.log('PASS sync errors shown truthfully with optional retry');
+ f=fixture();f.ctx.workflowLocalRequest=async()=>{throw Error('fixture unavailable')};f.change('model','fast');await f.flush(500);assert.equal(f.ctx.state().settingsTrial.state,'failed');assert(!f.ctx.settingsView().includes('Thử đồng bộ lại'));assert(f.ctx.settingsView().includes('fixture unavailable'));assert.equal(f.ctx.settingsSyncPending,null);
+ console.log('PASS sync errors shown truthfully without report/retry buttons');
  f=fixture();f.ctx.epoch=0;f.ctx.schedule=()=>{};f.ctx.state().settingsTrial={state:'running',request_id:'restored'};
  f.ctx.workflowLocalRequest=async path=>path==='flow/simple/status'?{selection:{available:true,account_id:'account'}}:{request_id:'restored',state:'verified'};
  const begin=html.indexOf('async function refresh(){const room=project.id,own=epoch;');

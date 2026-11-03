@@ -243,3 +243,25 @@ room/account changes, busy operation exclusion, visible error/retry, creation
 blocking and reload status recovery. All ten inline frontend scripts parse;
 the existing download/report UI check still passes. Live settings sync on the
 user's Flow page is unverified here; the existing backend apply route is reused.
+
+## v46.55 — compact settings dock on the Workflow toolbar
+
+Moved the settings controls out of the tall video node into a collapsed Flow
+summary beside the Workflow tabs. In the hosted app the active workflow iframe
+mounts the dock into its same-origin shell toolbar. Parked/background workers
+cannot take over the visible dock. Standalone workflow uses its own toolbar.
+The popup preserves the existing settings state/API and auto-sync change handler;
+it closes on outside click/Escape, fits narrow viewports and cleans up its event
+listeners on iframe exit. The two settings-only Retry and Download settings report
+buttons are removed. Errors remain visible; changing a selection triggers a new
+sync. Video tracking/download recovery controls are unchanged.
+
+The panel explicitly states the existing creation limit: Ingredients, Lite,
+portrait 9:16, one output. Applying other settings to Flow does not add support
+for generating those combinations in SceneForge. No backend/CLI behavior changes.
+
+Validation: real Chromium same-origin parent/iframe fixture checks collapsed
+placement, four controls, auto-sync from the parent document through the existing
+workflow API, verified/error statuses, absence of the two buttons, Escape/outside
+close, parked-worker isolation and narrow-screen bounds. Existing auto-settings
+and clip-recovery UI checks pass; all inline scripts parse. No live Flow calls.
