@@ -1,3 +1,5 @@
+> Bản .46 có lỗi nối engine vào hàm thử upload. Dùng [bản .47 thay thế](../v46-flow-ui-engine-fix/HUONG-DAN.md).
+
 # SceneForge v46.46 — Flow UI Engine
 
 Tải và chạy `SceneForge-Update-20261103-v46.46-Flow-UI-Engine.exe`, cập nhật vào
