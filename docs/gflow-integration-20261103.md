@@ -223,3 +223,23 @@ called in CLI mode, reject changed images/projects, and verify no invented image
 ID. Eight local CLI tests and existing submit/ledger/download-only recovery
 checks pass. Applied only to future requests; no existing Flow assets are deleted.
 Live Flow execution of this new change is unverified here.
+
+## v46.54 — auto-sync the settings selectors
+
+Changing a Flow settings selector now saves and schedules the existing settings
+API after 500 ms. Rapid edits coalesce into one request containing the latest
+selection. The normal Apply button is removed; failed/unverified attempts offer
+an optional retry. The UI polls for actual backend verification and resumes a
+pending settings-status read after returning to the room or reloading.
+
+Queued changes are scoped to their room and selected account. Account or room
+changes cancel/reject stale work, existing generation blocks setting changes,
+and creation is disabled while settings are queued/being applied. No generation,
+reference upload, CLI command or video-download implementation changes.
+
+Validation executes the actual change handler/settings functions against local
+API/timer doubles: coalescing/current settings, actual verification polling,
+room/account changes, busy operation exclusion, visible error/retry, creation
+blocking and reload status recovery. All ten inline frontend scripts parse;
+the existing download/report UI check still passes. Live settings sync on the
+user's Flow page is unverified here; the existing backend apply route is reused.
