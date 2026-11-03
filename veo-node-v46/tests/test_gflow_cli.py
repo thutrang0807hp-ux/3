@@ -16,7 +16,7 @@ FIXTURE='''import json,pathlib,sys
 args=sys.argv[1:]
 assert args[:2]==['video','r2v']
 assert args[-2]=='--' and args[-1]=='--a prompt as plain text'
-assert args[args.index('--duration')+1]=='8'
+assert '--duration' not in args
 assert args[args.index('--profile')+1]=='default'
 ref=pathlib.Path(args[args.index('--ref')+1]);assert ref.name=='flow-fixture-inputs.png' and ref.read_bytes()==b'image'
 assert pathlib.Path('grant.json').is_file()

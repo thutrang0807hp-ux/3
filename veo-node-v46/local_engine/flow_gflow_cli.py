@@ -70,7 +70,7 @@ def command(repo, reference, prompt, project, output, profile='default'):
     python = repo / 'runtime' / 'python.exe'
     return [str(python) if python.is_file() else 'py', '-m', 'gflow_cli',
             'video', 'r2v', '--ref', str(reference), '--aspect', '9:16',
-            '--duration', '8', '--model', 'veo-lite', '--count', '1',
+            '--model', 'veo-lite', '--count', '1',
             '--project', project, '--profile', profile, '--out-dir', str(output), '--json', '--', prompt]
 
 
