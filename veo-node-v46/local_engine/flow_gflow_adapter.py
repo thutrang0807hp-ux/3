@@ -82,7 +82,12 @@ async def generate(service, rid, payload, reference):
                 event = json.loads(line)
                 check_binding()
                 kind = event.get('event')
-                if kind == 'ready':
+                if kind == 'stage':
+                    value = event.get('stage')
+                    if value not in ('starting', 'imports', 'profile_check', 'browser_open', 'account_check', 'generation'):
+                        raise SimpleStopped('Sai trạng thái khởi chạy engine Flow.')
+                    service.ledger.set_metadata(rid, {'engine_diagnostics': {'stage': value}})
+                elif kind == 'ready':
                     if granted or event.get('engine_version') != '0.92.1':
                         raise SimpleStopped('Sai trạng thái engine Flow; không gửi lại.')
                     # Durable ambiguity boundary must succeed BEFORE granting the worker.
@@ -108,13 +113,23 @@ async def generate(service, rid, payload, reference):
                         raise SimpleStopped('Đường dẫn kết quả Flow không hợp lệ.')
                     complete = candidate
                 elif kind in ('error', 'generation_failed'):
+                    diagnostics = event.get('diagnostics') or {}
+                    error_type = event.get('error_type')
+                    if not isinstance(error_type, str) or not re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]{0,99}', error_type):
+                        error_type = 'GenerationFailed'
+                    # Worker redacts details with the same redactor used by the reference app.
+                    safe_diagnostics = {'stage': str(diagnostics.get('stage', 'unknown'))[:40],
+                                        'error_type': error_type,
+                                        'detail': str(diagnostics['detail'])[:3000] if diagnostics.get('detail') else None,
+                                        'frames': diagnostics.get('frames', [])[:8]}
+                    service.ledger.set_metadata(rid, {'engine_diagnostics': safe_diagnostics})
                     codes = event.get('public_error_codes', [])
                     safe = [code for code in codes if isinstance(code, str) and re.fullmatch(r'PUBLIC_ERROR_[A-Z0-9_]{1,100}', code)]
                     reason = {'engine_version_mismatch': 'Sai phiên bản engine Flow.',
                               'profile_or_image_missing': 'Thiếu profile hoặc ảnh đầu vào.',
                               'browser_missing': 'Không tìm thấy trình duyệt đã cài.',
                               'account_identity_unverified': 'Chưa xác minh được đúng tài khoản Flow đã chọn.'}.get(event.get('error_code'), 'Engine Flow dừng.')
-                    raise SimpleStopped(reason + (' ' + ', '.join(safe) if safe else '') + ' Không tự gửi lại.')
+                    raise SimpleStopped(reason + ' [' + error_type + ']' + (' ' + ', '.join(safe) if safe else '') + ' Không tự gửi lại. Chi tiết đã ghi trong báo cáo.')
                 else:
                     raise SimpleStopped('Phản hồi engine Flow không hợp lệ.')
             if await process.wait() != 0 or complete is None:

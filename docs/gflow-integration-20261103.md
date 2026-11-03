@@ -116,3 +116,26 @@ before worker launch. Four application-dispatch scenarios check the ordering
 restore -> existing prepare -> validate -> new engine, durable receipts and the
 upload-only path. These are local fixtures; live Flow and Windows remain
 unverified. This revision does not replay earlier failed/unknown requests.
+
+## v46.49 — preserve the startup failure instead of hiding it
+
+The user's .48 report proves that the new engine branch was reached and the
+existing upload completed, but the worker failed before its ready event, so no
+generation grant was sent. The parent discarded the worker's `error_type` and
+reported only "Engine Flow dừng"; that log cannot identify the Windows failure.
+The integration uses the SDK from the supplied portable repo, not its original
+app.py CLI wrapper. These are distinct facts; using the same SDK does not prove
+identical startup behavior.
+
+This change keeps generation behavior intact and adds startup-stage events,
+exception type, up to eight basename/function/line frames, and error detail
+scrubbed by the reference repo's own redactor. Reports expose `engine_diagnostics`.
+If the redactor cannot import, no raw detail is exported. Parent tests verify
+that startup details survive into ledger metadata.
+
+In addition to ten local protocol tests, exercised the actual pinned SDK's
+request/config objects and full worker/browser startup with real Chromium and
+all HTTP intercepted. Startup reached ready; the test canceled without granting
+generation. Also checked the real SDK redactor removes fixture bearer/cookie/
+signed-URL secrets. This Linux fixture does not reproduce or identify the user's
+Windows error. **This is a diagnostic update, not a claimed fix for that error.**

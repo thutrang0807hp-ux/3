@@ -11,9 +11,12 @@ from pathlib import Path
 import re
 import sys
 import threading
+import traceback
 
 UPSTREAM_VERSION = '0.92.1'
 _OUTPUT = sys.stdout
+_STAGE = 'starting'
+STAGES = {'starting', 'imports', 'profile_check', 'browser_open', 'account_check', 'generation'}
 ERROR_CODES = {'engine_version_mismatch', 'profile_or_image_missing', 'browser_missing',
                'account_identity_unverified'}
 
@@ -23,7 +26,26 @@ def emit(event, **fields):
     _OUTPUT.flush()
 
 
+def stage(value):
+    global _STAGE
+    _STAGE = value
+    emit('stage', stage=value)
+
+
+def error_fields(error):
+    detail = None
+    try:
+        from gflow_cli.redaction import redact_sensitive_text
+        detail = redact_sensitive_text(str(error))[:3000]
+    except Exception:
+        pass
+    frames = [{'file': Path(frame.filename).name, 'line': frame.lineno,
+               'function': frame.name} for frame in traceback.extract_tb(error.__traceback__)[-8:]]
+    return {'stage': _STAGE, 'error_type': type(error).__name__, 'detail': detail, 'frames': frames}
+
+
 async def run(spec):
+    stage('imports')
     from importlib.metadata import version
     if version('gflow-cli') != UPSTREAM_VERSION:
         raise RuntimeError('engine_version_mismatch')
@@ -31,6 +53,7 @@ async def run(spec):
     from gflow_cli.api.video import GenerateVideoRequest, Mode, Aspect, VideoModel
     from gflow_cli.config import Settings
 
+    stage('profile_check')
     profile = Path(spec['profile'])
     image = Path(spec['image'])
     output = Path(spec['output'])
@@ -71,13 +94,16 @@ async def run(spec):
     threading.Thread(target=controls, daemon=True).start()
     settings = Settings(_env_file=None, headless=False, transport='ui_automation',
                         browser_engine='playwright', concurrency=1, incident_capture=False)
+    stage('browser_open')
     async with SceneForgeClient(profile_dir=profile, headless=False, settings=settings,
                              transport='ui_automation', out_dir=output) as client:
+        stage('account_check')
         actual = await client.page.evaluate("()=>String(window.WIZ_global_data?.oPEP7c||'').trim().toLowerCase()")
         if actual != spec['expected_email'].strip().lower():
             raise ValueError('account_identity_unverified')
         emit('ready', engine_version=UPSTREAM_VERSION)
         await grants.get()  # Parent commits ambiguity boundary BEFORE this grant.
+        stage('generation')
         def started(value):
             emit('started', media_id=value.media_id, project_id=value.project_id,
                  workflow_id=value.workflow_id)
@@ -91,15 +117,16 @@ async def run(spec):
 
 
 def main():
-    spec = json.loads(sys.stdin.readline())
     try:
+        spec = json.loads(sys.stdin.readline())
         # Third-party logging is private/discarded by the parent, never report JSON.
         with contextlib.redirect_stdout(sys.stderr):
             asyncio.run(run(spec))
     except BaseException as error:
         codes = sorted(set(re.findall(r'\bPUBLIC_ERROR_[A-Z0-9_]{1,100}\b', str(error))))[:8]
         emit('error', error_type=type(error).__name__, public_error_codes=codes,
-             error_code=str(error) if str(error) in ERROR_CODES else None)
+             error_code=str(error) if str(error) in ERROR_CODES else None,
+             diagnostics=error_fields(error))
         return 1
     return 0
 

@@ -27,8 +27,9 @@ FIXTURE = r'''import json, pathlib, sys, time
 spec=json.loads(sys.stdin.readline())
 mode=sys.argv[1]
 def emit(**event): print(json.dumps(event),flush=True)
+emit(event='stage',stage='browser_open')
 if mode=='before':
- emit(event='error',error_type='FixtureError');sys.exit(1)
+ emit(event='error',error_type='FixtureError',diagnostics=dict(stage='browser_open',detail='fixture startup failure',frames=[dict(file='client.py',line=1,function='setup')]));sys.exit(1)
 emit(event='ready',engine_version='0.92.1')
 command=json.loads(sys.stdin.readline())
 assert command['action']=='generate'
@@ -94,6 +95,10 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
      with self.assertRaises((Stopped,OSError)) as caught:
       await adapter.generate(service,'flow-fixture',payload,image)
      self.assertNotIn('SECRET_INVALID',str(caught.exception))
+     if mode=='before' and not invalid_prepared:
+      self.assertEqual(metadata['engine_diagnostics']['error_type'],'FixtureError')
+      self.assertEqual(metadata['engine_diagnostics']['detail'],'fixture startup failure')
+      self.assertEqual(metadata['engine_diagnostics']['stage'],'browser_open')
    self.assertTrue(all(child.returncode is not None for child in children))
    self.assertEqual(service.sent, mode!='before' and not grant_error)
    self.assertEqual(len(finished),1 if mode=='success' else 0)

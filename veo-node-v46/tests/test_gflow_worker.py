@@ -66,7 +66,7 @@ class WorkerTests(unittest.IsolatedAsyncioTestCase):
   if requests:
    request=requests[0]['req']
    self.assertEqual((request.mode,request.aspect,request.model,request.duration,request.count),('r2v','portrait','lite',8,1))
-   self.assertEqual([event['event'] for event in events],['ready','started','complete'])
+   self.assertEqual([event['event'] for event in events if event['event']!='stage'],['ready','started','complete'])
  async def test_one_reference_portrait_lite(self):await self.scenario()
  async def test_wrong_account_never_generates(self):await self.scenario(actual='other@example.com')
  async def test_no_parent_grant_never_generates(self):await self.scenario(grant=False)
