@@ -1,0 +1,40 @@
+{
+  "version": "2026.11.04.4663",
+  "file": "SceneForge-Update-20261104-v46.63-Faster-Tabs.exe",
+  "bytes": 3986944,
+  "sha256": "8c20d9b7d5d52e3bf7ca6988630310d041c9a3660e894f8f1b4a04a02537f817",
+  "files": [
+    {
+      "path": "app/dist/web-demo/index.html",
+      "bytes": 1029886,
+      "sha256": "d502f66443e951b685cddace83f402e9bf31ea615c615d23ad90cbd748886099"
+    },
+    {
+      "path": "app/dist/web-demo/studio.html",
+      "bytes": 1029886,
+      "sha256": "d502f66443e951b685cddace83f402e9bf31ea615c615d23ad90cbd748886099"
+    },
+    {
+      "path": "app/dist/web-demo/workflow.html",
+      "bytes": 832802,
+      "sha256": "ec742134bfa27cbb50c2151a2048d8dbdd6f52c1f3c4c4f783c274bcad77e56a"
+    },
+    {
+      "path": "app/dist/web-demo/photos.html",
+      "bytes": 506438,
+      "sha256": "366b40de3e935134ae292f9f2a1b837d3924bd233379d714f04b1eb805641afa"
+    }
+  ],
+  "minimum_patch": "2026.11.04.4662",
+  "embedded_files_verified": true,
+  "launcher_code_unchanged": true,
+  "baseline_source_commit": "a5ba0a3887d2b7c42e017624986b15ab4cadd995",
+  "ui_only": true,
+  "installed_runtime_preserved": true,
+  "hidden_dashboard_render_skipped_on_workspace_navigation": true,
+  "lightweight_scanning_status": true,
+  "frame_instances_preserved": true,
+  "flush_and_busy_guards_preserved": true,
+  "live_flow_verified": false,
+  "windows_installer_tested": false
+}

@@ -512,3 +512,14 @@ review persists without deleting history, then create submits exactly one new ID
 and imports its video. Prior queue, continuity, no-redraw, settings and receipt
 checks remain. UI-only update on .60+, no engine/runtime/session changes. Local
 fixtures only; Windows/Flow live execution not verified.
+
+
+## v46.63 — ưu tiên độ trễ chuyển tab
+
+Báo cáo người dùng: toàn app có cảm giác lag, rõ nhất khi bấm đổi tab. Shell index.html/studio.html gọi toàn bộ chuỗi render của Trang chủ ở mỗi showView, kể cả khi bảng phòng bị ẩn. flushFrames còn gọi getState() chỉ để đọc analysis.status; workflow trả bản clone cả project (ảnh/lịch sử).
+
+Sửa hẹp: chuyển sang Tạo video/Dựng dùng renderRoomNavigation để cập nhật selector phòng còn sử dụng, nút active, queue count và workflow modes; các wrapper topbar/workspace vẫn cập nhật như cũ. Trang chủ vẫn render đầy đủ sau khi flush thành công. Thêm isScanning() không clone trên workflow và photos; shell có fallback getState cho iframe cũ. Giữ nguyên iframe, runtime, engine, lưu dự án và guard dò cảnh/xuất/lưu lỗi. Không thay lịch sử/receipt, cấu hình hoặc luồng tạo video.
+
+Kiểm Chromium shell thật với 200 phòng fixture, iframe API giả và 60 cảnh chứa tổng 12 MB chuỗi ảnh: trước 8 lượt chuyển workspace gọi full render 8 lần, 93.3–133.4 ms/lượt; sau 0 full render, 2.6–4.7 ms/lượt trong lần chạy hồi quy. Về Trang chủ vẫn flush một lần, không gọi clone state. Không đo tải tab lần đầu hay hiệu năng máy Windows người dùng. Script scripts/analysis/check_tab_navigation.py kiểm thêm scanning/export/failure guards, giữ frame và fallback API cũ. check_veo_redesign_ui.py và ba JS check cấu hình/tạo/đối soát đều đạt.
+
+Gói downloads/v46-faster-tabs/SceneForge-Update-20261104-v46.63-Faster-Tabs.exe chỉ thay bốn HTML, yêu cầu .62; build_tab_navigation_patch.py kiểm checksum launcher, ZIP và từng tệp nhúng. Không ghi đè .62. Chưa chạy updater Windows/Flow thật.
