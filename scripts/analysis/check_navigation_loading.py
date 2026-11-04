@@ -14,9 +14,8 @@ async def shell(browser, source):
    await r.fulfill(body=html,content_type='text/html')
   else:await r.fulfill(body='{}',content_type='application/json')
  await page.route('**/*',route)
- await page.goto('http://sceneforge.test/shell')
- await page.wait_for_function('!!window.SceneForgeApp')
- await page.wait_for_timeout(500)
+ await page.goto('https://sceneforge.test/shell')
+ await page.wait_for_function('window.SceneForgeApp?.getReadiness().rooms')
  result=await page.evaluate('''async()=>{
 const turn=()=>new Promise(r=>setTimeout(r,10)),check=(v,m)=>{if(!v)throw Error(m)};
 const refs=Object.fromEntries(['person','outfit','product','background'].map(k=>[k,{images:[],description:''}]));

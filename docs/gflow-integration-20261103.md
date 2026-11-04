@@ -549,3 +549,14 @@ stableHTML cache bằng WeakMap + MutationObserver: bỏ parse/patch khi HTML gi
 Fixture 200 phòng: .64 Trang chủ 135.6–261 ms, recipe 152.9–193.2 ms, batch 213.7–286.1 ms, 9 home renders/9 flush qua 3 vòng. .65 recipe/batch không home render, 0 flush khi overview→overview, batch input DOM và tỉ lệ giữ nguyên; lượt quay lại Trang chủ 31.9–39.1 ms (render 6.1–8.1 ms), recipe 11.6–32.4 ms, batch 2.7–7.1 ms. Lượt lạnh đầu có thể cao hơn (khoảng 69 ms home trong lần đo trước). Không suy ra thời gian trên Windows hay cam kết hết lag. Thay đổi dữ liệu cần patch thật, phép thử cập nhật tên phòng vẫn hiện chính xác.
 
 check_overview_tab_performance.py kiểm guard khi dò cảnh/lưu lỗi trước vào overview surface, giữ draft/tỉ lệ và input DOM, invalidation khi HTML đổi hoặc DOM bên ngoài bị sửa (cả trước/sau MutationObserver callback). check_tab_navigation và check_navigation_loading vẫn đạt, gồm lỗi tải cũ/khởi tạo frame/lưu dữ liệu/đọc một phòng/mở chi tiết không redraw. Gói .65 yêu cầu .64, chỉ thay hai shell HTML; trang download-v46-65.html. Chưa kiểm updater Windows/Flow thật.
+
+
+## v46.66 — lỗi undefined.transaction khi khởi động
+
+Ảnh người dùng có home 0 phòng/sản phẩm và Cannot read properties of undefined (reading transaction). Tái hiện với GET library/status chậm 2 giây, click Kịch bản khi SceneForgeStorage.ready còn chờ: recipeLibrary -> io('prefs','readonly','recipe-library') -> db chưa được init gán -> undefined.transaction. Promise recipeLoading bị reject còn bị giữ mãi. Chưa thể suy ra dữ liệu thật bị mất từ ảnh.
+
+io có barrier shellDatabaseReady: init giải quyết sau Storage.ready/openDB, reject khi startup lỗi. Không mở DB sớm trước hydrate, không reset hoặc trả giả [] khi lỗi. Capture click điều hướng trước appBootReady giữ target cuối, ngăn handler đọc model sớm; replay sau app-ready. Banner trạng thái mở dữ liệu được gỡ khi ready. recipeLoading được giải phóng sau settle để lỗi nhất thời không khóa lần đọc sau.
+
+check_startup_readiness.py chạy toàn bộ startup trên localhost với API kho bị giữ, không gán sẵn globals: DB mới; DB cũ có sản phẩm/phòng/blob media (so nội dung sau reload); lỗi mở DB (lan lỗi gốc, không báo ready); managed library startup. Kiểm direct reader đợi barrier, click Kịch bản rồi Trang chủ trước ready không gây lỗi, đúng target cuối, retry đọc recipe sau lỗi fixture thành công. Bộ kiểm .63/.64/.65 đã sửa fixture origin sang HTTPS và chờ getReadiness().rooms thật trước khi seed model; bản cũ chỉ chờ API object rồi seed, không xác minh boot trọn vẹn và không phát hiện trường hợp này.
+
+check_navigation_loading, check_tab_navigation, check_overview_tab_performance vẫn đạt. Gói .66 yêu cầu .65, chỉ hai shell HTML, launcher/từng file/hash được kiểm. Không xóa Data, migrate nơi khác hoặc tuyên bố khôi phục kho Windows thật. Trang download-v46-66.html.

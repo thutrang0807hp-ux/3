@@ -13,8 +13,8 @@ async def main():
    if r.request.resource_type=='document':await r.fulfill(body=Path(source).read_text(),content_type='text/html')
    else:await r.fulfill(json={})
   await page.route('**/*',route)
-  await page.goto('http://sceneforge.test/shell')
-  await page.wait_for_function('!!window.SceneForgeApp');await page.wait_for_timeout(500)
+  await page.goto('https://sceneforge.test/shell')
+  await page.wait_for_function('window.SceneForgeApp?.getReadiness().rooms')
   result=await page.evaluate('''async baseline=>{
 const check=(v,m)=>{if(!v)throw Error(m)},refs=Object.fromEntries(['person','outfit','product','background'].map(k=>[k,{images:[],description:''}]));
 products=[{id:'p',name:'Fixture',refs}];prefs.product='p';prefs.lastRoom='r0';

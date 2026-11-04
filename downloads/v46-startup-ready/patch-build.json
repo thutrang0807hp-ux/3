@@ -1,0 +1,43 @@
+{
+  "version": "2026.11.04.4666",
+  "file": "SceneForge-Update-20261104-v46.66-Startup-Ready.exe",
+  "bytes": 3986944,
+  "sha256": "e0a9f3842106bff8b1d25ea15226ffb353d3111711e04654d4399bdea7680a34",
+  "files": [
+    {
+      "path": "app/dist/web-demo/index.html",
+      "bytes": 1035520,
+      "sha256": "523a5ab2de27c9f65adc5a04901076721260d2b707e89bee3214a52af4042c2e"
+    },
+    {
+      "path": "app/dist/web-demo/studio.html",
+      "bytes": 1035520,
+      "sha256": "523a5ab2de27c9f65adc5a04901076721260d2b707e89bee3214a52af4042c2e"
+    }
+  ],
+  "minimum_patch": "2026.11.04.4665",
+  "embedded_files_verified": true,
+  "launcher_code_unchanged": true,
+  "baseline_source_commit": "b68afb8",
+  "ui_only": true,
+  "installed_runtime_preserved": true,
+  "database_readiness_barrier": true,
+  "preboot_navigation_deferred": true,
+  "recipe_read_failure_can_retry": true,
+  "existing_data_preserved_in_fixture": true,
+  "direct_overview_subpage_navigation": true,
+  "batch_form_retained": true,
+  "unchanged_markup_skipped_with_mutation_invalidation": true,
+  "offscreen_card_layout_deferred": true,
+  "home_date_formatter_reused": true,
+  "latest_navigation_click_wins": true,
+  "shared_frame_initialization": true,
+  "single_project_startup_read": true,
+  "scene_details_skip_canvas_rebuild": true,
+  "hidden_dashboard_render_skipped_on_workspace_navigation": true,
+  "lightweight_scanning_status": true,
+  "frame_instances_preserved": true,
+  "flush_and_busy_guards_preserved": true,
+  "live_flow_verified": false,
+  "windows_installer_tested": false
+}
