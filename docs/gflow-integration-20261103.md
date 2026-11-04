@@ -523,3 +523,16 @@ Sửa hẹp: chuyển sang Tạo video/Dựng dùng renderRoomNavigation để c
 Kiểm Chromium shell thật với 200 phòng fixture, iframe API giả và 60 cảnh chứa tổng 12 MB chuỗi ảnh: trước 8 lượt chuyển workspace gọi full render 8 lần, 93.3–133.4 ms/lượt; sau 0 full render, 2.6–4.7 ms/lượt trong lần chạy hồi quy. Về Trang chủ vẫn flush một lần, không gọi clone state. Không đo tải tab lần đầu hay hiệu năng máy Windows người dùng. Script scripts/analysis/check_tab_navigation.py kiểm thêm scanning/export/failure guards, giữ frame và fallback API cũ. check_veo_redesign_ui.py và ba JS check cấu hình/tạo/đối soát đều đạt.
 
 Gói downloads/v46-faster-tabs/SceneForge-Update-20261104-v46.63-Faster-Tabs.exe chỉ thay bốn HTML, yêu cầu .62; build_tab_navigation_patch.py kiểm checksum launcher, ZIP và từng tệp nhúng. Không ghi đè .62. Chưa chạy updater Windows/Flow thật.
+
+
+## v46.64 — kết quả tải cũ và khựng khi mở cảnh
+
+Người dùng báo .63 vẫn giật khi bấm tab khác trước khi tab cũ tải xong, và click ở Phân tích video. Tái hiện được với recipeLibrary trì hoãn: g6OpenRecipes chờ rồi gọi showView overview sau khi người dùng đã chọn Dựng; .63 giành màn hình về Kho kịch bản.
+
+Thêm navigationEpoch từ capture các click điều hướng, kiểm sau các await trước khi thay màn hình/frame/overlay. Recipe, batch, monitor, storage hub, room open và parked-worker detach đều không commit giao diện của ý định cũ. Mỗi frame giữ một Promise khởi tạo để tránh nhiều openRoom khi quay lại trong lúc đang tải; capture room cụ thể, nhường một nhịp paint trước chuẩn bị nặng. Các tác vụ/lưu dữ liệu vẫn hoàn tất, không tự hủy generation.
+
+Workflow init trước đây readProjects getAll rồi find roomId, kéo dữ liệu của mọi phòng vào bộ nhớ. Nay readProject(id) dùng IndexedDB get cho phòng hiện tại/last room; nút mở dự án cụ thể cũng dùng get. Danh sách dự án vẫn dùng getAll khi được yêu cầu. openScene dùng renderDetails và cập nhật class sceneRow thay cho cả render chain canvas. Không đổi schema, engine, receipt hoặc dữ liệu.
+
+scripts/analysis/check_navigation_loading.py tái hiện lỗi trên nguồn .63 (Late recipe loading stole the active tab); nguồn mới đạt delayed recipe/save/frame checks, chỉ 1 waitAPI/openRoom khi đổi tab liên tục, overlay không che tab đã sẵn sàng, IndexedDB get đúng phòng và 0 getAll projects, 0 canvas render khi mở chi tiết, chỉnh prompt giữ được. check_tab_navigation.py và check_veo_redesign_ui.py cùng ba check JS cũng đạt. Các phép thử dùng backend/iframe fixture, không xác minh Windows/Google thật.
+
+Gói .64 yêu cầu .63, chỉ thay index.html/studio.html/workflow.html. Launcher và từng HTML nhúng được kiểm lại; bản .63 giữ nguyên. Trang tải download-v46-64.html.

@@ -1,0 +1,39 @@
+{
+  "version": "2026.11.04.4664",
+  "file": "SceneForge-Update-20261104-v46.64-Smooth-Navigation.exe",
+  "bytes": 3986944,
+  "sha256": "b001943fef07f3dcdd6cd74101a450fdf5f55c82d84b6f6daf28e281ad29c5dc",
+  "files": [
+    {
+      "path": "app/dist/web-demo/index.html",
+      "bytes": 1032335,
+      "sha256": "6efe0c748fe8517ab61bebce50ce2cb57b37ca2664046c5634045c0acb3ddd4e"
+    },
+    {
+      "path": "app/dist/web-demo/studio.html",
+      "bytes": 1032335,
+      "sha256": "6efe0c748fe8517ab61bebce50ce2cb57b37ca2664046c5634045c0acb3ddd4e"
+    },
+    {
+      "path": "app/dist/web-demo/workflow.html",
+      "bytes": 833069,
+      "sha256": "66b026404d31459eedd608d7d9635612c8c033cb4b89bc9ea50b31b645973c63"
+    }
+  ],
+  "minimum_patch": "2026.11.04.4663",
+  "embedded_files_verified": true,
+  "launcher_code_unchanged": true,
+  "baseline_source_commit": "7b6a009",
+  "ui_only": true,
+  "installed_runtime_preserved": true,
+  "latest_navigation_click_wins": true,
+  "shared_frame_initialization": true,
+  "single_project_startup_read": true,
+  "scene_details_skip_canvas_rebuild": true,
+  "hidden_dashboard_render_skipped_on_workspace_navigation": true,
+  "lightweight_scanning_status": true,
+  "frame_instances_preserved": true,
+  "flush_and_busy_guards_preserved": true,
+  "live_flow_verified": false,
+  "windows_installer_tested": false
+}
