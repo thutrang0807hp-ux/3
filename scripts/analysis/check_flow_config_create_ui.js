@@ -8,9 +8,9 @@ const stateValue={flowSettings:{kind:'video',mode:'ingredients',ratio:'16:9',mod
 const posts=[];let confirmed='';
 class Reader{readAsDataURL(){this.result='data:image/png;base64,aW1hZ2U=';queueMicrotask(()=>this.onload());}}
 const ctx={clearTimeout:()=>{},refreshVeoHandoff:()=>{},paint:()=>{},requestAnimationFrame:fn=>queueMicrotask(fn),setTimeout:fn=>queueMicrotask(fn),yieldVeoUI:async()=>{},$:()=>null,key:()=> 'slot',project:{id:'room',scenes:[row.s],cloudJobs:[]},state:()=>stateValue,flowSettings:()=>stateValue.flowSettings,settingsSyncPending:null,settingsSyncStarting:false,remote:{native_pipeline:true},busy:false,active:()=>false,pairReady:()=>false,legacyUnresolved:()=>[],frame:()=>({image:'fixture'}),draft:()=>({text:'prompt',binding:'stable'}),binding:()=> 'stable',latestJob:()=>null,needsResolution:()=>false,assertRoom:id=>assert.equal(id,'room'),writeDraft:()=>{},confirm:text=>{confirmed=text;return true},uid:()=> 'fixture-id',directSignature:async()=> 'signature',clipContinuityFrom:()=>null,MODEL:'veo-3.1-lite-i2v-8s-portrait',VERSION:43,
-workflowLocalRequest:async(path,body)=>{if(!body)return {enabled:true,native_pipeline:true,selection:{available:true,token:'token',account_id:'account'},unresolved:[]};posts.push(body);return {state:'submitted'};},
+workflowLocalRequest:async(path,body)=>{if(!body)return {enabled:true,native_pipeline:true,selection:{available:true,token:'token',account_id:'account'},unresolved:[]};posts.push(body);return {request_id:body.request_id,store_id:'fixture-store',state:'submitted'};},
 fetch:async()=>({ok:true,blob:async()=>new Blob(['fixture'],{type:'image/png'})}),FileReader:Reader,Blob,File,URL,queueMicrotask,
-SFProviderReceipts:{persistIntent:async()=>{}},parent:{SceneForgeStorage:{}},storeProject:async()=>{},refresh:async()=>{},render:()=>{},jobReadRecord:(job,record)=>{job.state=record.state},jobPostFailure:()=>{},
+SFProviderReceipts:{persistIntent:async()=>{}},parent:{SceneForgeStorage:{}},storeProject:async()=>{},refresh:async()=>{},render:()=>{},rememberBackendRecord:()=>true,jobReadRecord:(job,record)=>{job.state=record.state},jobPostFailure:()=>{},
 clipParts:()=>[row.p],useVideo:async(url,fn)=>fn({videoWidth:160,videoHeight:90,duration:8}),seekFrame:async()=>{},capture:()=> 'tail',putAsset:()=> 'asset'};
 vm.createContext(ctx);vm.runInContext(settings+create+receive,ctx);
 (async()=>{
