@@ -10,7 +10,7 @@ package=types.ModuleType(PACKAGE);package.__path__=[str(ROOT)];sys.modules[PACKA
 spec=importlib.util.spec_from_file_location(PACKAGE+'.flow_gflow_cli',ROOT/'flow_gflow_cli.py')
 cli=importlib.util.module_from_spec(spec);spec.loader.exec_module(cli)
 class Stopped(RuntimeError):pass
-simple=types.ModuleType(PACKAGE+'.simple_flow');simple.SimpleStopped=Stopped;sys.modules[simple.__name__]=simple
+simple=types.ModuleType(PACKAGE+'.simple_flow');simple.SimpleStopped=Stopped;simple.FlowGenerationFailed=type('FlowGenerationFailed',(Stopped,),{});sys.modules[simple.__name__]=simple
 PROJECT='11111111-1111-4111-8111-111111111111'
 MEDIA='22222222-2222-4222-8222-222222222222'
 FIXTURE=r'''import json,pathlib,sys,time
@@ -33,7 +33,7 @@ ref=pathlib.Path(args[args.index('--ref')+1] if args[1]=='r2v' else args[args.in
 assert pathlib.Path('grant.json').is_file()
 mode=pathlib.Path('mode').read_text()
 print('fixture stderr retained',file=sys.stderr)
-if mode in ('live_progress','live_mismatch','live_download_error'):
+if mode in ('live_progress','live_mismatch','live_download_error','provider_failed'):
  def event(name,**fields):print(json.dumps(dict(event=name,level='info',**fields)),file=sys.stderr,flush=True)
  event('migrated.dispatch',project_id='11111111-1111-4111-8111-111111111111')
  event('migrated.frame_uploaded',media_id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa')
@@ -43,7 +43,10 @@ if mode in ('live_progress','live_mismatch','live_download_error'):
  event('migrated.status',status=2)
  if mode=='live_progress':
   while not pathlib.Path('release').exists():time.sleep(.01)
- event('migrated.status',status=3)
+ event('migrated.status',status=4 if mode=='provider_failed' else 3)
+if mode=='provider_failed':
+ print(json.dumps(dict(command='video '+args[1],status='fail',media_id='22222222-2222-4222-8222-222222222222',generation_status='MEDIA_GENERATION_STATUS_FAILED',succeeded=False,local_path=None,failure_reasons=[])))
+ sys.exit(1)
 if mode=='error':sys.exit(3)
 if mode in ('download_error','download_still_fails','live_download_error'):
  print(json.dumps(dict(status='fail',error=dict(**{'class':'MediaDownloadError'},remediation_hint='Run gflow data download 22222222-2222-4222-8222-222222222222'))))
@@ -102,7 +105,7 @@ class CliTests(unittest.IsolatedAsyncioTestCase):
      stack.enter_context(patch.object(bundle,'prepare_profile',return_value=(repo/'data/profiles','default')))
      stack.enter_context(patch.object(cli,'resolve_repo',side_effect=AssertionError('must not discover Downloads')))
      self.assertEqual(cli.command(repo,reference,'prompt',PROJECT,root)[0],str(repo/'python.exe'))
-    if mode in ('error','download_still_fails','live_mismatch'):
+    if mode in ('error','download_still_fails','live_mismatch','provider_failed'):
      with self.assertRaises(Stopped):await cli.generate(service,'flow-fixture',payload,reference)
     elif mode=='old_download_error':
      metadata['engine_diagnostics']=dict(exit_code=6,stdout='MediaDownloadError: Run gflow data download '+MEDIA,stderr='')
@@ -129,9 +132,12 @@ class CliTests(unittest.IsolatedAsyncioTestCase):
    calls=(repo/'calls').read_text().splitlines()
    self.assertEqual(sum(line.startswith('video ') for line in calls),0 if mode=='old_download_error' else 1)
    if mode in ('download_error','old_download_error','live_download_error'):self.assertIn('data download',calls)
-   self.assertEqual(len(finished),0 if mode in ('error','download_still_fails','live_mismatch') else 1)
+   self.assertEqual(len(finished),0 if mode in ('error','download_still_fails','live_mismatch','provider_failed') else 1)
    if finished:self.assertEqual(finished[0][2]['provider_identity']['media_id'],MEDIA)
+   if mode=='provider_failed':
+    self.assertEqual(metadata['phase'],'failed');self.assertEqual(metadata['provider_task']['state'],'failed');self.assertTrue(metadata['native_inputs']['generation_submitted']);self.assertNotIn('data download',calls)
    if mode=='live_download_error':self.assertEqual(finished[0][2]['provider_identity']['workflow_id'],'33333333-3333-4333-8333-333333333333')
+ async def test_provider_failed_does_not_attempt_download(self):await self.scenario('provider_failed')
  async def test_download_error_recovers_same_media_without_regeneration(self):await self.scenario('download_error')
  async def test_existing_report_downloads_only_never_generates(self):await self.scenario('old_download_error')
  async def test_download_retry_failure_keeps_media_and_never_regenerates(self):await self.scenario('download_still_fails')
@@ -194,6 +200,27 @@ class CliTests(unittest.IsolatedAsyncioTestCase):
   args=cli.command('/repo','/image.png','$(not a command)','project','/out')
   self.assertEqual(args[:5],['py','-m','gflow_cli','video','r2v'])
   self.assertEqual(args[-2:],['--','$(not a command)'])
+
+class TerminalFailureTests(unittest.IsolatedAsyncioTestCase):
+ def evidence(self):
+  result=dict(command='video i2v',succeeded=False,generation_status='MEDIA_GENERATION_STATUS_FAILED',media_id=MEDIA,local_path=None,failure_reasons=[])
+  return dict(exit_code=1,stdout=json.dumps(result),stderr=''),dict(media_id=MEDIA,project_id=PROJECT,association_confirmed=True)
+ def test_only_matching_explicit_failure_is_terminal(self):
+  logs,task=self.evidence()
+  self.assertIsNotNone(cli.confirmed_generation_failure(logs,task,PROJECT))
+  for invalid in ({**task,'association_confirmed':False},{**task,'media_id':'44444444-4444-4444-8444-444444444444'},{**task,'project_id':'wrong'}):
+   self.assertIsNone(cli.confirmed_generation_failure(logs,invalid,PROJECT))
+  for status in ('MEDIA_GENERATION_STATUS_SUCCEEDED','MEDIA_GENERATION_STATUS_PENDING','MEDIA_GENERATION_STATUS_CANCELLED'):
+   result=json.loads(logs['stdout']);result['generation_status']=status
+   self.assertIsNone(cli.confirmed_generation_failure({**logs,'stdout':json.dumps(result)},task,PROJECT))
+ async def test_old_unknown_failed_generation_is_reconciled_without_subprocess(self):
+  logs,task=self.evidence();meta=dict(engine='gflow-cli-direct',engine_diagnostics=logs,provider_task=task,native_inputs=dict(project_id=PROJECT),cli_download_diagnostics={'exit_code':7});finished=[]
+  service=types.SimpleNamespace(gate=asyncio.Lock(),busy=lambda:False,lookup=lambda rid:dict(state='unknown'),ledger=types.SimpleNamespace(metadata=lambda rid:meta,set_metadata=lambda rid,value:meta.update(value),finish=lambda *args:finished.append(args)))
+  with patch.object(asyncio,'create_subprocess_exec',side_effect=AssertionError('No download or generation allowed')):
+   await cli.recover_existing(service,'existing-failed')
+  self.assertEqual(finished,[('existing-failed','failed')]);self.assertEqual(meta['provider_task']['media_id'],MEDIA)
+  self.assertEqual(meta['provider_task']['state'],'failed');self.assertTrue(meta['native_inputs']['generation_submitted']);self.assertEqual(meta['cli_download_diagnostics']['exit_code'],7)
+  self.assertEqual(meta['provider_failure_evidence']['generation_status'],'MEDIA_GENERATION_STATUS_FAILED')
 
 class BundleProfileTests(unittest.TestCase):
  def test_existing_selected_profile_is_aliased_without_cookie_copy(self):

@@ -157,6 +157,36 @@ def video_result(stdout):
     return matches[0]
 
 
+def confirmed_generation_failure(logs, task, project):
+    """A terminal CLI result must match the already associated video and project."""
+    try:
+        result = video_result(logs.get('stdout', ''))
+    except (ValueError, TypeError):
+        return None
+    if (result.get('succeeded') is not False or
+            result.get('generation_status') != 'MEDIA_GENERATION_STATUS_FAILED' or
+            not re.fullmatch(r'[a-fA-F0-9]{8}(?:-[a-fA-F0-9]{4}){3}-[a-fA-F0-9]{12}', str(result.get('media_id'))) or
+            not re.fullmatch(r'[a-fA-F0-9]{8}(?:-[a-fA-F0-9]{4}){3}-[a-fA-F0-9]{12}', str(project)) or
+            not task or task.get('association_confirmed') is not True or
+            task.get('media_id') != result['media_id'] or task.get('project_id') != project):
+        return None
+    return result
+
+
+def record_generation_failure(service, rid, result):
+    meta = service.ledger.metadata(rid)
+    task = {**(meta.get('provider_task') or {}), 'state': 'failed', 'source': 'gflow_cli_terminal_result'}
+    inputs = {**(meta.get('native_inputs') or {}), 'generation_submitted': True,
+              'generation_ready': False, 'native_stage': 'generation_failed', 'state': 'failed'}
+    message = ('CLI báo Flow tạo video thất bại (MEDIA_GENERATION_STATUS_FAILED). '
+               'ID đã cấp không có nghĩa là video đã hoàn tất. Chưa có tệp video để tải; không tự tạo lại.')
+    service.ledger.set_metadata(rid, {'provider_task': task, 'native_inputs': inputs,
+        'provider_failure_evidence': {'media_id': result['media_id'], 'succeeded': False,
+            'generation_status': result['generation_status'], 'source': 'cli_video_result'},
+        'message': message, 'phase': 'failed', 'progress': None, 'generation_not_started': False})
+    return message
+
+
 async def generate(service, rid, payload, reference):
     from .simple_flow import SimpleStopped
     binding=service.account_bridge.binding(payload['account_id'])
@@ -232,6 +262,10 @@ async def generate(service, rid, payload, reference):
         logs = {'exit_code': process.returncode, 'stdout': safe_log(stdout, payload['prompt']),
                 'stderr': safe_log(stderr, payload['prompt'])}
         service.ledger.set_metadata(rid, {'engine_diagnostics': logs})
+        failure = confirmed_generation_failure(logs, service.ledger.metadata(rid).get('provider_task'), project)
+        if failure:
+            from .simple_flow import FlowGenerationFailed
+            raise FlowGenerationFailed(record_generation_failure(service, rid, failure))
         if process.returncode:
             media = recovery_media(logs)
             if media:
@@ -341,6 +375,14 @@ async def recover_existing(service, rid):
     async with service.gate:
         meta = service.ledger.metadata(rid)
         if service.busy() or service.lookup(rid)['state'] != 'unknown' or meta.get('engine') != 'gflow-cli-direct':return
+        inputs = meta.get('native_inputs') or {}
+        project = inputs.get('project_id') or inputs.get('uploaded_media_project')
+        failure = confirmed_generation_failure(meta.get('engine_diagnostics') or {}, meta.get('provider_task'), project)
+        if failure:
+            message = record_generation_failure(service, rid, failure)
+            service.ledger.finish(rid, 'failed')
+            service.state, service.message = 'failed', message
+            return
         media = (meta.get('provider_task') or {}).get('media_id') or recovery_media(meta.get('engine_diagnostics') or {})
         if not media:return
         selection = service.account_bridge.selection()
