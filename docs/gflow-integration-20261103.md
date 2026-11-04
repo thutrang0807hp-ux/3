@@ -536,3 +536,16 @@ Workflow init trước đây readProjects getAll rồi find roomId, kéo dữ li
 scripts/analysis/check_navigation_loading.py tái hiện lỗi trên nguồn .63 (Late recipe loading stole the active tab); nguồn mới đạt delayed recipe/save/frame checks, chỉ 1 waitAPI/openRoom khi đổi tab liên tục, overlay không che tab đã sẵn sàng, IndexedDB get đúng phòng và 0 getAll projects, 0 canvas render khi mở chi tiết, chỉnh prompt giữ được. check_tab_navigation.py và check_veo_redesign_ui.py cùng ba check JS cũng đạt. Các phép thử dùng backend/iframe fixture, không xác minh Windows/Google thật.
 
 Gói .64 yêu cầu .63, chỉ thay index.html/studio.html/workflow.html. Launcher và từng HTML nhúng được kiểm lại; bản .63 giữ nguyên. Trang tải download-v46-64.html.
+
+
+## v46.65 — ba tab overview còn khựng
+
+Người dùng xác nhận Dựng/Phân tích đã nhanh hơn sau .64, nhưng Trang chủ/Kịch bản/Hàng loạt còn khựng. Đo riêng phát hiện recipe/batch đều gọi showView overview, dựng toàn bộ dashboard và flush workflow trước khi che dashboard; Hàng loạt gọi batchMount mỗi lần vào lại. stableHTML vẫn parse và patch dù markup giống nhau; homeCard tạo date formatter cho từng thẻ.
+
+showView hỗ trợ hai surface nội bộ recipes/batch: giữ currentView overview nhưng bỏ dựng dashboard ẩn. Chỉ flush khi rời workspace, không ghi lại iframe đang giữ nguyên khi chuyển giữa các trang overview. Trang chủ nhường paint trước công việc cập nhật và kiểm navigationEpoch sau yield. batchMount chỉ chạy lần đầu, lần sau batchRefreshProducts cập nhật danh sách sản phẩm mà giữ lựa chọn hợp lệ và form. Preview signature được reset khi revoke URL.
+
+stableHTML cache bằng WeakMap + MutationObserver: bỏ parse/patch khi HTML giống và subtree không bị thay đổi. Kiểm takeRecords đồng bộ và callback để phát hiện cả mutation tức thì/later; root attribute không invalidates child markup vì stableHTML không sở hữu root attributes. Dùng chung Intl.DateTimeFormat cho ngày trên homeCard/homeTable. content-visibility:auto cho thẻ home/recipe và nhóm batch ngoài viewport, có intrinsic size dự phòng, không giới hạn danh sách hay xóa dữ liệu.
+
+Fixture 200 phòng: .64 Trang chủ 135.6–261 ms, recipe 152.9–193.2 ms, batch 213.7–286.1 ms, 9 home renders/9 flush qua 3 vòng. .65 recipe/batch không home render, 0 flush khi overview→overview, batch input DOM và tỉ lệ giữ nguyên; lượt quay lại Trang chủ 31.9–39.1 ms (render 6.1–8.1 ms), recipe 11.6–32.4 ms, batch 2.7–7.1 ms. Lượt lạnh đầu có thể cao hơn (khoảng 69 ms home trong lần đo trước). Không suy ra thời gian trên Windows hay cam kết hết lag. Thay đổi dữ liệu cần patch thật, phép thử cập nhật tên phòng vẫn hiện chính xác.
+
+check_overview_tab_performance.py kiểm guard khi dò cảnh/lưu lỗi trước vào overview surface, giữ draft/tỉ lệ và input DOM, invalidation khi HTML đổi hoặc DOM bên ngoài bị sửa (cả trước/sau MutationObserver callback). check_tab_navigation và check_navigation_loading vẫn đạt, gồm lỗi tải cũ/khởi tạo frame/lưu dữ liệu/đọc một phòng/mở chi tiết không redraw. Gói .65 yêu cầu .64, chỉ thay hai shell HTML; trang download-v46-65.html. Chưa kiểm updater Windows/Flow thật.

@@ -1,0 +1,39 @@
+{
+  "version": "2026.11.04.4665",
+  "file": "SceneForge-Update-20261104-v46.65-Overview-Tabs.exe",
+  "bytes": 3986944,
+  "sha256": "add0dc7a4424983e5ee7516f3762f5346ed6b4ffabe1f84d9e38e630398d6f71",
+  "files": [
+    {
+      "path": "app/dist/web-demo/index.html",
+      "bytes": 1034192,
+      "sha256": "bc94c6db560d65920154b90f1fc8335f454f3f796dde38b591e87a97f41dd838"
+    },
+    {
+      "path": "app/dist/web-demo/studio.html",
+      "bytes": 1034192,
+      "sha256": "bc94c6db560d65920154b90f1fc8335f454f3f796dde38b591e87a97f41dd838"
+    }
+  ],
+  "minimum_patch": "2026.11.04.4664",
+  "embedded_files_verified": true,
+  "launcher_code_unchanged": true,
+  "baseline_source_commit": "61a7d1a",
+  "ui_only": true,
+  "installed_runtime_preserved": true,
+  "direct_overview_subpage_navigation": true,
+  "batch_form_retained": true,
+  "unchanged_markup_skipped_with_mutation_invalidation": true,
+  "offscreen_card_layout_deferred": true,
+  "home_date_formatter_reused": true,
+  "latest_navigation_click_wins": true,
+  "shared_frame_initialization": true,
+  "single_project_startup_read": true,
+  "scene_details_skip_canvas_rebuild": true,
+  "hidden_dashboard_render_skipped_on_workspace_navigation": true,
+  "lightweight_scanning_status": true,
+  "frame_instances_preserved": true,
+  "flush_and_busy_guards_preserved": true,
+  "live_flow_verified": false,
+  "windows_installer_tested": false
+}
