@@ -26,19 +26,19 @@ for(let i=0;i<8;i++){const t=performance.now();await showView(i%2?'analysis':'ed
 const workspaceRenders=renders;await showView('overview');
 const initialRoom=currentRoom.id,wf=document.querySelector('#workflowFrame'),ed=document.querySelector('#standaloneEditorDemo');
 {
- if(workspaceRenders!==0||reads!==0||flushes!==1)throw Error('Navigation rendered hidden board, cloned state, or skipped flush');
+ if(workspaceRenders!==0||reads!==0||flushes!==0)throw Error('View navigation rendered hidden board or forced a full state flush');
  await showView('analysis');wf.contentWindow.SceneForgeWorkflow.isScanning=()=>true;
- let blocked=false;try{await showView('overview')}catch{blocked=true}if(!blocked||currentView!=='analysis')throw Error('Scanning must block leaving');
+ let blocked=false;try{await SceneForgeApp.flush()}catch{blocked=true}if(!blocked||currentView!=='analysis')throw Error('Scanning must block strict disposal/checkpoint');
  wf.contentWindow.SceneForgeWorkflow.isScanning=()=>false;
  wf.contentWindow.SceneForgeWorkflow.flushRoom=async()=>{throw Error('fixture save failed')};
- blocked=false;try{await showView('overview')}catch{blocked=true}if(!blocked||currentView!=='analysis')throw Error('Failed save must keep current view');
+ blocked=false;try{await SceneForgeApp.flush()}catch{blocked=true}if(!blocked||currentView!=='analysis')throw Error('Failed strict save must keep current view');
  wf.contentWindow.SceneForgeWorkflow.flushRoom=async()=>{};ed.contentWindow.SceneForgeEditor.isExporting=()=>true;
- blocked=false;try{await showView('overview')}catch{blocked=true}if(!blocked||currentView!=='analysis')throw Error('Export must block leaving');
+ blocked=false;try{await SceneForgeApp.flush()}catch{blocked=true}if(!blocked||currentView!=='analysis')throw Error('Export must block strict disposal/checkpoint');
  ed.contentWindow.SceneForgeEditor.isExporting=()=>false;await showView('editor');await showView('analysis');
  if(document.querySelector('#workflowFrame')!==wf||document.querySelector('#standaloneEditorDemo')!==ed||currentRoom.id!==initialRoom)throw Error('Tab switching replaced frame or room');
  if(wf.hidden||!ed.hidden||ed.inert!==true)throw Error('Active frame visibility/inert incorrect');
  const api=wf.contentWindow.SceneForgeWorkflow;delete api.isScanning;api.getState=()=>({analysis:{status:'scanning'}});
- blocked=false;try{await showView('overview')}catch{blocked=true}if(!blocked)throw Error('Older API fallback lost scanning guard');
+ blocked=false;try{await SceneForgeApp.flush()}catch{blocked=true}if(!blocked)throw Error('Older API fallback lost scanning guard');
 }
 return {switchMs:samples,workspaceRenders,fullStateReads:reads,flushes,iframeCount:document.querySelectorAll('#roomFrames iframe').length};}'''))
   await b.close()

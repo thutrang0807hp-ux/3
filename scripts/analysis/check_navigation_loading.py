@@ -30,12 +30,13 @@ document.querySelector('#g6OpenRecipes').click();await turn();
 document.querySelector('.rail [data-view=editor]').click();await turn();
 releaseLibrary({items:[],trash:[],topics:[],usage:{},feedback:{}});await turn();await turn();
 check(currentView==='editor'&&!g6RecipeOpen,'Late recipe loading stole the active tab');recipeLibrary=originalLibrary;
-// A slow save must still finish, but must not take over after a later click.
-await showView('analysis');let releaseSave;const api=document.querySelector('#workflowFrame').contentWindow.SceneForgeWorkflow;let saved=0;
-api.flushRoom=()=>new Promise(r=>releaseSave=()=>{saved++;r()});
-document.querySelector('.rail [data-view=overview]').click();await turn();
-document.querySelector('.rail [data-view=editor]').click();await turn();releaseSave();await turn();await turn();
-check(currentView==='editor'&&saved===1,'Late overview save changed the active view or was discarded');api.flushRoom=async()=>{};
+// A loading/uneditable retained frame must not block ordinary tab changes.
+await showView('analysis');const api=document.querySelector('#workflowFrame').contentWindow.SceneForgeWorkflow;let strictCalls=0;
+api.flushRoom=async()=>{strictCalls++;throw Error('fixture blocked strict flush')};
+document.querySelector('.rail [data-view=overview]').click();await turn();await turn();
+check(currentView==='overview'&&strictCalls===0,'View navigation waited for a retained frame flush');
+document.querySelector('.rail [data-view=editor]').click();await turn();
+check(currentView==='editor'&&strictCalls===0,'Editor navigation forced a retained-frame save');api.flushRoom=async()=>{};
 // Start a cold analysis frame; revisit it while its API is delayed.
 document.querySelector('#workflowFrame').remove();let releaseAPI,opens=0,waits=0;
 const originalWait=waitAPI,originalPayload=roomPayload;
@@ -51,7 +52,7 @@ releaseAPI({openRoom:async data=>{check(data.id==='r','Wrong room payload');open
 check(currentView==='editor'&&frame.hidden&&frame.inert,'Late frame completion stole visibility');
 check(opens===1&&waits===1,'Concurrent tab clicks initialized the frame more than once');
 waitAPI=originalWait;roomPayload=originalPayload;
-return {lateRecipeIgnored:true,lateSaveCompletedWithoutNavigation:true,frameInitializationCount:opens,apiWaitCount:waits,readyTabUncovered:true};
+return {lateRecipeIgnored:true,retainedFramesDoNotBlockNavigation:true,frameInitializationCount:opens,apiWaitCount:waits,readyTabUncovered:true};
 }''')
  print('PASS shell',result)
  await page.close()

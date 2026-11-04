@@ -1,0 +1,55 @@
+{
+  "version": "2026.11.04.4667",
+  "file": "SceneForge-Update-20261104-v46.67-Project-Navigation.exe",
+  "bytes": 3986944,
+  "sha256": "fd33c65a167e3681e01a7e4d255d3555fc1c551def086517eedd9745e66c5cf2",
+  "files": [
+    {
+      "path": "app/dist/web-demo/index.html",
+      "bytes": 1035935,
+      "sha256": "b2d54abea90a920f53d29a37efe1f0839405f3afe80eae1e93ee6fa526041b28"
+    },
+    {
+      "path": "app/dist/web-demo/studio.html",
+      "bytes": 1035935,
+      "sha256": "b2d54abea90a920f53d29a37efe1f0839405f3afe80eae1e93ee6fa526041b28"
+    },
+    {
+      "path": "app/dist/web-demo/workflow.html",
+      "bytes": 833775,
+      "sha256": "22e1ecda63f92064a33dafdb071c5205c4d750c862879bdf2d68328482b5b64b"
+    }
+  ],
+  "minimum_patch": "2026.11.04.4666",
+  "embedded_files_verified": true,
+  "launcher_code_unchanged": true,
+  "baseline_source_commit": "a3f6c92",
+  "ui_only": true,
+  "installed_runtime_preserved": true,
+  "view_navigation_keeps_frames_and_autosave": true,
+  "strict_room_switch_and_checkpoint_guards": true,
+  "recent_people_uses_metadata_only": true,
+  "recipe_notifications_use_structural_summary": true,
+  "loaded_room_reused_without_duplicate_render": true,
+  "workspace_progress_skips_hidden_home_render": true,
+  "legacy_frame_markup_skipped_in_grid": true,
+  "database_readiness_barrier": true,
+  "preboot_navigation_deferred": true,
+  "recipe_read_failure_can_retry": true,
+  "existing_data_preserved_in_fixture": true,
+  "direct_overview_subpage_navigation": true,
+  "batch_form_retained": true,
+  "unchanged_markup_skipped_with_mutation_invalidation": true,
+  "offscreen_card_layout_deferred": true,
+  "home_date_formatter_reused": true,
+  "latest_navigation_click_wins": true,
+  "shared_frame_initialization": true,
+  "single_project_startup_read": true,
+  "scene_details_skip_canvas_rebuild": true,
+  "hidden_dashboard_render_skipped_on_workspace_navigation": true,
+  "lightweight_scanning_status": true,
+  "frame_instances_preserved": true,
+  "flush_and_busy_guards_preserved": true,
+  "live_flow_verified": false,
+  "windows_installer_tested": false
+}

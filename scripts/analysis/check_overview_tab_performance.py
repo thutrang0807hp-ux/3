@@ -24,10 +24,11 @@ recipeCache={version:4,items:structuredClone(SFRecipes.starters).map(r=>({...r,k
 batchState=batchReadState(null);batchState.draft='keep this unsent prompt';batchState.paused=true;
 let homeRenders=0;const homeBefore=homeDashboardPaint;homeDashboardPaint=(...args)=>{homeRenders++;return homeBefore(...args)};
 if(!baseline){
- await showView('analysis');const api=frame.contentWindow.SceneForgeWorkflow;api.isScanning=()=>true;let blocked=false;
- try{await g6OpenRecipes()}catch{blocked=true}check(blocked&&currentView==='analysis'&&!g6RecipeOpen,'Recipe entry bypassed scanning guard');
- api.isScanning=()=>false;api.flushRoom=async()=>{throw Error('fixture save failure')};blocked=false;
- try{await openBatchStudio()}catch{blocked=true}check(blocked&&currentView==='analysis'&&!batchOpen,'Batch entry bypassed save failure');
+ await showView('analysis');const api=frame.contentWindow.SceneForgeWorkflow;api.isScanning=()=>true;
+ await g6OpenRecipes();check(currentView==='overview'&&g6RecipeOpen&&frame.isConnected,'Recipe tab disposed an active analysis frame');
+ api.isScanning=()=>false;api.flushRoom=async()=>{throw Error('fixture save failure')};
+ await openBatchStudio();check(batchOpen&&frame.isConnected,'Batch navigation forced a flush/disposed the workflow');
+ let blocked=false;try{await SceneForgeApp.flush()}catch{blocked=true}check(blocked,'Strict checkpoint lost its save-error guard');
  api.flushRoom=async()=>{flushes++};await showView('overview');flushes=0;
 }
 const times={home:[],recipes:[],batch:[],render:[],board:[]};const oldRender=render;render=(...args)=>{const t=performance.now();const r=oldRender(...args);times.render.push(performance.now()-t);return r;};const oldBoard=homeDashboardPaint;homeDashboardPaint=(...args)=>{const t=performance.now();const r=oldBoard(...args);times.board.push(performance.now()-t);return r;};
