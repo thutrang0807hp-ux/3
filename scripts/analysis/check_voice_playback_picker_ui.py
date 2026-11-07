@@ -22,6 +22,7 @@ async def main():
   await page.route('**/*',route)
   await page.goto('http://127.0.0.1:43891/workflow.html?mode=reference');await page.wait_for_function('!!window.SFAudioNodes&&!!window.SceneForgeWorkflow')
   await page.evaluate('''async()=>{project=blankProject();project.id='voice-fixture';project.scenes=[sceneRecord(0,8,0,["data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"])];project.script=[{id:'line1',start:0,end:3,newText:'Xin chào bạn.',original:'Xin chào bạn.'},{id:'line2',start:3,end:8,newText:'Đây là lời đọc thử.',original:'Đây là lời đọc thử.'}];render();await SFAudioNodes.refresh();}''')
+  await page.evaluate("document.body.classList.add('compactWorkspaceFrame')")
   async def focus():
    await page.evaluate("()=>{const n=document.querySelector('#node-voice-over');view.z=1;view.x=30-n.offsetLeft;view.y=150-n.offsetTop;applyView();}")
    await page.wait_for_timeout(80)
