@@ -49,6 +49,7 @@ async def lifespan(app):
  sweeper=asyncio.create_task(storage_sweeper())
  try:yield
  finally:
+  await STOP_VOICE_PREVIEWS()
   sweeper.cancel()
   try:await sweeper
   except asyncio.CancelledError:pass
@@ -352,6 +353,9 @@ async def recommend_recipes(body:dict):
  return result
 @app.post('/local-api/ai/director')
 async def director(body:dict):return await gemini(body,'Choose a useful clip preference order from supplied clip metadata. Read only text, no video. Return {"order":[clip ids]} containing only actual input clip ids, no duplicates. Missing shot types must not trigger generation.')
+from .voice_previews import install_voice_previews
+STOP_VOICE_PREVIEWS=install_voice_previews(app,DATA,tts_lock)
+
 @app.get('/local-api/tts/status')
 async def speech_status():return tts_status(DATA)
 @app.post('/local-api/tts')

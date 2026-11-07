@@ -1,0 +1,87 @@
+{
+  "version": "2026.11.07.4671",
+  "file": "SceneForge-Update-20261107-v46.71-Shared-Previews.exe",
+  "bytes": 3986944,
+  "sha256": "f0925de5f580f1e02d87b348bec16efddeac49a0fc2b5477844f39223386d5b2",
+  "files": [
+    {
+      "path": "app/local_engine/server.py",
+      "bytes": 36844,
+      "sha256": "df0d84d5b56f1f2bcbad16d232b645a5319c4acbfa9905a54ba7f45638b29c01"
+    },
+    {
+      "path": "app/local_engine/voice_previews.py",
+      "bytes": 4002,
+      "sha256": "0692d89776e851702bf19b3ed3c784b2803e668f6f74981ac2e212ae6326d1fa"
+    },
+    {
+      "path": "app/local_engine/voice_previews_worker.py",
+      "bytes": 1382,
+      "sha256": "1677d210b52f43e7c0972992e25daf47c9fccdab45300d569d707bd8f6a36afc"
+    },
+    {
+      "path": "app/local_engine/voice_worker.py",
+      "bytes": 6128,
+      "sha256": "d419e1baf5c8d4490d5b4208729069c91dcdbf7e904615f9b15d23b043f6b8f8"
+    },
+    {
+      "path": "app/dist/web-demo/workflow.html",
+      "bytes": 846907,
+      "sha256": "0dcd6cfae82ad367f8c595c1482f738b7c29e5cfa8de2de5bed29b2bc1a1c3e0"
+    },
+    {
+      "path": "app/dist/web-demo/photos.html",
+      "bytes": 512707,
+      "sha256": "f5b2a3ab56633ee97dbd4329ac51b8491fcc0f6f94a426e5a6ed82463279fc24"
+    }
+  ],
+  "minimum_patch": "2026.11.07.4670",
+  "embedded_files_verified": true,
+  "launcher_code_unchanged": true,
+  "baseline_source_commit": "b661b91",
+  "ui_only": false,
+  "windows_voice_alias_compatible": true,
+  "explicit_shared_preparation": true,
+  "single_model_load_for_preview_batch": true,
+  "ready_preview_does_not_synthesize": true,
+  "installed_runtime_preserved": true,
+  "compact_searchable_voice_picker": true,
+  "immediate_audio_play": true,
+  "cached_sample_retry": true,
+  "fresh_readonly_diagnostic_export": true,
+  "labeled_last_backend_snapshot": true,
+  "export_request_store_room_binding_checked": true,
+  "unknown_store_not_treated_as_unsent": true,
+  "generation_behavior_unchanged": true,
+  "explicit_generation_failure_not_downloaded": true,
+  "legacy_failure_identity_checked": true,
+  "error_recovery_controls_reenabled": true,
+  "json_export_separate_from_clip_check": true,
+  "original_cli_runtime_unchanged": true,
+  "view_navigation_keeps_frames_and_autosave": true,
+  "strict_room_switch_and_checkpoint_guards": true,
+  "recent_people_uses_metadata_only": true,
+  "recipe_notifications_use_structural_summary": true,
+  "loaded_room_reused_without_duplicate_render": true,
+  "workspace_progress_skips_hidden_home_render": true,
+  "legacy_frame_markup_skipped_in_grid": true,
+  "database_readiness_barrier": true,
+  "preboot_navigation_deferred": true,
+  "recipe_read_failure_can_retry": true,
+  "existing_data_preserved_in_fixture": true,
+  "direct_overview_subpage_navigation": true,
+  "batch_form_retained": true,
+  "unchanged_markup_skipped_with_mutation_invalidation": true,
+  "offscreen_card_layout_deferred": true,
+  "home_date_formatter_reused": true,
+  "latest_navigation_click_wins": true,
+  "shared_frame_initialization": true,
+  "single_project_startup_read": true,
+  "scene_details_skip_canvas_rebuild": true,
+  "hidden_dashboard_render_skipped_on_workspace_navigation": true,
+  "lightweight_scanning_status": true,
+  "frame_instances_preserved": true,
+  "flush_and_busy_guards_preserved": true,
+  "live_flow_verified": false,
+  "windows_installer_tested": false
+}

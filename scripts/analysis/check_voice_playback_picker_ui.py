@@ -3,14 +3,19 @@ import asyncio
 from pathlib import Path
 from playwright.async_api import async_playwright,expect
 async def main():
- html=Path('workflow.html').read_text();wav=Path('/workspace/3/docs/voice-cpu-real.wav').read_bytes();posts=[];fail_tts=False
+ html=Path('workflow.html').read_text();wav=Path('/workspace/3/docs/voice-cpu-real.wav').read_bytes();posts=[];fail_tts=False;prepared=False;preparations=[]
  voices=[{'id':'voice'+str(i),'label':'Giọng '+str(i)+' · Nam Bắc · Phong cách tự nhiên'} for i in range(25)]
  async with async_playwright() as p:
   browser=await p.chromium.launch(executable_path='/usr/bin/chromium',args=['--no-sandbox'])
   page=await browser.new_page(viewport={'width':1450,'height':1000})
   async def route(r):
+   nonlocal prepared
    url=r.request.url
    if '/local-api/media/fixture.wav' in url:await r.fulfill(body=wav,content_type='audio/wav');return
+   if url.endswith('/tts/previews/prepare'):
+    prepared=True;preparations.append(True);await r.fulfill(json={'state':'ready','total':25,'ready':[{'id':v['id'],'url':'/local-api/media/fixture.wav'} for v in voices]});return
+   if url.endswith('/tts/previews/status'):
+    await r.fulfill(json={'state':'ready' if prepared else 'not-prepared','total':25,'ready':[{'id':v['id'],'url':'/local-api/media/fixture.wav'} for v in voices] if prepared else []});return
    if url.endswith('/tts/status'):await r.fulfill(json={'installed':True,'model_ready':True,'voices':voices});return
    if url.endswith('/audio-effects/status'):await r.fulfill(status=503,json={'detail':'fixture optional effects unavailable'});return
    if url.endswith('/tts') and r.request.method=='POST':
@@ -52,6 +57,12 @@ async def main():
   # A worker error must be visible at the top of the node, with controls restored.
   fail_tts=True;await node.locator('[data-an=voices]').click();await picker.locator('#anVoiceSearch').fill('Giọng 18');await picker.locator('[data-an=preset]').click();await focus()
   await node.locator('[data-an=sample]').click();await expect(node.locator('.anError')).to_contain_text('fixture VieNeu worker unavailable');await expect(node.locator('[data-an=sample]')).to_be_enabled();await expect(node.locator('[data-an=generate]')).to_be_enabled()
-  print('PASS 25-voice picker stays compact/searchable; real WAV playback advances; autoplay denial keeps sample and retry makes no new TTS; full narration saved; optional effects do not block TTS; worker errors remain visible')
+  # Shared ready samples are available in a new project, without another TTS POST.
+  await focus();await node.locator('[data-an=prepare-previews]').click();assert len(preparations)==1
+  before=len(posts)
+  await page.evaluate("async()=>{project.id='second-preview-room';project.audioNodes.samples={};await SFAudioNodes.refresh();}")
+  await focus();await node.locator('[data-an=sample]').click();await page.wait_for_function('SFAudioNodes.getState().playback.active&&SFAudioNodes.getState().playback.time>0.1');assert len(posts)==before
+  assert await page.evaluate('Object.values(project.audioNodes.samples).some(s=>s.sharedPreview)')
+  print('PASS shared ready sample plays in another room with no synthesis; 25-voice picker stays compact/searchable; real WAV playback advances; autoplay denial keeps sample and retry makes no new TTS; full narration saved; optional effects do not block TTS; worker errors remain visible')
   await browser.close()
 if __name__=='__main__':asyncio.run(main())
