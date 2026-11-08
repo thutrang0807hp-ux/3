@@ -31,7 +31,9 @@ async def main():
   async def focus():
    await page.evaluate("()=>{const n=document.querySelector('#node-voice-over');view.z=1;view.x=30-n.offsetLeft;view.y=150-n.offsetTop;applyView();}")
    await page.wait_for_timeout(80)
+  await page.evaluate("window.keptFrame=document.querySelector('[id^=frame-]')")
   await focus();await page.locator('#node-voice-over [data-an=voice][data-id=ai]').click();await focus()
+  assert await page.evaluate("!!keptFrame&&keptFrame===document.querySelector('[id^=frame-]')"),'Voice tab must retain existing scene frame DOM'
   node=page.locator('#node-voice-over')
   assert await node.locator('.anVoices').count()==0
   assert (await node.bounding_box())['height']<650
@@ -58,7 +60,7 @@ async def main():
   fail_tts=True;await node.locator('[data-an=voices]').click();await picker.locator('#anVoiceSearch').fill('Giọng 18');await picker.locator('[data-an=preset]').click();await focus()
   await node.locator('[data-an=sample]').click();await expect(node.locator('.anError')).to_contain_text('fixture VieNeu worker unavailable');await expect(node.locator('[data-an=sample]')).to_be_enabled();await expect(node.locator('[data-an=generate]')).to_be_enabled()
   # Shared ready samples are available in a new project, without another TTS POST.
-  await focus();await node.locator('[data-an=prepare-previews]').click();assert len(preparations)==1
+  await focus();await node.locator('[data-an=prepare-previews]').click();await expect(node.locator('.anPreviewPrep')).to_contain_text('25/25');assert len(preparations)==1
   before=len(posts)
   await page.evaluate("async()=>{project.id='second-preview-room';project.audioNodes.samples={};await SFAudioNodes.refresh();}")
   await focus();await node.locator('[data-an=sample]').click();await page.wait_for_function('SFAudioNodes.getState().playback.active&&SFAudioNodes.getState().playback.time>0.1');assert len(posts)==before

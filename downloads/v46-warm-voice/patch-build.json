@@ -1,0 +1,96 @@
+{
+  "version": "2026.11.08.4672",
+  "file": "SceneForge-Update-20261108-v46.72-Warm-Voice.exe",
+  "bytes": 3986944,
+  "sha256": "6c93d1c97616a322bf7ccb151e67fc7d85039d29205a66c893606b97a1608185",
+  "files": [
+    {
+      "path": "app/local_engine/server.py",
+      "bytes": 37079,
+      "sha256": "9d5be135c0aa96dfd86b1abb58f65cf41d90952b41e5044ae6209d67ad6afb55"
+    },
+    {
+      "path": "app/local_engine/local_tts.py",
+      "bytes": 4900,
+      "sha256": "8c56853a7e91f83c6937bd1e6f366243f2749b9dcc6ae6da6a8d52d354ab4b75"
+    },
+    {
+      "path": "app/local_engine/voice_runtime.py",
+      "bytes": 2666,
+      "sha256": "fe09aec5da85a45720273bad1d81b21a1680bc5df9f8eed6968dea1ba9b44984"
+    },
+    {
+      "path": "app/local_engine/voice_runtime_worker.py",
+      "bytes": 1492,
+      "sha256": "bc8a76331ac8a24e77ea12d48ad01b393b86160b4fbe14125cba0a7a86ce016e"
+    },
+    {
+      "path": "app/local_engine/voice_previews.py",
+      "bytes": 4573,
+      "sha256": "16c4919ca3394a1a16513daff209cb9aece6df3063ea4c97694e870b84756e24"
+    },
+    {
+      "path": "app/dist/web-demo/workflow.html",
+      "bytes": 848756,
+      "sha256": "6e87a563a86682b944c5041cc37dc7d730be66035839c050934ecc4bdc20b62a"
+    },
+    {
+      "path": "app/dist/web-demo/photos.html",
+      "bytes": 514556,
+      "sha256": "5b2c3857e7b93a3d310e7ac119d0c9c03402d76d0bf50c08db391f16850b17b5"
+    }
+  ],
+  "minimum_patch": "2026.11.07.4671",
+  "embedded_files_verified": true,
+  "launcher_code_unchanged": true,
+  "baseline_source_commit": "10ae0eb",
+  "ui_only": false,
+  "windows_voice_alias_compatible": true,
+  "persistent_private_cpu_worker": true,
+  "idle_release_seconds": 180,
+  "audio_controls_preserve_frame_dom": true,
+  "filesystem_checks_off_event_loop": true,
+  "explicit_shared_preparation": true,
+  "single_model_load_for_preview_batch": true,
+  "ready_preview_does_not_synthesize": true,
+  "installed_runtime_preserved": true,
+  "compact_searchable_voice_picker": true,
+  "immediate_audio_play": true,
+  "cached_sample_retry": true,
+  "fresh_readonly_diagnostic_export": true,
+  "labeled_last_backend_snapshot": true,
+  "export_request_store_room_binding_checked": true,
+  "unknown_store_not_treated_as_unsent": true,
+  "generation_behavior_unchanged": true,
+  "explicit_generation_failure_not_downloaded": true,
+  "legacy_failure_identity_checked": true,
+  "error_recovery_controls_reenabled": true,
+  "json_export_separate_from_clip_check": true,
+  "original_cli_runtime_unchanged": true,
+  "view_navigation_keeps_frames_and_autosave": true,
+  "strict_room_switch_and_checkpoint_guards": true,
+  "recent_people_uses_metadata_only": true,
+  "recipe_notifications_use_structural_summary": true,
+  "loaded_room_reused_without_duplicate_render": true,
+  "workspace_progress_skips_hidden_home_render": true,
+  "legacy_frame_markup_skipped_in_grid": true,
+  "database_readiness_barrier": true,
+  "preboot_navigation_deferred": true,
+  "recipe_read_failure_can_retry": true,
+  "existing_data_preserved_in_fixture": true,
+  "direct_overview_subpage_navigation": true,
+  "batch_form_retained": true,
+  "unchanged_markup_skipped_with_mutation_invalidation": true,
+  "offscreen_card_layout_deferred": true,
+  "home_date_formatter_reused": true,
+  "latest_navigation_click_wins": true,
+  "shared_frame_initialization": true,
+  "single_project_startup_read": true,
+  "scene_details_skip_canvas_rebuild": true,
+  "hidden_dashboard_render_skipped_on_workspace_navigation": true,
+  "lightweight_scanning_status": true,
+  "frame_instances_preserved": true,
+  "flush_and_busy_guards_preserved": true,
+  "live_flow_verified": false,
+  "windows_installer_tested": false
+}

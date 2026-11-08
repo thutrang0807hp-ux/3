@@ -1,5 +1,5 @@
 """Real API/SQLite-free cache tests with fixture WAVs; no model inference claim."""
-import asyncio,hashlib,importlib.util,json,sys,tempfile,types
+import asyncio,hashlib,importlib.util,json,sys,tempfile,types,time
 from pathlib import Path
 import httpx
 from fastapi import FastAPI
@@ -15,12 +15,27 @@ async def main():
    for row in voices:
     key=hashlib.sha256(row['id'].encode()).hexdigest();(folder/(key+'.wav')).write_bytes(WAV);(folder/(key+'.json')).write_text(json.dumps({'id':row['id'],'sha256':hashlib.sha256(WAV).hexdigest()}))
    return 0,b'',b''
+  async def synth(data,folder,beats,voice):
+   calls.append(voice);await release.wait();file='fixture-'+str(len(calls))+'.wav';(Path(folder)/file).write_bytes(WAV);return {'url':'/local-api/media/'+file,'sha256':hashlib.sha256(WAV).hexdigest()}
+  local.synthesize_isolated=synth
   machine.run_command=command
   spec=importlib.util.spec_from_file_location('prep_fixture.voice_previews',SRC/'voice_previews.py');m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
   app=FastAPI();lock=asyncio.Lock();shutdown=m.install_voice_previews(app,root,lock)
   async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app),base_url='http://testserver') as c:
    async def get():return (await c.get('/local-api/tts/previews/status')).json()
    assert (await get())['state']=='not-prepared' and not calls
+   original_status=m.tts_status
+   def slow_status(data):time.sleep(.08);return original_status(data)
+   m.tts_status=slow_status;done=False;ticks=0
+   async def read_slow():
+    nonlocal done
+    await get();done=True
+   async def tick():
+    nonlocal ticks
+    while not done:ticks+=1;await asyncio.sleep(.005)
+   await asyncio.gather(read_slow(),tick());m.tts_status=original_status
+   assert ticks>5,'Slow filesystem status must not block API event loop'
+
    key=hashlib.sha256(voices[0]['id'].encode()).hexdigest();assert (await c.get('/local-api/tts/previews/file/'+key)).status_code==404 and not calls
    await lock.acquire();assert (await c.post('/local-api/tts/previews/prepare',json={})).status_code==409;lock.release()
    assert (await c.post('/local-api/tts/previews/prepare',json={})).json()['state']=='running';await asyncio.sleep(.01);assert lock.locked() and len(calls)==1

@@ -50,6 +50,7 @@ async def lifespan(app):
  try:yield
  finally:
   await STOP_VOICE_PREVIEWS()
+  await VOICE_RUNTIME.close()
   sweeper.cancel()
   try:await sweeper
   except asyncio.CancelledError:pass
@@ -120,7 +121,7 @@ async def cloud_error(request:Request,error:HTTPException):
 
 @app.get('/local-api/status')
 async def status():
- return {'connected':True,'accounts':sorted(VAULT.rows('accounts'),key=lambda a:a.get('priority',0)),'logs':sorted(VAULT.rows('logs'),key=lambda l:l['at'],reverse=True)[:20],'rotation':VAULT.secret('rotation')or{'flow':False,'muse':False},'tts':tts_status(DATA),'openai_configured':bool(VAULT.secret('openai')),'gemini_configured':bool(VAULT.secret('gemini')),'ai_source':(VAULT.secret('ai-routing')or{}).get('source','gemini_chat'),'ai_configured':GEMINI_CHAT.status()['configured']if (VAULT.secret('ai-routing')or{}).get('source','gemini_chat')=='gemini_chat'else bool(VAULT.secret('gemini')),'active':{s:next((a for a in VAULT.rows('accounts')if a['service']==s and a.get('active')),None)for s in ['flow','muse','gemini_chat','grok','chatgpt','meta']},'engines':{**{key:WEB_IMAGES.status(key)for key in ('grok','chatgpt','meta')},'flow':{**FLOW_PROVIDER.status(),'generation':FLOW_PROVIDER.status()['generation_verified'],'adapter':True,'configured':FLOW_PROVIDER.status()['configured'],'reason':'Kết nối Flow cục bộ; chỉ đánh dấu chạy thật sau khi nhận và lưu kết quả.'},'muse':{**MUSE_PROVIDER.status(),'generation':MUSE_PROVIDER.status()['generation_verified']},'gemini_chat':{**GEMINI_CHAT.status(),'generation':GEMINI_CHAT.status()['generation_verified']}}}
+ return {'connected':True,'accounts':sorted(VAULT.rows('accounts'),key=lambda a:a.get('priority',0)),'logs':sorted(VAULT.rows('logs'),key=lambda l:l['at'],reverse=True)[:20],'rotation':VAULT.secret('rotation')or{'flow':False,'muse':False},'tts':await asyncio.to_thread(tts_status,DATA),'openai_configured':bool(VAULT.secret('openai')),'gemini_configured':bool(VAULT.secret('gemini')),'ai_source':(VAULT.secret('ai-routing')or{}).get('source','gemini_chat'),'ai_configured':GEMINI_CHAT.status()['configured']if (VAULT.secret('ai-routing')or{}).get('source','gemini_chat')=='gemini_chat'else bool(VAULT.secret('gemini')),'active':{s:next((a for a in VAULT.rows('accounts')if a['service']==s and a.get('active')),None)for s in ['flow','muse','gemini_chat','grok','chatgpt','meta']},'engines':{**{key:WEB_IMAGES.status(key)for key in ('grok','chatgpt','meta')},'flow':{**FLOW_PROVIDER.status(),'generation':FLOW_PROVIDER.status()['generation_verified'],'adapter':True,'configured':FLOW_PROVIDER.status()['configured'],'reason':'Kết nối Flow cục bộ; chỉ đánh dấu chạy thật sau khi nhận và lưu kết quả.'},'muse':{**MUSE_PROVIDER.status(),'generation':MUSE_PROVIDER.status()['generation_verified']},'gemini_chat':{**GEMINI_CHAT.status(),'generation':GEMINI_CHAT.status()['generation_verified']}}}
 
 @app.get('/local-api/logs')
 async def logs():return sorted(VAULT.rows('logs'),key=lambda l:l['at'],reverse=True)
@@ -353,11 +354,14 @@ async def recommend_recipes(body:dict):
  return result
 @app.post('/local-api/ai/director')
 async def director(body:dict):return await gemini(body,'Choose a useful clip preference order from supplied clip metadata. Read only text, no video. Return {"order":[clip ids]} containing only actual input clip ids, no duplicates. Missing shot types must not trigger generation.')
+from .voice_runtime import RUNTIME as VOICE_RUNTIME
 from .voice_previews import install_voice_previews
 STOP_VOICE_PREVIEWS=install_voice_previews(app,DATA,tts_lock)
 
 @app.get('/local-api/tts/status')
-async def speech_status():return tts_status(DATA)
+async def speech_status():return await asyncio.to_thread(tts_status,DATA)
+@app.get('/local-api/tts/runtime/status')
+async def voice_runtime_status():return VOICE_RUNTIME.status()
 @app.post('/local-api/tts')
 async def tts(body:dict):
  if tts_lock.locked():raise HTTPException(409,'Đang tạo giọng. Chờ lượt hiện tại hoàn tất.')
