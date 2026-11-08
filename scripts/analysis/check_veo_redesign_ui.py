@@ -1,15 +1,15 @@
 """Real workflow and Chromium; intercepted CLI endpoints, no Google calls."""
-import asyncio,base64,io,json,subprocess,tempfile
+import asyncio,base64,io,json,subprocess,tempfile,sys
 from pathlib import Path
 from PIL import Image
 from playwright.async_api import async_playwright,expect
 
 async def main():
- html=Path('workflow.html').read_text();errors=[];posts=[];records={};submit_mode='done'
+ html=Path('workflow.html').read_text();errors=[];posts=[];records={};submit_mode='done';short_tail='--short-tail' in sys.argv
  image=io.BytesIO();Image.new('RGB',(90,160),'#35636c').save(image,format='PNG');data='data:image/png;base64,'+base64.b64encode(image.getvalue()).decode()
  with tempfile.TemporaryDirectory() as tmp:
   video=Path(tmp)/'fixture.mp4'
-  subprocess.run(['ffmpeg','-hide_banner','-loglevel','error','-f','lavfi','-i','color=c=teal:s=90x160:r=8','-t','8','-c:v','libx264','-pix_fmt','yuv420p','-y',str(video)],check=True)
+  subprocess.run(['ffmpeg','-hide_banner','-loglevel','error','-f','lavfi','-i','color=c=teal:s=90x160:r='+('24' if short_tail else '8'),'-t','7.90' if short_tail else '8','-c:v','libx264','-pix_fmt','yuv420p','-y',str(video)],check=True)
   async with async_playwright() as pw:
    browser=await pw.chromium.launch(executable_path='/usr/bin/chromium',headless=True,args=['--no-sandbox'])
    page=await browser.new_page(viewport={'width':1500,'height':1100});page.on('pageerror',lambda e:errors.append(str(e)))
@@ -92,11 +92,20 @@ await storeProject();render();await SFVeoNode.refresh();
    await page.evaluate("SFVeoNode.sync('flow-ui-fixture')")
    assert await page.evaluate('project.scenes[0].clips.length')==1
    await expect(page.locator('#node-merge > header span')).to_have_text('1/9 clip')
+   if short_tail:
+    assert 7.85<=state['clip']['duration']<8,'Fixture must reproduce a 7.9-second source'
+    assert await page.evaluate('''(()=>{const r=SFVeoNode.slots()[0],c=r.s.clips[0];return !clipTimingInfo({...c,duration:7.849},r.p).ok&&clipTimingInfo({...c,duration:7.85},r.p).ok&&!clipTimingInfo({...c,duration:7.9,requestId:''},r.p).ok&&!clipTimingInfo({...c,duration:'7.9'},r.p).ok})()''')
+
+    result=await page.evaluate('''async()=>{const row=SFVeoNode.slots()[0],c=row.s.clips[0],cases=[['frameId','wrong-frame','Ảnh đầu'],['prompt','wrong-prompt','Prompt'],['slotStart',row.p.start+.1,'Mốc cảnh'],['duration',7.7,'7.700s'],['tail','','7.'],['origin','imported','7.'],['sourceIn',.1,'7.']];const messages=[];for(const [key,value,expected]of cases){const had=Object.hasOwn(c,key),previous=c[key];try{c[key]=value;try{await SFVeoNode.acceptClip(row);throw Error('BAD ACCEPT '+key);}catch(e){if(!e.message.includes('Cảnh 1')||!e.message.includes(expected))throw e;messages.push(e.message);}}finally{if(had)c[key]=previous;else delete c[key];}}return {messages,approved:!!c.reviewDecision,ready:readyCount(),duration:c.duration};}''')
+    assert len(result['messages'])==7 and not result['approved'] and result['ready']==0
    # Human approval still works; other scenes untouched.
    await page.locator('#vnDetail [data-vn=accept]').click()
    await expect(page.locator('#vnDetail [data-vn=accept]')).to_have_text('Đã duyệt')
    assert await page.evaluate("project.scenes[0].clips[0].reviewDecision.status")=='accepted'
    assert await page.evaluate('readyCount()')==1
+   if short_tail:
+    assert await page.evaluate('''(()=>{const c=project.scenes[0].clips[0];return c.duration<8&&c.timingAdjustment.kind==='codec-tail-hold'&&c.timingAdjustment.seconds>0&&c.timingAdjustment.seconds<=.15&&!!c.tail})()''')
+
    assert await page.evaluate("handoffFrameNode===document.querySelector('#node-frames')")
    await expect(page.locator('#runBar')).to_contain_text('1/9 cảnh đã duyệt')
    await page.locator('#modal [data-action=close-modal]').first.click()
@@ -182,5 +191,5 @@ await storeProject();render();await SFVeoNode.refresh();
    assert not errors,errors
    await page.screenshot(path='/tmp/veo-v58-detail.png',full_page=False)
    await browser.close()
- print('PASS Veo receive/idempotent reread refresh assembly without full render, auto-approval or editor overwrite; real node tiles/filter/detail/edit; live stage estimate; automatic file import + 100%; idempotency; separate approval; missing not presented as success; stable images/no writes on unchanged polls; all-missing queue prepares prompt despite filter and skips completed clips; stop on uncertainty; legacy negative receipts auto-unlock, unknown confirmation cancel sends nothing, acknowledgement permits one new request; local intercepted generation only')
+ print(('SHORT-TAIL ' if short_tail else '')+'PASS Veo receive/idempotent reread refresh assembly without full render, auto-approval or editor overwrite; real node tiles/filter/detail/edit; live stage estimate; automatic file import + 100%; idempotency; separate approval; missing not presented as success; stable images/no writes on unchanged polls; all-missing queue prepares prompt despite filter and skips completed clips; stop on uncertainty; legacy negative receipts auto-unlock, unknown confirmation cancel sends nothing, acknowledgement permits one new request; local intercepted generation only')
 if __name__=='__main__':asyncio.run(main())
