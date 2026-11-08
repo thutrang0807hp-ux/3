@@ -68,6 +68,7 @@ await storeProject();render();await SFVeoNode.refresh();
    await expect(page.locator('#vnDetail [data-vn=create]')).to_be_enabled()
    await expect(page.locator('#vnDetail [data-vn=write]')).to_be_enabled()
    assert 'Đang tạo' not in await page.locator('#vnDetail .vnDetailPlayer').inner_text()
+   await page.evaluate("window.handoffFrameNode=document.querySelector('#node-frames');window.handoffVeoNode=document.querySelector('#node-videos');project.merge.ndTransferred={signature:SFReferenceNodes.snapshot(),at:Date.now()};window.handoffMessages=[];const send=window.postMessage.bind(window);window.postMessage=(data,...rest)=>{handoffMessages.push(data);return send(data,...rest)}")
    records[job['id']]={'request_id':job['id'],'state':'done','result':{'room_id':'node-ui','scene_id':job['sceneId'],'part':job['part'],'mime_type':'video/mp4','settings':job['settings']}}
    await page.evaluate("SFVeoNode.sync('flow-ui-fixture')")
    await expect(page.locator('#vnDetail video')).to_have_count(1)
@@ -75,13 +76,29 @@ await storeProject();render();await SFVeoNode.refresh();
    state=await page.evaluate("({job:project.cloudJobs[0],clip:project.scenes[0].clips[0],chosen:project.scenes[0].chosen})")
    assert state['job']['state']=='imported' and state['clip']['autoReceivedAt'] and state['chosen']['a']==state['clip']['id']
    assert not state['clip'].get('reviewDecision'),'Receiving is not quality approval'
+   await expect(page.locator('#node-merge > header span')).to_have_text('1/9 clip')
+   await expect(page.locator('#node-merge .ndClipStrip em').first).to_have_text('✓')
+   await expect(page.locator('#node-merge [data-nd=handoff]')).to_contain_text('1/9')
+   assert await page.evaluate("handoffFrameNode===document.querySelector('#node-frames')&&handoffVeoNode===document.querySelector('#node-videos')")
+   assert await page.evaluate('readyCount()')==0,'Receiving must not silently approve quality'
+   await expect(page.locator('#node-merge .ndNew')).to_contain_text('Có lựa chọn clip mới')
+   assert await page.evaluate("handoffMessages.every(m=>m?.type!=='sceneforge:workflow-open-editor')"),'Receiving must not overwrite an existing editor timeline'
+   assert await page.evaluate("SFReferenceNodes.refreshHandoff('other-room')===false"),'Foreign-room refresh must be ignored'
+
+   # Re-reading an imported job also repairs stale handoff UI, without choosing another version.
+   await page.evaluate("document.querySelector('#node-merge > header span').textContent='STALE HANDOFF'")
+
    # Repeated reads never duplicate import.
    await page.evaluate("SFVeoNode.sync('flow-ui-fixture')")
    assert await page.evaluate('project.scenes[0].clips.length')==1
+   await expect(page.locator('#node-merge > header span')).to_have_text('1/9 clip')
    # Human approval still works; other scenes untouched.
    await page.locator('#vnDetail [data-vn=accept]').click()
    await expect(page.locator('#vnDetail [data-vn=accept]')).to_have_text('Đã duyệt')
    assert await page.evaluate("project.scenes[0].clips[0].reviewDecision.status")=='accepted'
+   assert await page.evaluate('readyCount()')==1
+   assert await page.evaluate("handoffFrameNode===document.querySelector('#node-frames')")
+   await expect(page.locator('#runBar')).to_contain_text('1/9 cảnh đã duyệt')
    await page.locator('#modal [data-action=close-modal]').first.click()
    await page.evaluate("document.querySelector('#node-videos [data-vn=filter-review]').click()")
    await expect(page.locator('#node-videos .vnTile')).to_have_count(0)
@@ -165,5 +182,5 @@ await storeProject();render();await SFVeoNode.refresh();
    assert not errors,errors
    await page.screenshot(path='/tmp/veo-v58-detail.png',full_page=False)
    await browser.close()
- print('PASS real node tiles/filter/detail/edit; live stage estimate; automatic file import + 100%; idempotency; separate approval; missing not presented as success; stable images/no writes on unchanged polls; all-missing queue prepares prompt despite filter and skips completed clips; stop on uncertainty; legacy negative receipts auto-unlock, unknown confirmation cancel sends nothing, acknowledgement permits one new request; local intercepted generation only')
+ print('PASS Veo receive/idempotent reread refresh assembly without full render, auto-approval or editor overwrite; real node tiles/filter/detail/edit; live stage estimate; automatic file import + 100%; idempotency; separate approval; missing not presented as success; stable images/no writes on unchanged polls; all-missing queue prepares prompt despite filter and skips completed clips; stop on uncertainty; legacy negative receipts auto-unlock, unknown confirmation cancel sends nothing, acknowledgement permits one new request; local intercepted generation only')
 if __name__=='__main__':asyncio.run(main())
