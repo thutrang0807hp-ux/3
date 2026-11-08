@@ -18,9 +18,9 @@ async def main():
    merge=page.locator('#node-merge')
    async def focus():await page.evaluate("()=>{const n=document.querySelector('#node-merge');view.z=1;view.x=30-n.offsetLeft;view.y=50-n.offsetTop;applyView();}")
    await focus();await expect(merge.locator('[data-nd=assembly-play]')).to_be_enabled();await merge.locator('[data-nd=assembly-play]').click();dialog=page.locator('#anCaptionDialog');await expect(dialog).to_be_visible();await expect(dialog.locator('header b')).to_have_text('Bản ghép tự động')
-   await page.wait_for_function('document.querySelector("#anCaptionDialog video").currentTime>0.1&&SFAudioNodes.getState().captionPreview.playing')
+   await page.wait_for_function('document.querySelector("#anCaptionDialog video[data-cap-active]").currentTime>0.1&&SFAudioNodes.getState().captionPreview.playing')
    assert await dialog.locator('[data-cap-text]').text_content()==''
-   first=await dialog.locator('video').get_attribute('src');await dialog.locator('[data-cap-seek]').evaluate('(el)=>{el.value=8.2;el.dispatchEvent(new Event("input",{bubbles:true}))}');await page.wait_for_function('(src)=>document.querySelector("#anCaptionDialog video").src!==src',arg=first)
+   first=await dialog.locator('video[data-cap-active]').get_attribute('src');await dialog.locator('[data-cap-seek]').evaluate('(el)=>{el.value=8.2;el.dispatchEvent(new Event("input",{bubbles:true}))}');await page.wait_for_function('(src)=>document.querySelector("#anCaptionDialog video[data-cap-active]").src!==src',arg=first)
    assert await page.evaluate('editorTransfers.length===0&&project.merge.ndTransferred.at===1234'),'Play must not overwrite/open Dựng'
    await dialog.locator('[data-cap-close]').click();await focus();await merge.locator('[data-nd-include=captions]').check();await merge.locator('[data-nd=assembly-play]').click();await expect(dialog).to_be_visible();await expect(dialog.locator('[data-cap-text]')).to_contain_text('Cảnh thứ nhất');await dialog.locator('[data-cap-close]').click()
    # Switching to manual while automatic preparation is delayed cancels the late viewer.
