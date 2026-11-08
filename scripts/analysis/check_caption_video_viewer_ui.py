@@ -17,9 +17,29 @@ async def main():
    assert await page.evaluate('''async()=>{try{await SFAudioNodes.preparePayload({clips:[],audio:[],captions:project.merge.captionDraft});return false}catch(e){return e.message.includes('Rà phụ đề')}}''')
    await page.locator('#node-captions [data-an=caption-preview]').click();dialog=page.locator('#anCaptionDialog');await expect(dialog).to_be_visible();await expect(dialog.locator('[data-cap-status]')).to_contain_text('cần rà')
    await dialog.locator('[data-cap-play]').click();await page.wait_for_function('document.querySelector("#anCaptionDialog video").currentTime>0.15');assert await page.evaluate('SFAudioNodes.getState().captionPreview.time')>0
+   # Deliberately stall persistence: style updates must remain synchronous and local.
+   await page.evaluate("window.savedStyleStore=storeProject;window.styleSaveWaiters=[];window.styleSaveCalls=0;storeProject=()=>{styleSaveCalls++;return new Promise(resolve=>styleSaveWaiters.push(resolve))};window.styleVideo=document.querySelector('#anCaptionDialog video');window.styleCanvas=document.querySelector('#anCaptionDialog canvas');window.styleFrame=document.querySelector('[id^=frame-]')")
+   hashes=[]
+   for style in ['yellowbox','box','tiktok','clean']:
+    await dialog.locator('[data-an=caption-style][data-id='+style+']').click()
+    await expect(dialog.locator('[data-an=caption-style][data-id='+style+']')).to_have_attribute('aria-pressed','true')
+    assert await page.evaluate('(style)=>project.merge.captionStyle===style&&project.merge.captionSize===37&&project.merge.captionY===80&&styleVideo===document.querySelector("#anCaptionDialog video")&&styleCanvas===document.querySelector("#anCaptionDialog canvas")&&styleFrame===document.querySelector("[id^=frame-]")&&!SFAudioNodes.getState().busy',style)
+    hashes.append(await dialog.locator('canvas').evaluate('(c)=>c.toDataURL()'))
+    if style=='tiktok':assert await dialog.locator('canvas').evaluate('(c)=>c.getContext("2d").font.startsWith("900 ")')
+   assert len(set(hashes))>=3,'Color/background styles must redraw actual overlay pixels (fixture font may map 700/900 to the same glyph)'
+   await page.wait_for_function('styleSaveCalls>0')
+   await dialog.locator('[data-an=caption-style][data-id=yellowbox]').click();assert await page.evaluate('project.merge.captionStyle')=='yellowbox'
+   assert await page.evaluate('SFAudioNodes.getState().captionPreview.playing'),'Style change must not pause video'
+   await page.evaluate('storeProject=savedStyleStore;for(const resolve of styleSaveWaiters)resolve()')
+   await dialog.locator('[data-an=caption-style][data-id=clean]').click()
    first=await dialog.locator('[data-cap-text]').text_content();assert len(first.split())<=5
    await dialog.locator('[data-cap-seek]').evaluate('(el)=>{el.value=4;el.dispatchEvent(new Event("input",{bubbles:true}))}');await dialog.locator('[data-cap-play]').click()
    assert await dialog.locator('[data-cap-text]').text_content()!=first
+   before=await dialog.locator('canvas').evaluate('(c)=>c.toDataURL()');time_before=await page.evaluate('SFAudioNodes.getState().captionPreview.time')
+   await dialog.locator('[data-an=caption-style][data-id=box]').click();after=await dialog.locator('canvas').evaluate('(c)=>c.toDataURL()');assert before!=after
+   assert await page.evaluate('!SFAudioNodes.getState().captionPreview.playing') and abs(await page.evaluate('SFAudioNodes.getState().captionPreview.time')-time_before)<.001
+   await dialog.locator('[data-an=caption-style][data-id=clean]').click()
+
    await dialog.locator('[data-cap-words]').select_option('3');assert len((await dialog.locator('[data-cap-text]').text_content()).split())<=3
    await dialog.locator('[data-cap-words]').select_option('8');assert len((await dialog.locator('[data-cap-text]').text_content()).split())<=8
    await dialog.locator('[data-cap-words]').select_option('0');assert await dialog.locator('[data-cap-text]').text_content()==text
@@ -30,6 +50,12 @@ async def main():
    assert result['raw']['text']==text and result['raw']['manual'] and result['words']==3 and result['size']==48 and result['y']==85 and result['png'] and result['layerCount']==len(pages)
    await dialog.locator('[data-cap-close]').click();await expect(dialog).to_have_count(0);assert await page.evaluate('SFAudioNodes.getState().captionPreview===null')
    assert await page.evaluate('viewerCreated.every(u=>viewerRevoked.includes(u))'),'Viewer must revoke all created media URLs'
+   await page.evaluate("window.nodeStyleStore=storeProject;window.nodeStyleWaiters=[];window.nodeStyleSaveCalls=0;storeProject=()=>{nodeStyleSaveCalls++;return new Promise(resolve=>nodeStyleWaiters.push(resolve))};const n=document.querySelector('#node-captions');view.x=30-n.offsetLeft;view.y=50-n.offsetTop;applyView()")
+   await page.locator('#node-captions [data-an=caption-style][data-id=tiktok]').click();await page.wait_for_function('nodeStyleSaveCalls>0')
+   await page.locator('#node-captions [data-an=caption-style][data-id=box]').click()
+   assert await page.evaluate("project.merge.captionStyle==='box'&&project.merge.captionSize===48&&project.merge.captionY===85&&!SFAudioNodes.getState().busy&&styleFrame===document.querySelector('[id^=frame-]')")
+   await page.evaluate('storeProject=nodeStyleStore;for(const resolve of nodeStyleWaiters)resolve()')
+
    # Missing clip never produces a fake video or a generation request.
    await page.evaluate('assets.delete("clip");render();const n=document.querySelector("#node-captions");view.x=30-n.offsetLeft;view.y=50-n.offsetTop;applyView()');await page.locator('#node-captions [data-an=caption-preview]').click();await expect(page.locator('#node-captions .anError')).to_contain_text('Chưa có clip')
    assert not errors,errors
@@ -37,9 +63,9 @@ async def main():
    await page.evaluate("""async({video,text})=>{const file=new File([Uint8Array.from(atob(video),c=>c.charCodeAt(0))],'fixture.mp4',{type:'video/mp4'});window.SceneForgeApp={photoBridge:{engine:async()=>({}),listRecipes:async()=>[],saveDraft:async()=>{},getFile:async key=>key==='clip'?file:null,putFile:async()=>{}}};const refs=Object.fromEntries(['person','outfit','product','background'].map(k=>[k,{images:[],description:''}]));const d=newDraft();d.refs=refs;d.voice.mode='native';d.beats=[{id:'b1',name:'Cảnh 1',type:'wide',seconds:8,text,clips:[{id:'pc1',key:'clip',part:'a',version:1,duration:8}],clipPlanning:{mode:'legacy',continuity:false}}];await SceneForgeWorkflow.openRoom({id:'photo-caption',name:'Photo caption',refs,product:{id:'prod',name:'Sản phẩm',sceneBank:[]},photoDraft:d});const post=photoProduction();post.captions=true;post.captionWords=5;post.cues=[{start:0,end:8,text,manual:true}];post.cueSignature=photoCueSignature();render();await SFAudioNodes.refresh();const n=document.querySelector('[data-node=captions]');view.z=1;view.x=30-n.offsetLeft;view.y=50-n.offsetTop;applyView();}""",{'video':video,'text':text})
    await page.locator('[data-node=captions] [data-an=caption-preview]').click();dialog=page.locator('#anCaptionDialog');await expect(dialog).to_be_visible();await dialog.locator('[data-cap-play]').click();await page.wait_for_function('document.querySelector("#anCaptionDialog video").currentTime>0.1')
    await dialog.locator('[data-cap-words]').select_option('0');assert await dialog.locator('[data-cap-text]').text_content()==text
-   await dialog.locator('[data-cap-words]').select_option('3');await dialog.locator('[data-cap-close]').click()
-   result=await page.evaluate("""async()=>{const r=await photoBuildDraftPayload();const layers=await SFAudioNodes.captionLayers(r.payload);return {pages:r.payload.captions,layers:layers.length,text:photoProduction().cues[0].text}}""")
-   assert all(len(r['text'].split())<=3 for r in result['pages']) and ' '.join(r['text'] for r in result['pages'])==text and result['text']==text and result['layers']==len(result['pages'])
+   await dialog.locator('[data-cap-words]').select_option('3');await dialog.locator('[data-an=caption-style][data-id=yellowbox]').click();assert await page.evaluate('photoProduction().style')=='yellowbox';await dialog.locator('[data-cap-close]').click()
+   result=await page.evaluate("""async()=>{const r=await photoBuildDraftPayload();const layers=await SFAudioNodes.captionLayers(r.payload);return {pages:r.payload.captions,layers:layers.length,text:photoProduction().cues[0].text,style:r.payload.captionStyle}}""")
+   assert all(len(r['text'].split())<=3 for r in result['pages']) and ' '.join(r['text'] for r in result['pages'])==text and result['text']==text and result['layers']==len(result['pages']) and result['style']=='yellowbox'
    await browser.close()
- print('PASS workflow/photos real MP4 clock and large caption canvas; live 3/5/8/full-cue controls; grouped payload/SRT/PNG layers retain all words and cue envelope; stale export guard retained; cleanup; missing video not fabricated')
+ print('PASS workflow/photos live styles while saves stalled; same video/canvas/frame DOM; paused/playing redraw preserves size/position; MP4 clock and large caption canvas; live 3/5/8/full-cue controls; grouped payload/SRT/PNG layers retain all words and cue envelope; stale export guard retained; cleanup; missing video not fabricated')
 if __name__=='__main__':asyncio.run(main())
