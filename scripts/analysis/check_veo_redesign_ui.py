@@ -78,7 +78,7 @@ await storeProject();render();await SFVeoNode.refresh();
    assert not state['clip'].get('reviewDecision'),'Receiving is not quality approval'
    await expect(page.locator('#node-merge > header span')).to_have_text('1/9 clip')
    await expect(page.locator('#node-merge .ndClipStrip em').first).to_have_text('✓')
-   await expect(page.locator('#node-merge [data-nd=handoff]')).to_contain_text('1/9')
+   await expect(page.locator('#node-merge [data-nd=assembly-play]')).to_contain_text('1/9')
    assert await page.evaluate("handoffFrameNode===document.querySelector('#node-frames')&&handoffVeoNode===document.querySelector('#node-videos')")
    assert await page.evaluate('readyCount()')==0,'Receiving must not silently approve quality'
    await expect(page.locator('#node-merge .ndNew')).to_contain_text('Có lựa chọn clip mới')
