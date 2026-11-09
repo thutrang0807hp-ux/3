@@ -1,0 +1,48 @@
+{
+  "version": "2026.11.10.4696",
+  "file": "SceneForge-Update-20261110-v46.96-Smooth-Exit.exe",
+  "bytes": 3986944,
+  "sha256": "fb4efbb1ce4f97450a7dfea3eab7cfa58b778e5e631ac7d13718fdbe0977e113",
+  "files": [
+    {
+      "path": "app/dist/web-demo/index.html",
+      "bytes": 1072761,
+      "sha256": "d86007c84cfbc276ca2f71c8bd149fa4749318ff6663f63fc88a7a1d77c8f68f"
+    },
+    {
+      "path": "app/dist/web-demo/studio.html",
+      "bytes": 1037001,
+      "sha256": "6b9849e8c0a4624e16922b7adc8942e482e29c27ff5c2bdc45103ed3a6ef23bb"
+    },
+    {
+      "path": "app/dist/web-demo/workflow.html",
+      "bytes": 939853,
+      "sha256": "5c00a32e103e75bc154344533ccb02c48361c347c85b463fddc27a3157fc7a33"
+    },
+    {
+      "path": "app/dist/web-demo/photos.html",
+      "bytes": 598886,
+      "sha256": "c49edbb8e4cce0ecc5deb0c149a08169fc8561c5b4c51671b5b952df4488ffff"
+    },
+    {
+      "path": "app/dist/web-demo/native/index.html",
+      "bytes": 558080,
+      "sha256": "3e61af9d4d3937cd7c23760f9bc64c956351a6f3140bb3ef075d31e80a36b0fa"
+    }
+  ],
+  "minimum_patch": "2026.11.09.4695",
+  "embedded_files_verified": true,
+  "launcher_code_unchanged": true,
+  "baseline_source_commit": "4646bb4",
+  "ui_only": true,
+  "clean_checkpoint_noop": true,
+  "save_only_frame_flush": true,
+  "workflow_photo_save_version_tracking": true,
+  "editor_save_only_exit_api": true,
+  "room_switch_guards_preserved": true,
+  "real_save_failure_still_warns": true,
+  "host_javascript_handshake_tested": true,
+  "native_host_unchanged": true,
+  "windows_desktop_exit_tested": false,
+  "windows_installer_tested": false
+}

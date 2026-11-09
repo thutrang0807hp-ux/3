@@ -4167,7 +4167,9 @@ const loadBeforeAutomaticRows=$('#projectFile').onchange;$('#projectFile').oncha
 
 // Room-scoped persistence wraps the existing editor; standalone editor remains usable.
 let editorRoomReadyResolve,editorRoomReadyReject;
-const bootBeforeRoomShell=bootSharedEditor;bootSharedEditor=function(){bootBeforeRoomShell();if(!editorRoomId)return;
+const bootBeforeRoomShell=bootSharedEditor;bootSharedEditor=function(){bootBeforeRoomShell();
+ window.SceneForgeEditor.flushForClose=async()=>{await window.SceneForgeEditor.roomReady;clearTimeout(editorSaveTimer);while(editorSaveBusy)await new Promise(r=>setTimeout(r,20));await flushEditorDraft();while(editorSaveBusy)await new Promise(r=>setTimeout(r,20));if(editorSavedVersion!==editorSaveVersion)throw Error('Chưa lưu được bản dựng.');};
+ if(!editorRoomId)return;
  window.SceneForgeEditor.roomReady=new Promise((resolve,reject)=>{editorRoomReadyResolve=resolve;editorRoomReadyReject=reject;});
  window.SceneForgeEditor.isExporting=()=>recording;
  window.SceneForgeEditor.flushRoom=async()=>{await window.SceneForgeEditor.roomReady;if(recording)throw Error('Đợi xuất video xong trước khi đổi phòng.');clearTimeout(editorSaveTimer);while(editorSaveBusy)await new Promise(r=>setTimeout(r,40));await flushEditorDraft();while(editorSaveBusy)await new Promise(r=>setTimeout(r,40));if(editorSavedVersion!==editorSaveVersion)throw Error('Chưa lưu được bản dựng. Không đổi phòng để tránh mất dữ liệu.');};
