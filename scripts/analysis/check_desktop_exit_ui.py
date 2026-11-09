@@ -3,7 +3,7 @@
 No Windows host is executed: its existing JavaScript handshake is reproduced in
 Chromium. Genuine save failures must still return ok:false to the host.
 """
-import asyncio,importlib,json,sys,tempfile,zipfile
+import asyncio,importlib,json,sys,tempfile,zipfile,hashlib
 from pathlib import Path
 from urllib.parse import urlsplit
 import httpx
@@ -13,6 +13,7 @@ ROOT=Path('/workspace/3')
 HOST="""async()=>{try{await window.SceneForgeApp?.flush?.();await window.SceneForgeStorage?.flush?.();return {type:'sf-desktop-flush',ok:true};}catch(e){return {type:'sf-desktop-flush',ok:false,error:e.message};}}"""
 async def main():
  paths=['index.html','workflow.html','photos.html','native/index.html'];html={p:(Path(p)if Path(p).exists()else ROOT/p).read_text()for p in paths}
+ html['index.html']=html['index.html'].replace('return {ready,edit,','return {testContentHash:contentHash,testEqualBlob:equalBlob,ready,edit,')
  with tempfile.TemporaryDirectory(prefix='sf-exit96-')as td:
   root=Path(td);pkg=root/'exit_runtime';pkg.mkdir();(pkg/'__init__.py').write_text('')
   with zipfile.ZipFile(ROOT/'downloads/v46/SceneForge-Veo-v46-Source.zip')as z:
@@ -32,6 +33,10 @@ async def main():
     if target in html:await r.fulfill(body=html[target],content_type='text/html');return
     await r.fulfill(status=404,body='')
    await page.route('**/*',route);await page.goto('http://127.0.0.1:43891/');await page.wait_for_function('appBootReady&&SceneForgeStorage.state.active');await page.evaluate('''async()=>{prefs.package5WelcomeDone=true;await savePrefs();document.querySelector('#shellDialog').close();const r={id:'exit-room',name:'Exit fixture',mode:'reference',productId:products[0].id,stage:'draft'};rooms.push(r);await io('rooms','readwrite',r.id,r);document.querySelector('#roomFrames').replaceChildren();const f=document.createElement('iframe');f.id='workflowFrame';f.src='workflow.html?room=exit-room&host=1&mode=reference';document.querySelector('#roomFrames').append(f);}''');frame=page.frame_locator('#workflowFrame');await page.wait_for_function('!!document.querySelector("#workflowFrame").contentWindow.SceneForgeWorkflow?.flushForClose');wf=page.frames[-1]
+   binary=await page.evaluate("""async()=>{const a=new Blob(['x'.repeat(16*1024*1024)]),b=new Blob(['x'.repeat(16*1024*1024)]),c=new Blob(['x'.repeat(16*1024*1024-1)+'y']);const at=performance.now();const nativeHash=await SceneForgeStorage.testContentHash(a);const nativeMs=performance.now()-at;const before=performance.now();const oldHash=(await SceneForgePortable.fingerprintWorker(a)).hash;return {nativeHash,oldHash,nativeMs,workerMs:performance.now()-before,equal:await SceneForgeStorage.testEqualBlob(a,b),different:await SceneForgeStorage.testEqualBlob(a,c)}}""")
+   assert binary['nativeHash']==binary['oldHash']==hashlib.sha256(b'x'*(16*1024*1024)).hexdigest(),binary
+   assert binary['equal']and not binary['different'],binary
+   print('16MiB hash native_ms='+str(round(binary['nativeMs'],1))+' previous_worker_ms='+str(round(binary['workerMs'],1)))
    await page.evaluate('SceneForgeStorage.observeWindow(document.querySelector("#workflowFrame").contentWindow)');await wf.evaluate("assets.set('fixture-media',new Blob(['x'.repeat(2*1024*1024)],{type:'video/mp4'}));project.name='Initial saved';save()")
    warm=await page.evaluate(HOST);assert warm['ok'],warm;assert not await page.evaluate('SceneForgeStorage.state.dirty')
    # Metadata-only saves must never open unchanged project/media cursors.
