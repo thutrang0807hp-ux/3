@@ -3236,4 +3236,13 @@ const accountFPSimplePaintBefore=paintAccounts;paintAccounts=function(){accountF
   if(clean)clean.onclick=async()=>{clean.disabled=true;scan.disabled=true;try{const result=await engineRequest('accounts/profile-lite',{token:plan.token});plan=null;await settingsMeasure();if(g5SettingsTab==='storage'){g5PaintSettings();document.querySelector('#profileCacheResult').textContent='Đã dọn '+archiveFormat(result.bytes)+' · '+result.files+' file'+(result.errors?' · '+result.errors+' file chưa dọn được':'')+(result.skipped_profiles?' · bỏ qua '+result.skipped_profiles+' profile đang dùng/chưa xác minh':'');}}catch(e){document.querySelector('#profileCacheResult').textContent=e.message;scan.disabled=false;}};
  };
 })();
+</script><script>
+(()=>{
+ const button=document.createElement('button');button.id='workspaceFlowCredit';button.type='button';button.textContent='Credit · — ↻';button.title='Credit Flow · bấm để đọc số dư tài khoản đang chọn';document.querySelector('#workspaceHeaderControls').prepend(button);
+ let refreshing=false;
+ function show(row){const known=typeof row.credit==='number'&&Number.isFinite(row.credit)&&row.credit>=0;button.textContent=refreshing?'Đọc credit…':(known?row.credit.toLocaleString('vi-VN')+' cr':'Credit · —')+' ↻';button.title=(row.name||'Chưa chọn tài khoản Flow')+' · '+(known?(row.credit_at?'Đọc lúc '+new Date(row.credit_at*1000).toLocaleString('vi-VN'):'Số đã lưu; chưa rõ thời điểm'):'Chưa đọc số dư')+' · bấm để cập nhật';}
+ async function cached(){if(refreshing)return;try{show(await engineRequest('flow/credit'));}catch{}}
+ button.onclick=async()=>{if(refreshing)return;refreshing=true;button.disabled=true;button.textContent='Đọc credit…';try{const result=await engineRequest('flow/credit/refresh',{});refreshing=false;show(result);if(result.read!==true)toast(result.message||'Chưa đọc được credit Flow.');}catch(e){toast(e.message);}finally{refreshing=false;button.disabled=false;await cached();}};
+ document.querySelector('#shellDialog').addEventListener('close',cached);window.addEventListener('sceneforge:app-ready',cached);if(appBootReady)cached();
+})();
 </script></body></html>

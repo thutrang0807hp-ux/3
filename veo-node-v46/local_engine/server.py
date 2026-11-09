@@ -560,6 +560,8 @@ BROWSER_BRIDGE=install_browser_bridge(app,GEMINI_CHAT,FLOW_ACCOUNTS)
 
 from .simple_flow import install_simple_flow
 SIMPLE_FLOW=install_simple_flow(app,DATA,VAULT,REQUESTS,FLOW_PROVIDER)
+from .flow_credit import install_flow_credit
+install_flow_credit(app,FLOW_ACCOUNTS,SIMPLE_FLOW,DATA)
 
 from .fingerprints import install_fingerprints
 def fingerprint_busy(aid):
