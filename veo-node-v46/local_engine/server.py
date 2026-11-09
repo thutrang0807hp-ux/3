@@ -567,6 +567,8 @@ def fingerprint_busy(aid):
  entry=profiles(VAULT,DATA).registry().get(aid)
  return bool(entry and profiles(VAULT,DATA).lease(entry).locked()or aid in WEB_IMAGES.assignments.values()or aid in FLOW_PROVIDER.assignments.values()or aid in GEMINI_CHAT.phases.values()or GEMINI_CHAT.lock(aid).locked()or aid in MUSE_PROVIDER.phases.values()or MUSE_PROVIDER.lock(aid).locked()or account(aid)['service']=='flow'and SIMPLE_FLOW.busy())
 install_fingerprints(app,VAULT,DATA,fingerprint_busy)
+from .profile_cache import install_profile_cache
+install_profile_cache(app,VAULT,DATA,fingerprint_busy)
 
 if frontend.is_dir():app.mount('/',StaticFiles(directory=frontend,html=True),name='frontend')
 

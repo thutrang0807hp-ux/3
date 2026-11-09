@@ -116,10 +116,12 @@ async def open_google_login(url, data, *, profile=None, keep_profile=False, exec
     (profile/'DevToolsActivePort').unlink(missing_ok=True)
     # Dedicated writable profile is required by Chrome 136+ for local CDP.
     args = [executable, '--user-data-dir='+str(profile), '--remote-debugging-address=127.0.0.1',
-            '--remote-debugging-port=0', '--window-size=1280,800', '--disk-cache-size=67108864', '--media-cache-size=33554432', '--no-first-run', '--no-default-browser-check', '--new-window', 'about:blank'if device_profile else url]
+            '--remote-debugging-port=0', '--window-size=1280,800', '--disk-cache-size=33554432', '--media-cache-size=16777216', '--no-first-run', '--no-default-browser-check', '--new-window', 'about:blank'if device_profile else url]
     try:
-        process = subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                                   **({'creationflags':0x08000000} if os.name == 'nt' else {}))
+        from .profile_cache import GATE
+        async with GATE:
+            process = subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                                       **({'creationflags':0x08000000} if os.name == 'nt' else {}))
     except OSError:
         if not keep_profile:shutil.rmtree(profile, ignore_errors=True)
         raise HTTPException(503, 'Chưa mở được Chrome/Edge. Kiểm tra trình duyệt đã cài trên máy.') from None
@@ -172,12 +174,14 @@ async def open_flow_web_login(data,auto_connect=False,profile_key=None):
         login=await open_google_login('https://flow.google.com/',data,profile=profile,keep_profile=True,executable=executable,device_profile=fp)
         _FLOW_DEVICE_LOGINS.append(login);_FLOW_WEB_PROCESSES.append(login.process)
         return {'opened':True,'message':'Đã mở Flow với fingerprint tùy chỉnh của profile. Không bảo đảm phiên còn hiệu lực; chưa tạo video.'}
-    args=[executable,'--user-data-dir='+str(profile.resolve()),'--window-size=1280,800','--disk-cache-size=67108864','--media-cache-size=33554432','--no-first-run',
+    args=[executable,'--user-data-dir='+str(profile.resolve()),'--window-size=1280,800','--disk-cache-size=33554432','--media-cache-size=16777216','--no-first-run',
           '--no-default-browser-check','--new-window','https://flow.google.com/']
     if auto_connect:args[1:1]=['--remote-debugging-address=127.0.0.1','--remote-debugging-port=0']
     try:
-        process=subprocess.Popen(args,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,
-                                 **({'creationflags':0x08000000}if os.name=='nt'else{}))
+        from .profile_cache import GATE
+        async with GATE:
+            process=subprocess.Popen(args,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,
+                                     **({'creationflags':0x08000000}if os.name=='nt'else{}))
     except OSError:
         raise HTTPException(503,'Chưa mở được Chrome/Edge. Kiểm tra trình duyệt đã cài trên máy.')from None
     _FLOW_WEB_PROCESSES[:]=[p for p in _FLOW_WEB_PROCESSES if p.poll()is None]

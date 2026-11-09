@@ -12,7 +12,7 @@ async def main():
   root=Path(td);pkg=root/'fp_runtime';pkg.mkdir();(pkg/'__init__.py').write_text('')
   with zipfile.ZipFile(ROOT/'downloads/v46/SceneForge-Veo-v46-Source.zip')as z:
    for name in ['vault.py','schema.py']:(pkg/name).write_bytes(z.read('local_engine/'+name))
-  for name in ['browser_profiles.py','google_login.py','fingerprints.py']:
+  for name in ['browser_profiles.py','google_login.py','fingerprints.py','profile_cache.py']:
    src=Path('local_engine')/name;src=src if src.exists()else ROOT/'veo-node-v46/local_engine'/name;(pkg/name).write_bytes(src.read_bytes())
   sys.path.insert(0,td);fp=importlib.import_module('fp_runtime.fingerprints');bp=importlib.import_module('fp_runtime.browser_profiles');google=importlib.import_module('fp_runtime.google_login');Vault=importlib.import_module('fp_runtime.vault').Vault;data=root/'data';vault=Vault(data)
   vault.put('accounts',{'id':'A','service':'grok','name':'A'});vault.put('accounts',{'id':'G','service':'gemini_chat','name':'G'});manager=bp.profiles(vault,data);entry=manager.reserve('grok','A');manager.settings(entry,'/usr/bin/chromium');ge=manager.reserve('gemini_chat','G');manager.settings(ge,'/usr/bin/chromium')

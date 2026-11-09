@@ -9,7 +9,9 @@ async def launch_background(pw,profile):
  from .fingerprints import read_config,apply
  cfg=read_config(profile)
  options={'viewport':{'width':cfg['width'],'height':cfg['height']}}if cfg['enabled']else{}
- context=await pw.chromium.launch_persistent_context(str(profile),executable_path=installed_browser(),headless=True,accept_downloads=True,timeout=25000,**options)
+ from .profile_cache import GATE,CACHE_ARGS
+ async with GATE:
+  context=await pw.chromium.launch_persistent_context(str(profile),executable_path=installed_browser(),headless=True,accept_downloads=True,timeout=25000,args=CACHE_ARGS,**options)
  await apply(context,cfg)
  return context
 

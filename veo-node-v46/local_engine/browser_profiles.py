@@ -112,7 +112,9 @@ class Profiles:
    path=self.path(entry['service'],entry['key']);marker=path/'sceneforge-seeded'
    from .fingerprints import read_config,apply
    fp=read_config(path);viewport={'width':fp['width'],'height':fp['height']}if fp['enabled']else cfg['viewport']
-   context=await pw.chromium.launch_persistent_context(str(path),executable_path=cfg['executable'],headless=False,viewport=viewport,args=['--disk-cache-size=67108864','--media-cache-size=33554432'])
+   from .profile_cache import GATE,CACHE_ARGS
+   async with GATE:
+    context=await pw.chromium.launch_persistent_context(str(path),executable_path=cfg['executable'],headless=False,viewport=viewport,args=CACHE_ARGS)
    await apply(context,fp)
    if storage:
     current={(c['domain'],c['path'],c['name'])for c in await context.cookies()}

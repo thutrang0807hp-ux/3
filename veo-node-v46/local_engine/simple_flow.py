@@ -193,7 +193,9 @@ class SimpleFlow:
   profile=self.data/'browser-profiles'/'simple-flow'/self.channel
   from playwright.async_api import async_playwright
   self.pw=await async_playwright().start()
-  self.context=await self.pw.chromium.launch_persistent_context(str(profile),executable_path=str(executable),headless=False,accept_downloads=True)
+  from .profile_cache import GATE,CACHE_ARGS
+  async with GATE:
+   self.context=await self.pw.chromium.launch_persistent_context(str(profile),executable_path=str(executable),headless=False,accept_downloads=True,args=CACHE_ARGS)
   self.page=self.context.pages[0]if self.context.pages else await self.context.new_page()
   await self.page.goto(saved['project'],wait_until='domcontentloaded',timeout=60000)
   current=await self.identity()
@@ -211,7 +213,9 @@ class SimpleFlow:
    executable=self.find_browser(self.channel)
    profile=self.data/'browser-profiles'/'simple-flow'/self.channel;profile.mkdir(parents=True,exist_ok=True)
    self.state='opening';self.message='Đang mở trình duyệt đăng nhập thông thường.'
-   self.login_process=subprocess.Popen([str(executable),'--user-data-dir='+str(profile.resolve()),'--no-first-run','--disable-background-mode','--new-window','https://flow.google.com/'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,**({'creationflags':0x08000000}if os.name=='nt'else{}))
+   from .profile_cache import GATE,CACHE_ARGS
+   async with GATE:
+    self.login_process=subprocess.Popen([str(executable),'--user-data-dir='+str(profile.resolve()),*CACHE_ARGS,'--no-first-run','--disable-background-mode','--new-window','https://flow.google.com/'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,**({'creationflags':0x08000000}if os.name=='nt'else{}))
    while True:
     await self.checkpoint('login','Đăng nhập Flow trong cửa sổ vừa mở. Mở được Flow rồi ĐÓNG các cửa sổ của phiên này và bấm Tiếp tục. Nếu Google từ chối, bấm Dừng.')
     if self.login_process.poll()is not None:break
@@ -219,7 +223,9 @@ class SimpleFlow:
    from playwright.async_api import async_playwright
    self.state='connecting';self.message='Đang mở lại profile đã chọn.'
    self.pw=await async_playwright().start()
-   self.context=await self.pw.chromium.launch_persistent_context(str(profile),executable_path=str(executable),headless=False,accept_downloads=True)
+   from .profile_cache import GATE,CACHE_ARGS
+   async with GATE:
+    self.context=await self.pw.chromium.launch_persistent_context(str(profile),executable_path=str(executable),headless=False,accept_downloads=True,args=CACHE_ARGS)
    self.page=self.context.pages[0] if self.context.pages else await self.context.new_page()
    await self.page.goto('https://flow.google.com/',wait_until='domcontentloaded',timeout=60000)
    await self.checkpoint('project','Kiểm tra đúng tài khoản và mở đúng dự án Flow muốn dùng. Nếu cửa sổ này yêu cầu đăng nhập lại hoặc từ chối đăng nhập, bấm Dừng; chưa tạo video.')

@@ -1,0 +1,11 @@
+# .104 — conservative browser-profile cache maintenance
+
+The prior 880.8 MB profile total does not identify how much is disposable. Add a per-profile scan of recognized app-owned Flow and service profile paths, separating allowlisted disposable cache files from retained state. Do not claim all profile bytes can be removed.
+
+Only exact Cache, Code Cache, GPUCache, ShaderCache, GrShaderCache and Dawn cache directories at the profile root or Default/Profile N are eligible. Cookies, Network, Local State, Preferences, Local Storage, IndexedDB, Session Storage, Service Worker/CacheStorage, fingerprint and unknown paths are retained. Symlinks, Windows reparse points, unknown profile locations and active/uncertain profiles are skipped. Bounded scans must complete before deletion; explicit cleanup checks a current metadata token. Each file's metadata and ancestors are rechecked before unlink. Windows process inspection fails closed on errors; Linux excludes zombie processes. No process command lines or session contents are exposed in UI.
+
+A shared async gate serializes cleanup with app browser launches; OS process inspection and Chromium singleton indicators protect existing browser processes. Startup schedules one idle maintenance attempt after 15 seconds. Active accounts or unverified state may defer cleanup until a later app launch/manual attempt. Limits are advisory Chromium launch arguments (32 MiB disk cache, 16 MiB media cache), consistently supplied to native Flow, other service profiles, background Flow and legacy simple Flow. They do not cap the total profile or site storage.
+
+Settings provides scan/cleanup controls with per-profile eligible and retained byte counts. Existing total profile usage measurement remains physical disk usage. User data is not migrated or reset.
+
+Validation: real Chromium cookie/localStorage/IndexedDB survive cleanup and restart; retained files/fingerprint byte-identical; active and uncertain profiles skipped; changed token rejected; external symlink target and unknown profile untouched; HTTP endpoints and actual Settings actions checked. Existing custom fingerprint and persistent account-isolation browser tests pass. No real provider login or Windows cleanup execution. Cumulative .62+ package includes all required modules and previous app updates.

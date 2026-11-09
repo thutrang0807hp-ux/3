@@ -11,9 +11,11 @@ async def main():
   tmp=Path(td);pkg=tmp/'storage89_runtime';pkg.mkdir();(pkg/'__init__.py').write_text('')
   with zipfile.ZipFile(root/'downloads/v46/SceneForge-Veo-v46-Source.zip')as z:
    for name in ['library.py','library_api.py','library_lock.py','storage_lifecycle.py','schema.py','instance.py','storage_jobs.py']:(pkg/name).write_bytes(z.read('local_engine/'+name))
+  pcsource=Path('local_engine/profile_cache.py');pcsource=pcsource if pcsource.exists()else root/'veo-node-v46/local_engine/profile_cache.py';(pkg/'profile_cache.py').write_bytes(pcsource.read_bytes())
   source=Path('local_engine/monitoring.py');source=source if source.exists()else root/'veo-node-v46/local_engine/monitoring.py';(pkg/'monitoring.py').write_bytes(source.read_bytes());sys.path.insert(0,td)
   tts=types.ModuleType('storage89_runtime.local_tts');tts.engine_root=lambda data:tmp/'voice';sys.modules[tts.__name__]=tts
   api=importlib.import_module('storage89_runtime.library_api');monitor=importlib.import_module('storage89_runtime.monitoring');app=FastAPI();data=tmp/'data';data.mkdir();lib=api.install_library(app,data);monitor.install_monitoring(app,None,None,lib,data)
+  pc=importlib.import_module('storage89_runtime.profile_cache');v=types.SimpleNamespace(rows=lambda name:[]);pc.install_profile_cache(app,v,data,lambda aid:False);profile=data/'browser-profiles/flow-accounts'/('a'*24);cachefile=profile/'Default/Cache/data';cachefile.parent.mkdir(parents=True);cachefile.write_bytes(b'PROFILE_CACHE');auth=profile/'sceneforge-fingerprint.json';auth.write_text('KEEP')
   old=lib.root/'cache/thu-vien-old.zip';old.write_bytes(b'CACHE');os.utime(old,(time.time()-7200,)*2);fresh=lib.root/'cache/thu-vien-new.zip';fresh.write_bytes(b'FRESH');model=data/'models';model.mkdir();(model/'weights.bin').write_bytes(b'MODEL')
   working=data/'timeline-exports';working.mkdir();(working/'render.mp4').write_bytes(b'WORKING_VIDEO')
   outside=data/'outside';outside.write_bytes(b'NOT_MANAGED');(lib.root/'cache/link').symlink_to(outside)
@@ -22,7 +24,7 @@ async def main():
    browser=await pw.chromium.launch(executable_path='/usr/bin/chromium',args=['--no-sandbox']);page=await browser.new_page(viewport={'width':1440,'height':1050});errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
    async def route(r):
     path=r.request.url.split('/local-api/')[-1]
-    if '/local-api/library/'in r.request.url:
+    if '/local-api/library/'in r.request.url or '/local-api/accounts/profile-cache'in r.request.url:
      requests.append((r.request.method,path));response=await client.request(r.request.method,'/local-api/'+path,content=r.request.post_data_buffer,headers={'content-type':r.request.headers.get('content-type','application/json')});await r.fulfill(status=response.status_code,body=response.content,content_type=response.headers.get('content-type','application/json'));return
     if '/local-api/'in r.request.url:
      await r.fulfill(json={'engines':[],'accounts':[]}if path=='system'else []if path in ['logs','notifications','accounts']else{});return
@@ -47,6 +49,7 @@ async def main():
    await page.set_viewport_size({'width':600,'height':900});await page.screenshot(path='/tmp/sceneforge-storage-manager-mobile-v89.png');assert await page.locator('.g5SettingsScroll').evaluate('e=>e.scrollWidth<=e.clientWidth+2')
    # Shared physical file is counted once globally, in each logical project.
    before=lib.status()['revision'];again=monitor.storage_breakdown(lib,data);assert again['counts']['projects']['images']==2 and lib.status()['revision']==before
+   await page.evaluate("g5OpenSettings('storage')");await page.locator('#profileCacheScan').click();await expect(page.locator('#profileCacheClean')).to_be_enabled();await page.locator('#profileCacheClean').click();await expect(page.locator('#profileCacheResult')).to_contain_text('Đã dọn');assert not cachefile.exists()and auth.read_text()=='KEEP'
    assert not errors,errors;await browser.close()
   await client.aclose()
  print('PASS real SQLite/deduplicated media counts; per-project shared bytes; search/filter/sort/selection; guarded single/bulk cleanup; cache cancel/confirm preserves model/project/fresh files; responsive storage overview; no provider requests')

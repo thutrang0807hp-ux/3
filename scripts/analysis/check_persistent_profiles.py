@@ -15,7 +15,7 @@ async def main():
   root=Path(td);pkg=root/'profile_runtime';pkg.mkdir();(pkg/'__init__.py').write_text('')
   with zipfile.ZipFile(ROOT/'downloads/v46/SceneForge-Veo-v46-Source.zip')as z:
    for name in ['vault.py','schema.py']:(pkg/name).write_bytes(z.read('local_engine/'+name))
-  for name in ['browser_profiles.py','google_login.py','fingerprints.py']:
+  for name in ['browser_profiles.py','google_login.py','fingerprints.py','profile_cache.py']:
    src=Path('local_engine')/name;src=src if src.exists()else ROOT/'veo-node-v46/local_engine'/name;(pkg/name).write_bytes(src.read_bytes())
   sys.path.insert(0,td);mod=importlib.import_module('profile_runtime.browser_profiles');Vault=importlib.import_module('profile_runtime.vault').Vault;data=root/'data';vault=Vault(data)
   for id in ['A','B']:vault.put('accounts',{'id':id,'name':id,'service':'grok','enabled':True,'state':'ready'})
