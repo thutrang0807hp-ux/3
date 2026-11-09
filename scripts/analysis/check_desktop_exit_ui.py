@@ -46,6 +46,12 @@ async def main():
    assert any(r['key']=='incremental-fixture'for r in lib.snapshot()['records'])
    await page.evaluate("""async()=>{await new Promise((ok,no)=>{const tx=db.transaction('prefs','readwrite');tx.objectStore('prefs').delete('incremental-fixture');tx.oncomplete=ok;tx.onerror=()=>no(tx.error)});await SceneForgeStorage.flush()}""")
    assert not any(r['key']=='incremental-fixture'for r in lib.snapshot()['records'])
+   # Save from inside the workflow with Ctrl+S, then close without redoing work.
+   await wf.evaluate("project.name='Manual durable save';save();document.dispatchEvent(new KeyboardEvent('keydown',{key:'s',ctrlKey:true,bubbles:true,cancelable:true}))")
+   await page.wait_for_function("document.querySelector('#projectSaveStatus').textContent==='Đã lưu'")
+   assert next(r for r in lib.snapshot()['records']if r['db']=='sceneforge-workflows'and r['key']=='exit-room')['value']['name']=='Manual durable save'
+   before=len(requests);assert (await page.evaluate(HOST))['ok']
+   assert not any(method=='POST'and path.endswith('/snapshot')for method,path in requests[before:])
    await wf.evaluate("(()=>{window.exitWrites=0;const old=IDBObjectStore.prototype.put;IDBObjectStore.prototype.put=function(...args){if(this.name==='projects')exitWrites++;return old.apply(this,args)};})()")
    before=len(requests);idle=await page.evaluate('''async fn=>{const at=performance.now();const result=await eval('('+fn+')')();return {result,ms:performance.now()-at}}''',HOST);assert idle['result']['ok']and idle['ms']<500,idle;assert await wf.evaluate('exitWrites')==0;assert not any(method=='POST'and path.endswith('/snapshot')for method,path in requests[before:]),requests[before:];assert not await page.evaluate("(()=>{const e=new Event('beforeunload',{cancelable:true});dispatchEvent(e);return e.defaultPrevented})()")
    # One new workflow edit: the host's two flush calls must write it only once.
@@ -73,7 +79,7 @@ async def main():
    result=await page.evaluate(HOST);assert result['ok'],result;draft=next(r for r in lib.snapshot()['records']if r['db']=='sceneforge-editor-local'and r['key']=='exit-room');assert any(m.get('label')=='Last editor edit'for m in draft['value']['payload']['markers']);assert await ed.evaluate('SceneForgeEditor.isExporting()')is True
    await ed.evaluate('(()=>{SceneForgeEditor.isExporting=window.exitIsExporting})()');await page.evaluate("document.querySelector('#standaloneEditorDemo').remove();document.querySelector('#exitWorkflowHidden').id='workflowFrame'")
    # Failed canonical save still warns, retaining the newer browser draft.
-   reject=True;await wf.evaluate("project.name='Unsynced edit retained';save()");failed=await page.evaluate(HOST);assert not failed['ok'];assert await wf.evaluate("(async()=>{const p=await readProject(project.id);return p.name})()")=='Unsynced edit retained';assert not await page.evaluate('SceneForgeStorage.state.active');assert await page.evaluate("(()=>{const e=new Event('beforeunload',{cancelable:true});dispatchEvent(e);return e.defaultPrevented})()")
+   reject=True;await wf.evaluate("project.name='Unsynced edit retained';save()");assert not await page.evaluate("async()=>{try{await SceneForgeApp.saveProject();return true}catch{return false}}");assert await page.locator('#projectSaveStatus').inner_text()=='Lưu lỗi';failed=await page.evaluate(HOST);assert not failed['ok'];assert await wf.evaluate("(async()=>{const p=await readProject(project.id);return p.name})()")=='Unsynced edit retained';assert not await page.evaluate('SceneForgeStorage.state.active');assert await page.evaluate("(()=>{const e=new Event('beforeunload',{cancelable:true});dispatchEvent(e);return e.defaultPrevented})()")
    report=await page.evaluate("JSON.parse(localStorage.getItem('sceneforge-close-error'))");assert report['stage']in ['Ghi kho dữ liệu trên máy','Kiểm tra kho dữ liệu']and 'Fixture save conflict'in report['error'],report
    assert 'Fixture save conflict'in await page.locator('#sfCloseDiagnostic').inner_text()
    assert not errors,errors;await browser.close()

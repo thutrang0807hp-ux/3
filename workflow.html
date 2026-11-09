@@ -323,14 +323,14 @@ function displayFrame(s){return s.frames.find(f=>f.id===s.approvedFrame)?.image|
 function frameApproved(s){return !!s.approvedFrame;}
 function estimate(){if(!project.scenes.length)return null;let total=0,known=true;for(const s of project.scenes){const cost=project.settings.costs[s.model];if(cost===null||!Number.isFinite(cost)||cost<0)known=false;else total+=clipParts(s).length*cost;}return known?total:null;}
 let workflowEditVersion=0,workflowSavedVersion=-1,workflowSavedId=null;const workflowWrites=new Set();
-function save(){workflowEditVersion++;project.updatedAt=Date.now();$('#saveStatus').textContent='Đang lưu…';clearTimeout(saveTimer);saveTimer=setTimeout(storeProject,350);}
+function save(){workflowEditVersion++;parent.postMessage({type:'sceneforge:draft-status',dirty:true},location.origin);project.updatedAt=Date.now();$('#saveStatus').textContent='Đang lưu…';clearTimeout(saveTimer);saveTimer=setTimeout(storeProject,350);}
 async function openDB(){return new Promise((resolve,reject)=>{const r=indexedDB.open('sceneforge-workflows',1);r.onupgradeneeded=()=>r.result.createObjectStore('projects',{keyPath:'id'});r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});}
 async function writeWorkflowDraft(){
  if(!db)throw Error('Chưa mở được kho bản nháp.');
  const version=workflowEditVersion,id=project.id,payload={...clone(project),assetEntries:[...assets.entries()]};
  const write=new Promise((resolve,reject)=>{const tx=db.transaction('projects','readwrite');tx.objectStore('projects').put(payload);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);});
  workflowWrites.add(write);
- try{await write;workflowSavedVersion=version;workflowSavedId=id;localStorage.setItem('sceneforge-workflow-last',id);$('#saveStatus').textContent='✓ Đã lưu trên máy';}
+ try{await write;workflowSavedVersion=version;workflowSavedId=id;parent.postMessage({type:'sceneforge:draft-status',dirty:workflowSavedVersion!==workflowEditVersion},location.origin);localStorage.setItem('sceneforge-workflow-last',id);$('#saveStatus').textContent='✓ Đã lưu trên máy';}
  finally{workflowWrites.delete(write);}
 }
 async function storeProject(){try{await writeWorkflowDraft();}catch{$('#saveStatus').textContent='Bộ nhớ đầy hoặc chưa lưu được · hãy lưu JSON';}}
@@ -2819,4 +2819,4 @@ const inspectBefore=g6Open;g6Open=function(kind,id,version=null,part=null){if(ki
 const reconcileBefore=reconcileWorkflowJob;reconcileWorkflowJob=function(job){return job.veoNodeVersion===VERSION?sync(job.id):reconcileBefore(job);};
 window.SFVeoNode={version:46,jobSchema:VERSION,slots,selected,refresh,sync,receive,create,view,stageProgress,tileState,openClipDetail,acceptClip};
 })();
-</script></body></html>
+</script><script>if(parent!==window)document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&!e.altKey&&e.key.toLowerCase()==='s'){e.preventDefault();e.stopImmediatePropagation();if(!e.repeat)parent.postMessage({type:'sceneforge:save-project'},location.origin);}},true);</script></body></html>

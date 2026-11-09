@@ -631,7 +631,7 @@ window.SFProviderReceipts={jobWireId,jobPostFailure,jobReadRecord,jobReadError,w
 window.SceneForgeCloseTrace={async step(stage,action){
  const at=performance.now();let panel;
  const show=(detail)=>{panel??=document.getElementById('sfCloseDiagnostic');if(!panel){panel=document.createElement('div');panel.id='sfCloseDiagnostic';panel.style.cssText='position:fixed;z-index:2147483647;left:24px;right:24px;bottom:24px;padding:18px;background:#291b16;color:#ffe5c4;border:1px solid #ad7745;border-radius:12px;white-space:pre-wrap;font:14px system-ui';document.body.append(panel);}panel.textContent=detail;};
- const timer=setInterval(()=>show('Đang đóng · '+stage+'\n'+(window.SceneForgeStorage?.state?.phase||'Đang chờ lưu dữ liệu.')+'\nChưa xác nhận lưu xong.'),2500);
+ const timer=setInterval(()=>show((window.SceneForgeManualSave?'Đang lưu dự án · ':'Đang đóng · ')+stage+'\n'+(window.SceneForgeStorage?.state?.phase||'Đang chờ lưu dữ liệu.')+'\nChưa xác nhận lưu xong.'),2500);
  try{const result=await action();clearInterval(timer);panel?.remove();return result;}
  catch(e){clearInterval(timer);const report={stage,phase:window.SceneForgeStorage?.state?.phase||'',error:String(e?.message||e),elapsed_ms:Math.round(performance.now()-at),at:new Date().toISOString()};try{localStorage.setItem('sceneforge-close-error',JSON.stringify(report));}catch{}show('Chưa đóng được · '+stage+'\n'+report.error+'\nDữ liệu chưa được xác nhận lưu xong. Chụp thông báo này để kiểm tra.');throw e;}
 }};
@@ -647,7 +647,7 @@ window.SceneForgeStorage=(()=>{
  const identity=(d,s,k)=>JSON.stringify([d,s,k]);
  function announce(){dispatchEvent(new CustomEvent('sceneforge:storage-status'));}
  async function api(path,body,method){const res=await fetch('/local-api/library/'+path,{method:method||(body===undefined?'GET':'POST'),headers:body===undefined?{}:{'Content-Type':'application/json','X-SceneForge-Local':'1'},body:body===undefined?undefined:JSON.stringify(body)});if(!res.ok){let data;try{data=await res.json();}catch{}const e=Error(data?.detail||'Không đọc được kho trên máy.');e.status=res.status;throw e;}return res.json();}
- function change(d,s,k){if(suppress||!schemas[d]?.includes(s))return;dirty.add(identity(d,s,k));epoch++;localStorage.setItem('sceneforge-library-dirty','1');if(active){clearTimeout(timer);timer=setTimeout(()=>checkpoint().catch(()=>{}),1800);}}
+ function change(d,s,k){if(suppress||!schemas[d]?.includes(s))return;dirty.add(identity(d,s,k));epoch++;localStorage.setItem('sceneforge-library-dirty','1');announce();if(active&&!timer)timer=setTimeout(()=>{timer=null;checkpoint().catch(()=>{});},1800);}
  function observeWindow(w){if(!enabled||w.IDBObjectStore.prototype.__sfStorage)return;const proto=w.IDBObjectStore.prototype;Object.defineProperty(proto,'__sfStorage',{value:true});for(const method of ['put','add','delete','clear']){const old=proto[method];proto[method]=function(...args){const tx=this.transaction,d=tx.db.name,s=this.name;if(!schemas[d]?.includes(s))return old.apply(this,args);const req=old.apply(this,args),key=method==='delete'?args[0]:undefined;tx.addEventListener('complete',()=>change(d,s,method==='clear'?null:method==='delete'?key:req.result),{once:true});return req;};}}
  function open(name){return new Promise((ok,no)=>{const req=indexedDB.open(name,1);req.onupgradeneeded=()=>(schemas[name]||schemas['sceneforge-app-shell']).forEach(s=>req.result.createObjectStore(s,name==='sceneforge-workflows'?{keyPath:'id'}:undefined));req.onsuccess=()=>ok(req.result);req.onerror=()=>no(req.error);});}
  async function hasLocalRecords(){for(const[d,stores]of Object.entries(schemas)){const db=await open(d);try{for(const store of stores){const count=await new Promise((ok,no)=>{const r=db.transaction(store).objectStore(store).count();r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error);});if(count)return true;}}finally{db.close();}}return false;}
@@ -735,7 +735,7 @@ window.SceneForgeStorage=(()=>{
  async function rowsDigest(rows){return contentHash(new Blob([canonical([...rows].sort((a,b)=>identity(a.db,a.store,a.key).localeCompare(identity(b.db,b.store,b.key))))]));}
  async function compareLocal(){comparing=true;try{const rows=[];for(const r of await readAll())rows.push({...r,value:await encode(r.value)});return rowsDigest(rows);}finally{comparing=false;}}
  async function markMutation(id,kind='cleanup',rows=null){const digest=rows?await rowsDigest(rows):await compareLocal();localStorage.setItem('sceneforge-library-intent',JSON.stringify({id,kind,digest,library_id:libraryId,base_revision:revision}));return id;}
- async function checkpoint(){if(editing)return;if(!managed||!active)return;if(busy)return busy;if(!fullScan&&!dirty.size)return {revision,library_id:libraryId,unchanged:true};busy=(async()=>{let sent=false;try{phase='Chuẩn bị thay đổi và kiểm tra media';const rows=JSON.parse(JSON.stringify(await prepare())),generation=epoch,id=crypto.randomUUID();phase='Tính mã kiểm tra metadata';await markMutation(id,'checkpoint',rows);sent=true;phase='Chờ máy ghi SQLite / sao lưu / bản xuất';const snapshot=await api('snapshot',{revision,records:rows,mutation_id:id});phase='Đối chiếu kết quả đã lưu';const returned=new Map(snapshot.records.map(r=>[identity(r.db,r.store,r.key),canonical(r.value)]));if(snapshot.records.length!==rows.length||rows.some(r=>returned.get(identity(r.db,r.store,r.key))!==canonical(r.value)))throw Error('Số bản ghi chưa khớp sau khi lưu.');revision=snapshot.revision;if(generation===epoch){dirty.clear();localStorage.removeItem('sceneforge-library-dirty');}fullScan=false;lastSaved=Date.now();error=(snapshot.warnings||[]).join(' ');localStorage.setItem('sceneforge-library-revision',String(revision));localStorage.removeItem('sceneforge-library-intent');announce();return snapshot;}catch(e){error=e.message;if(e.status===409||sent&&(!e.status||e.status>=500))active=false;announce();throw e;}finally{busy=null;phase='';}})();return busy;}
+ async function checkpoint(){if(editing)return;if(!managed||!active)return;if(busy)return busy;if(!fullScan&&!dirty.size)return {revision,library_id:libraryId,unchanged:true};clearTimeout(timer);timer=null;busy=(async()=>{let sent=false;try{phase='Chuẩn bị thay đổi và kiểm tra media';const rows=JSON.parse(JSON.stringify(await prepare())),generation=epoch,id=crypto.randomUUID();phase='Tính mã kiểm tra metadata';await markMutation(id,'checkpoint',rows);sent=true;phase='Chờ máy ghi SQLite / sao lưu / bản xuất';const snapshot=await api('snapshot',{revision,records:rows,mutation_id:id});phase='Đối chiếu kết quả đã lưu';const returned=new Map(snapshot.records.map(r=>[identity(r.db,r.store,r.key),canonical(r.value)]));if(snapshot.records.length!==rows.length||rows.some(r=>returned.get(identity(r.db,r.store,r.key))!==canonical(r.value)))throw Error('Số bản ghi chưa khớp sau khi lưu.');revision=snapshot.revision;if(generation===epoch){dirty.clear();localStorage.removeItem('sceneforge-library-dirty');}fullScan=false;lastSaved=Date.now();error=(snapshot.warnings||[]).join(' ');localStorage.setItem('sceneforge-library-revision',String(revision));localStorage.removeItem('sceneforge-library-intent');announce();return snapshot;}catch(e){error=e.message;if(e.status===409||sent&&(!e.status||e.status>=500))active=false;announce();throw e;}finally{busy=null;phase='';if(active&&!error&&dirty.size&&!editing&&!timer)timer=setTimeout(()=>{timer=null;checkpoint().catch(()=>{});},1800);announce();}})();announce();return busy;}
  async function ready(){if(!enabled)return;let status;try{status=await api('status');}catch{return;}if(!Number.isInteger(status?.revision)||typeof status.root!=='string'||!Array.isArray(status.backups))return;diskRoot=status.root;managed=true;revision=status.revision;observeWindow(window);active=false;
   if(navigator.locks){let acquired;const granted=new Promise(ok=>acquired=ok);navigator.locks.request('sceneforge-library-writer',{ifAvailable:true},lock=>{acquired(!!lock);if(lock)return new Promise(resolve=>lease=resolve);}).catch(()=>acquired(false));if(!await granted){error='Thư viện đang mở ở cửa sổ khác. Đóng cửa sổ đó trước để tránh ghi đè.';throw Error(error);}}
   try{const remote=await api('snapshot'),hasLocal=await hasLocalRecords(),known=Number(localStorage.getItem('sceneforge-library-revision')||-1);
@@ -3097,5 +3097,33 @@ async function open(){
  location.assign('/?accounts=flow');
 }
 window.SFSimpleFlow={open,close(){}};
+})();
+</script><script>
+// Explicit durable save uses the same failure-checked path as native close.
+(()=>{
+ const control=document.createElement('div');control.id='projectSaveControl';control.innerHTML='<button id="saveProjectNow" type="button" title="Lưu dự án · Ctrl+S" aria-label="Lưu dự án · Ctrl+S"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 3h13l4 4v14H3V3zM7 3v6h9V3M7 21v-8h10v8"/></svg><small>Lưu dự án</small></button><span id="projectSaveStatus" role="status" aria-live="polite">Đang mở…</span>';
+ document.querySelector('.railBottom').before(control);
+ const style=document.createElement('style');style.textContent='#projectSaveControl{width:58px;margin-top:16px;text-align:center}#projectSaveControl button{height:54px;width:54px;padding:6px;display:flex;flex-direction:column;align-items:center;gap:4px;color:#d4f53c}#projectSaveControl button small{font-size:9px;white-space:nowrap}#projectSaveStatus{display:block;font-size:9px;line-height:1.4;color:#93a4ad;padding:4px 0}#projectSaveControl[data-state=error] #projectSaveStatus{color:#f5ad80}#projectSaveControl[data-state=saved] #projectSaveStatus{color:#68ca93}';document.head.append(style);
+ const drafts=new Map();let saving=null,manualError='';
+ const owns=w=>[...document.querySelectorAll('iframe')].some(f=>f.contentWindow===w);
+ const draftDirty=()=>[...drafts].some(([w,dirty])=>dirty&&owns(w));
+ function paint(){for(const w of drafts.keys())if(!owns(w))drafts.delete(w);const s=SceneForgeStorage.state;let state='pending',text='Chờ lưu';
+  if(!appBootReady){text='Đang mở…';state='loading';}
+  else if(saving||s.busy){text='Đang lưu…';state='saving';}
+  else if(manualError||s.error||s.managed&&!s.active){text='Lưu lỗi';state='error';}
+  else if(!s.dirty&&!draftDirty()){text=s.managed?'Đã lưu':'Bản nháp';state='saved';}
+  control.dataset.state=state;document.querySelector('#projectSaveStatus').textContent=text;
+  document.querySelector('#saveProjectNow').disabled=!!saving||!appBootReady;
+  control.title=manualError||s.error||(s.managed?'Lưu dự án vào kho trên máy · Ctrl+S':'Lưu bản nháp trình duyệt · Ctrl+S');
+ }
+ async function saveProject(){if(saving)return saving;if(!appBootReady)throw Error('Đang mở dữ liệu, hãy chờ một chút.');
+  manualError='';window.SceneForgeManualSave=true;saving=(async()=>{await SceneForgeStorage.flush();await new Promise(r=>setTimeout(r,0));const s=SceneForgeStorage.state;if(s.dirty||draftDirty())throw Error('Có thay đổi mới trong lúc lưu. Bấm Lưu lại khi thao tác đã xong.');toast(s.managed?'Đã lưu dự án vào kho trên máy.':'Đã lưu bản nháp trong trình duyệt.');return {saved:true,durable:s.managed};})();paint();
+  try{return await saving;}catch(e){manualError=e.message;toast('Chưa lưu được: '+e.message);throw e;}finally{saving=null;window.SceneForgeManualSave=false;paint();}
+ }
+ window.SceneForgeApp.saveProject=saveProject;
+ document.querySelector('#saveProjectNow').onclick=()=>saveProject().catch(()=>{});
+ document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'&&!e.altKey){e.preventDefault();if(!e.repeat)saveProject().catch(()=>{});}},true);
+ window.addEventListener('message',e=>{if(e.origin!==location.origin||!owns(e.source))return;if(e.data?.type==='sceneforge:draft-status'){drafts.set(e.source,!!e.data.dirty);paint();}if(e.data?.type==='sceneforge:save-project')saveProject().catch(()=>{});});
+ window.addEventListener('sceneforge:storage-status',paint);window.addEventListener('sceneforge:app-ready',paint);paint();
 })();
 </script></body></html>

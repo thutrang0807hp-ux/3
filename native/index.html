@@ -3890,7 +3890,7 @@ async function flushEditorDraft(){
    let file=editorBlobCache.get(a.url);if(!file){const response=await fetch(a.url);if(!response.ok)throw Error('Không đọc được '+a.name);file=await response.blob();editorBlobCache.set(a.url,file);}
    media.push({id:a.id,file,poster:a.poster||null});
   }
-  await editorDraftIO('readwrite',{payload,media,savedAt:Date.now()});editorSavedVersion=version;
+  await editorDraftIO('readwrite',{payload,media,savedAt:Date.now()});editorSavedVersion=version;parent.postMessage({type:'sceneforge:draft-status',dirty:editorSavedVersion!==editorSaveVersion},location.origin);
   if(editorRoomId)parent.postMessage({type:'sceneforge:room-editor-saved',roomId:editorRoomId,itemCount:items.length,assetCount:assets.length},location.origin);
   localStorage.setItem(editorDraftMetaKey(),JSON.stringify(payload));draftCandidate=JSON.stringify(payload);
   const missing=source.filter(a=>a.missing||!a.url).length;setEditorSaveStatus(missing?'Đã lưu · thiếu '+missing+' tệp':'✓ Đã lưu trên máy',missing?'error':'saved');
@@ -3898,7 +3898,7 @@ async function flushEditorDraft(){
  }catch(error){setEditorSaveStatus('Chưa lưu được','error');const n=$('#editorSaveStatus');if(n)n.title=error?.name==='QuotaExceededError'?'Bộ nhớ trình duyệt đầy. Hãy giải phóng dung lượng.':String(error.message||error);}
  finally{editorSaveBusy=false;if(editorSaveVersion!==version)editorSaveTimer=setTimeout(flushEditorDraft,250);}
 }
-scheduleDraft=function(){if(booting||editorRestoring)return;editorSaveVersion++;clearTimeout(editorSaveTimer);setEditorSaveStatus('Chưa lưu thay đổi','pending');editorSaveTimer=setTimeout(flushEditorDraft,700);};
+scheduleDraft=function(){if(booting||editorRestoring)return;editorSaveVersion++;parent.postMessage({type:'sceneforge:draft-status',dirty:true},location.origin);clearTimeout(editorSaveTimer);setEditorSaveStatus('Chưa lưu thay đổi','pending');editorSaveTimer=setTimeout(flushEditorDraft,700);};
 const metadataRestore=$('#restoreDraft').onclick;
 $('#restoreDraft').onclick=async()=>{
  if(editorSaveBusy||recording){notify('Đợi thao tác lưu/xuất hoàn tất.');return;}
@@ -4168,7 +4168,7 @@ const loadBeforeAutomaticRows=$('#projectFile').onchange;$('#projectFile').oncha
 // Room-scoped persistence wraps the existing editor; standalone editor remains usable.
 let editorRoomReadyResolve,editorRoomReadyReject;
 const bootBeforeRoomShell=bootSharedEditor;bootSharedEditor=function(){bootBeforeRoomShell();
- window.SceneForgeEditor.flushForClose=async()=>{await window.SceneForgeEditor.roomReady;clearTimeout(editorSaveTimer);while(editorSaveBusy)await new Promise(r=>setTimeout(r,20));await flushEditorDraft();while(editorSaveBusy)await new Promise(r=>setTimeout(r,20));if(editorSavedVersion!==editorSaveVersion)throw Error('Chưa lưu được bản dựng.');};
+ window.SceneForgeEditor.flushForClose=async()=>{await window.SceneForgeEditor.roomReady;clearTimeout(editorSaveTimer);while(editorSaveBusy)await new Promise(r=>setTimeout(r,20));await flushEditorDraft();while(editorSaveBusy)await new Promise(r=>setTimeout(r,20));if(editorSavedVersion!==editorSaveVersion)throw Error('Chưa lưu được bản dựng.');parent.postMessage({type:'sceneforge:draft-status',dirty:false},location.origin);};
  if(!editorRoomId)return;
  window.SceneForgeEditor.roomReady=new Promise((resolve,reject)=>{editorRoomReadyResolve=resolve;editorRoomReadyReject=reject;});
  window.SceneForgeEditor.isExporting=()=>recording;
