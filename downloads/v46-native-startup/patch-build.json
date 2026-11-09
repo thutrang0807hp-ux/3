@@ -1,0 +1,161 @@
+{
+  "version": "2026.11.10.46101",
+  "file": "SceneForge-Update-20261110-v46.101-Native-Startup.exe",
+  "bytes": 3986944,
+  "sha256": "2860c54d93bea0c06b6c54542bd3da5bec8b326f490611af990700819e32b0af",
+  "files": [
+    {
+      "path": "app/local_engine/browser_profiles.py",
+      "bytes": 9139,
+      "sha256": "c4f17b294ee1e4f13789f954d05aecc001b431db50e6a5d9f80ed5abc1b2d59b"
+    },
+    {
+      "path": "app/local_engine/desktop_icon.py",
+      "bytes": 5142,
+      "sha256": "986149c839b1ab0b01428b88db03f6a69656bd5919b299f88900e8b3bbf069ab"
+    },
+    {
+      "path": "app/local_engine/export_save_as.py",
+      "bytes": 6751,
+      "sha256": "ce1c6d84577380b8ebd0935882af4d679eaaabdd5bb662fb365562a8de1dc248"
+    },
+    {
+      "path": "app/local_engine/fingerprints.py",
+      "bytes": 6544,
+      "sha256": "86356f8c39c46728d2d801a83154c0d57286bce3231f67b3721867963b526bc3"
+    },
+    {
+      "path": "app/local_engine/flow_background_session.py",
+      "bytes": 7690,
+      "sha256": "92eb8ba2ed4c3df7b54c4c8504f4e2c154975a2804330517ee752ff40d85b550"
+    },
+    {
+      "path": "app/local_engine/flow_gflow_cli.py",
+      "bytes": 25810,
+      "sha256": "05af457e1dff20a439b0b3a06311d84a0d0f04f51119deec8cd10029cce78a8b"
+    },
+    {
+      "path": "app/local_engine/gemini_chat.py",
+      "bytes": 27561,
+      "sha256": "72a9c35974987e5fe6d59c29c9bb776be5be6800d0b4a54652f77c0f121729c8"
+    },
+    {
+      "path": "app/local_engine/google_login.py",
+      "bytes": 10463,
+      "sha256": "76129e766e280ef2561c44a45385f631a21c4fce9b4852a55cecf06842f8cc21"
+    },
+    {
+      "path": "app/local_engine/local_tts.py",
+      "bytes": 4900,
+      "sha256": "8c56853a7e91f83c6937bd1e6f366243f2749b9dcc6ae6da6a8d52d354ab4b75"
+    },
+    {
+      "path": "app/local_engine/monitoring.py",
+      "bytes": 9313,
+      "sha256": "cd1f1878820504e0127d90be6ea5b3f6541ec49d95fb4f940e3e52bfae2dd1e1"
+    },
+    {
+      "path": "app/local_engine/server.py",
+      "bytes": 41006,
+      "sha256": "ab0312f8cce2a4cbc20ba496e3173544e387b91964c728be49aa2372d8e785e7"
+    },
+    {
+      "path": "app/local_engine/storage_jobs.py",
+      "bytes": 16118,
+      "sha256": "69abc0c0def6bc36141eb77d158b2ad2c7bf810f610f30d4454bee9c485b23fb"
+    },
+    {
+      "path": "app/local_engine/timeline_export.py",
+      "bytes": 20642,
+      "sha256": "d6d2e70d78a5eae54ecd9aec33eb03e7cb43f2e0b6a1c1efda8c914aa9552f34"
+    },
+    {
+      "path": "app/local_engine/voice_previews.py",
+      "bytes": 4573,
+      "sha256": "16c4919ca3394a1a16513daff209cb9aece6df3063ea4c97694e870b84756e24"
+    },
+    {
+      "path": "app/local_engine/voice_previews_worker.py",
+      "bytes": 1382,
+      "sha256": "1677d210b52f43e7c0972992e25daf47c9fccdab45300d569d707bd8f6a36afc"
+    },
+    {
+      "path": "app/local_engine/voice_runtime.py",
+      "bytes": 2666,
+      "sha256": "fe09aec5da85a45720273bad1d81b21a1680bc5df9f8eed6968dea1ba9b44984"
+    },
+    {
+      "path": "app/local_engine/voice_runtime_worker.py",
+      "bytes": 1492,
+      "sha256": "bc8a76331ac8a24e77ea12d48ad01b393b86160b4fbe14125cba0a7a86ce016e"
+    },
+    {
+      "path": "app/local_engine/voice_worker.py",
+      "bytes": 6128,
+      "sha256": "d419e1baf5c8d4490d5b4208729069c91dcdbf7e904615f9b15d23b043f6b8f8"
+    },
+    {
+      "path": "app/local_engine/web_images.py",
+      "bytes": 26121,
+      "sha256": "e24b69de5c96b1989c4cb8ede74df9058212867b1a52adb017528d1d1485b332"
+    },
+    {
+      "path": "app/dist/web-demo/index.html",
+      "bytes": 1078865,
+      "sha256": "e28dc25a2d6218b413f1e4050129b0143d33dad1119676a697f9fb98153572e1"
+    },
+    {
+      "path": "app/dist/web-demo/studio.html",
+      "bytes": 1043105,
+      "sha256": "630757d43d9a4b41a27f9298d7031756d7c78fec9ff38a681e1c2e470796b49d"
+    },
+    {
+      "path": "app/dist/web-demo/workflow.html",
+      "bytes": 939853,
+      "sha256": "5c00a32e103e75bc154344533ccb02c48361c347c85b463fddc27a3157fc7a33"
+    },
+    {
+      "path": "app/dist/web-demo/photos.html",
+      "bytes": 598886,
+      "sha256": "c49edbb8e4cce0ecc5deb0c149a08169fc8561c5b4c51671b5b952df4488ffff"
+    },
+    {
+      "path": "app/dist/web-demo/native/index.html",
+      "bytes": 558080,
+      "sha256": "3e61af9d4d3937cd7c23760f9bc64c956351a6f3140bb3ef075d31e80a36b0fa"
+    },
+    {
+      "path": "app/dist/web-demo/icons/SceneForge.ico",
+      "bytes": 106001,
+      "sha256": "97729bee7bcd19813196b9409898ac119d95044a3551d83e80e0222d22dd20ea"
+    },
+    {
+      "path": "SceneForge.exe",
+      "bytes": 133632,
+      "sha256": "54708ad2c26b5cc4eb5f4f92b86776c39ba62bbe051b854b5001a082711641a1"
+    }
+  ],
+  "minimum_patch": "2026.11.04.4662",
+  "embedded_files_verified": true,
+  "launcher_code_unchanged": true,
+  "baseline_source_commit": "2440eba",
+  "cumulative_from": "2026.11.04.4662",
+  "covers_patch_numbers": [
+    63,
+    96
+  ],
+  "all_intermediate_file_updates_covered": true,
+  "file_count": 26,
+  "model_and_account_data_not_in_payload": true,
+  "installed_version_shown": true,
+  "downgrade_blocked": true,
+  "startup_count_only_presence": true,
+  "native_loading_card": true,
+  "native_windows_run": false,
+  "static_loading_card": true,
+  "native_bounded_sha256": true,
+  "native_binary_compare": true,
+  "incremental_dirty_key_reads": true,
+  "visible_close_error": true,
+  "windows_installer_tested": false
+}
