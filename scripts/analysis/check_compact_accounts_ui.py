@@ -35,8 +35,8 @@ async def main():
   await expect(page.locator('[data-account-remove-direct]')).to_have_count(4);await expect(page.locator('#flowWebLogin')).to_have_count(0);await expect(page.locator('#connectAccount')).to_have_count(1)
   await expect(page.locator('.acctCompactTable th')).to_have_count(6);await expect(page.locator('.acctGraphNode')).to_have_count(4)
   assert await page.locator('.acctCompactTable').evaluate('e=>e.scrollWidth<=e.parentElement.clientWidth+2')
-  assert await page.locator('.acctGraphSimple').evaluate('e=>e.scrollWidth<=e.clientWidth+2')
-  assert await page.locator('.acctGraphIdentity b').first.evaluate('e=>e.scrollWidth>e.clientWidth&&getComputedStyle(e).textOverflow==="ellipsis"')
+  assert await page.locator('.acctGraph').evaluate('e=>e.scrollWidth<=e.clientWidth+2')
+  assert await page.locator('.acctGraphNode b').first.evaluate('e=>e.scrollWidth>e.clientWidth&&getComputedStyle(e).textOverflow==="ellipsis"')
   assert await page.locator('.acctIdentity b').first.get_attribute('title')==accounts[0]['name']
   # Account details remain accessible without increasing the table width.
   await page.locator('.acctRowDetails summary').first.click();await expect(page.locator('.acFullName').first).to_have_text(accounts[0]['name']);await page.locator('.acctRowDetails summary').first.click()
@@ -49,7 +49,7 @@ async def main():
   await page.locator('[data-use-account="flow-2"]').click();await expect(page.locator('[data-account-row="flow-2"]')).to_have_class('current');await page.locator('[data-account-edit="flow-2"]').click();await expect(page.locator('#accountEditName')).to_be_visible();await page.locator('#accountEditBack').click()
   await page.set_viewport_size({'width':600,'height':900});await page.locator('.acctCompactTable').scroll_into_view_if_needed();await page.screenshot(path='/tmp/sceneforge-compact-accounts-mobile-v91.png');assert await page.locator('.g5SettingsScroll').evaluate('e=>e.scrollWidth<=e.clientWidth+2')
   for service in services[1:]:
-   await page.evaluate('(s)=>accountScreen(s)',service);await expect(page.locator('[data-account-remove-direct]')).to_have_count(4);assert await page.locator('.acctGraphSimple').evaluate('e=>e.scrollWidth<=e.clientWidth+2')
+   await page.evaluate('(s)=>accountScreen(s)',service);await expect(page.locator('[data-account-remove-direct]')).to_have_count(4);assert await page.locator('.acctGraph').evaluate('e=>e.scrollWidth<=e.clientWidth+2')
   assert not errors,errors;assert not any('/jobs'in path or '/generate'in path for path,_ in posts);await b.close()
  print('PASS long names stay within graph/table; six columns and mobile cards; direct remove confirmation cancel/error/success targets correct account; no Edit detour; check/use/edit preserved; all six services; no generation. Mocked accounts only.')
 if __name__=='__main__':asyncio.run(main())

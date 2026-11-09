@@ -1,0 +1,24 @@
+{
+  "version": "2026.11.09.4692",
+  "file": "SceneForge-Update-20261109-v46.92-Account-Diagram.exe",
+  "bytes": 3986944,
+  "sha256": "3d4b39c53343ee83f0b968260c8db862a05990dec29030b77b88656026a40d24",
+  "files": [
+    {
+      "path": "app/dist/web-demo/index.html",
+      "bytes": 1063678,
+      "sha256": "bed6d6cdcdb7e47118bcc82e658b1989cd3f17df7ea12d19ce219d884ff26c9f"
+    }
+  ],
+  "minimum_patch": "2026.11.09.4691",
+  "embedded_files_verified": true,
+  "launcher_code_unchanged": true,
+  "baseline_source_commit": "755066d",
+  "ui_only": true,
+  "connected_account_diagram_restored": true,
+  "labels_bound_to_nodes": true,
+  "full_name_tooltips": true,
+  "direct_row_remove_preserved": true,
+  "compact_table_preserved": true,
+  "windows_installer_tested": false
+}
