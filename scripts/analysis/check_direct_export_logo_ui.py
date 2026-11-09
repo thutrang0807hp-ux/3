@@ -15,6 +15,7 @@ async def main():
   runtime=Path(tmp)/'runtime82';runtime.mkdir();(runtime/'__init__.py').write_text('')
   with zipfile.ZipFile('/workspace/3/downloads/v42/SceneForge-Veo-v42-Source.zip') as archive:
    for name in ['timeline_export.py','local_jobs.py','schema.py']:(runtime/name).write_bytes(archive.read('local_engine/'+name))
+  patched=Path('local_engine/timeline_export.py');patched=patched if patched.is_file() else Path('/workspace/3/veo-node-v46/local_engine/timeline_export.py');(runtime/'timeline_export.py').write_bytes(patched.read_bytes())
   sys.path.insert(0,tmp);renderer=importlib.import_module('runtime82.timeline_export');app=FastAPI();renderer.install_timeline_exports(app,Path(tmp))
   client=httpx.AsyncClient(transport=httpx.ASGITransport(app=app),base_url='http://local');requests=[];models=[];hold_start=False;start_entered=asyncio.Event();start_gate=asyncio.Event()
   async with async_playwright() as p:
@@ -52,7 +53,7 @@ async def main():
    await expect(dialog.locator('[data-cap-export]')).to_be_enabled();assert not await page.evaluate('SFAudioNodes.getState().captionPreview.joined');assert models==[]
 
    # Stale captions are blocked before the final renderer is started and controls recover.
-   await page.evaluate('project.merge.audioChanged=true');await dialog.locator('[data-cap-export]').click();await expect(dialog.locator('[data-cap-export-status]')).to_contain_text('Rà phụ đề')
+   await page.evaluate('project.merge.audioChanged=true');await dialog.locator('[data-cap-export]').click();await expect(dialog.locator('[data-cap-export-status]')).to_contain_text('Phụ đề cần rà')
    assert len(models)==0;await expect(dialog.locator('[data-cap-export]')).to_be_enabled();await page.evaluate('project.merge.audioChanged=false')
    await dialog.locator('[data-cap-export-size]').select_option('720');await dialog.locator('[data-cap-rate]').select_option('2')
    async with page.expect_download(timeout=90000) as pending:
