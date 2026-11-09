@@ -1,0 +1,30 @@
+{
+  "version": "2026.11.09.4689",
+  "file": "SceneForge-Update-20261109-v46.89-Storage-Manager.exe",
+  "bytes": 3986944,
+  "sha256": "2b80cdb752377c99788d7317d44d9470afda8617b1c4ff0f51e277c12631ed5d",
+  "files": [
+    {
+      "path": "app/local_engine/monitoring.py",
+      "bytes": 9198,
+      "sha256": "e587dff355cb0ef29efe3b395eab264ff0d0afca91d981041a19bb8701654b78"
+    },
+    {
+      "path": "app/dist/web-demo/index.html",
+      "bytes": 1046909,
+      "sha256": "449b1ef9e0d57950c493afe57980537a2b2bd8f4383ffb49cf441f01a78fe33c"
+    }
+  ],
+  "minimum_patch": "2026.11.09.4688",
+  "embedded_files_verified": true,
+  "launcher_code_unchanged": true,
+  "baseline_source_commit": "237f203",
+  "storage_category_file_counts": true,
+  "deduplicated_physical_totals": true,
+  "per_project_shared_media_usage": true,
+  "working_render_files_measured": true,
+  "existing_lifecycle_guards_reused": true,
+  "cache_cleanup_review_required": true,
+  "models_not_deleted": true,
+  "windows_installer_tested": false
+}
