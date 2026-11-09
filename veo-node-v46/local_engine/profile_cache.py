@@ -59,7 +59,14 @@ def browser_commands():
   return out
  except OSError:return None
 
-def scan(data,busy=False,commands=None):
+def keep_lite(relative):
+ parts=relative.parts
+ if len(parts)==1:return parts[0]in {'Local State','Last Version','sceneforge-fingerprint.json','sceneforge-profile.json','sceneforge-browser.json','sceneforge-seeded'}
+ if parts[0]!='Default'and not re.fullmatch(r'Profile [0-9]+',parts[0]):return False
+ tail='/'.join(parts[1:])
+ return tail in {'Preferences','Secure Preferences','Cookies','Cookies-wal','Cookies-shm','Cookies-journal','Network/Cookies','Network/Cookies-wal','Network/Cookies-shm','Network/Cookies-journal'}
+
+def scan(data,busy=False,commands=None,lean=False):
  commands=browser_commands()if commands is None else commands;started=time.monotonic();rows=[];files=[];complete=True;entries=0
  for root,label in profile_roots(data):
   blocked=busy or commands is None or any(str(root).lower()in c.lower()for c in commands)or any(os.path.lexists(root/n)for n in ('SingletonLock','SingletonCookie','SingletonSocket'))
@@ -78,18 +85,19 @@ def scan(data,busy=False,commands=None):
       parent_ok=folder==root or folder.parent==root and(folder.name=='Default'or re.fullmatch(r'Profile [0-9]+',folder.name))
       stack.append((p,disposable or bool(parent_ok and p.name in CACHE_DIRS)))
      elif stat.S_ISREG(st.st_mode):
-      if disposable:
+      eligible=not keep_lite(p.relative_to(root))if lean else disposable
+      if eligible:
        cache+=st.st_size;count+=1
        if not blocked:files.append((p,st.st_size,st.st_mtime_ns,st.st_ino))
       else:retained+=st.st_size
    except OSError:complete=False
   rows.append({'profile':label,'cache_bytes':cache,'retained_bytes':retained,'files':count,'busy':bool(blocked)})
   if not complete:break
- token=hashlib.sha256(json.dumps([(str(p),n,t,i)for p,n,t,i in files],separators=(',',':')).encode()).hexdigest()
- return {'profiles':rows,'bytes':sum(n for _,n,_,_ in files),'token':token,'complete':complete},files
+ token=hashlib.sha256(json.dumps([lean,[(str(p),n,t,i)for p,n,t,i in files]],separators=(',',':')).encode()).hexdigest()
+ return {'profiles':rows,'bytes':sum(n for _,n,_,_ in files),'token':token,'complete':complete,'mode':'cookie-fingerprint'if lean else'cache'},files
 
-def clean(data,busy=False,token=None):
- plan,files=scan(data,busy)
+def clean(data,busy=False,token=None,lean=False):
+ plan,files=scan(data,busy,lean=lean)
  if not plan['complete']:raise HTTPException(409,'Chưa quét đủ profile; chưa dọn. Đóng trình duyệt rồi thử lại.')
  if token is not None and token!=plan['token']:raise HTTPException(409,'Cache hoặc trạng thái trình duyệt đã đổi. Quét lại trước khi dọn.')
  freed=0;count=0;errors=0
@@ -112,12 +120,21 @@ def install_profile_cache(app,vault,data,busy):
  async def clear(body:dict):
   if not isinstance(body.get('token'),str):raise HTTPException(400,'Cần quét cache trước khi dọn.')
   async with GATE:return await asyncio.to_thread(clean,data,occupied(),body['token'])
+ @app.get('/local-api/accounts/profile-lite')
+ async def lite_plan():
+  async with GATE:return(await asyncio.to_thread(scan,data,occupied(),lean=True))[0]
+ @app.post('/local-api/accounts/profile-lite')
+ async def lite_clear(body:dict):
+  if not isinstance(body.get('token'),str):raise HTTPException(400,'Cần quét profile trước khi dọn.')
+  async with GATE:return await asyncio.to_thread(clean,data,occupied(),body['token'],lean=True)
  async def maintain():
   await asyncio.sleep(15)
-  async with GATE:
-   if not occupied():
-    try:await asyncio.to_thread(clean,data)
+  while True:
+   async with GATE:
+    try:
+     if not occupied():await asyncio.to_thread(clean,data,lean=True)
     except (OSError,HTTPException):pass
+   await asyncio.sleep(60)
  @app.on_event('startup')
  async def start():app.state.profile_cache_task=asyncio.create_task(maintain())
  @app.on_event('shutdown')

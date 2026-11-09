@@ -24,7 +24,7 @@ async def main():
    browser=await pw.chromium.launch(executable_path='/usr/bin/chromium',args=['--no-sandbox']);page=await browser.new_page(viewport={'width':1440,'height':1050});errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
    async def route(r):
     path=r.request.url.split('/local-api/')[-1]
-    if '/local-api/library/'in r.request.url or '/local-api/accounts/profile-cache'in r.request.url:
+    if '/local-api/library/'in r.request.url or '/local-api/accounts/profile-lite'in r.request.url:
      requests.append((r.request.method,path));response=await client.request(r.request.method,'/local-api/'+path,content=r.request.post_data_buffer,headers={'content-type':r.request.headers.get('content-type','application/json')});await r.fulfill(status=response.status_code,body=response.content,content_type=response.headers.get('content-type','application/json'));return
     if '/local-api/'in r.request.url:
      await r.fulfill(json={'engines':[],'accounts':[]}if path=='system'else []if path in ['logs','notifications','accounts']else{});return

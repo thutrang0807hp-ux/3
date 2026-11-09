@@ -45,5 +45,18 @@ async def main():
    page=await ctx.new_page();await page.goto('https://fixture.test');assert await page.evaluate("localStorage.getItem('session')")=='keep-local'
    assert await page.evaluate("new Promise((ok,no)=>{let r=indexedDB.open('keep',1);r.onsuccess=()=>{let db=r.result,q=db.transaction('session').objectStore('session').get('key');q.onsuccess=()=>{db.close();ok(q.result)}};r.onerror=no})")=='keep-idb'
    await ctx.close()
- print('PASS real Chromium cookie/localStorage/IndexedDB survive cleanup; fingerprint and non-cache files byte-identical; active/unknown profiles skipped; stale token rejected; symlink/unowned paths untouched; API cleanup verified. No real provider login or Windows run.')
+   # Explicit cookie-only retention drops site databases but retains cookie keys.
+   project=data/'projects/keep.json';project.parent.mkdir();project.write_text('KEEP_PROJECT')
+   cookies=root/'Default/Network/Cookies';cookies=cookies if cookies.exists()else root/'Default/Cookies'
+   required={f:hashlib.sha256(f.read_bytes()).hexdigest()for f in [cookies,root/'Local State',root/'sceneforge-fingerprint.json']}
+   async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app),base_url='http://local')as client:
+    plan=(await client.get('/local-api/accounts/profile-lite')).json();assert plan['mode']=='cookie-fingerprint'and plan['bytes']>0
+    r=await client.post('/local-api/accounts/profile-lite',json={'token':plan['token']});assert r.status_code==200,r.text
+   assert all(hashlib.sha256(f.read_bytes()).hexdigest()==h for f,h in required.items())
+   assert project.read_text()=='KEEP_PROJECT'and(outside/'keep').read_text()=='outside'
+   ctx=await launch();assert any(c['name']=='session-sentinel'and c['value']=='keep-me'for c in await ctx.cookies())
+   page=await ctx.new_page();await page.goto('https://fixture.test');assert await page.evaluate("localStorage.getItem('session')")is None
+   assert 'keep'not in await page.evaluate("indexedDB.databases().then(rows=>rows.map(r=>r.name))")
+   await ctx.close()
+ print('PASS cache-only mode preserves site storage; explicit cookie-only mode preserves cookie/key/fingerprint bytes and survives browser restart while removing localStorage/IndexedDB; project preserved; fingerprint and non-cache files byte-identical; active/unknown profiles skipped; stale token rejected; symlink/unowned paths untouched; API cleanup verified. No real provider login or Windows run.')
 asyncio.run(main())
