@@ -34,6 +34,12 @@ async def main():
    await page.route('**/*',route);await page.goto('http://127.0.0.1:43891/');await page.wait_for_function('appBootReady&&SceneForgeStorage.state.active');await page.evaluate('''async()=>{prefs.package5WelcomeDone=true;await savePrefs();document.querySelector('#shellDialog').close();const r={id:'exit-room',name:'Exit fixture',mode:'reference',productId:products[0].id,stage:'draft'};rooms.push(r);await io('rooms','readwrite',r.id,r);document.querySelector('#roomFrames').replaceChildren();const f=document.createElement('iframe');f.id='workflowFrame';f.src='workflow.html?room=exit-room&host=1&mode=reference';document.querySelector('#roomFrames').append(f);}''');frame=page.frame_locator('#workflowFrame');await page.wait_for_function('!!document.querySelector("#workflowFrame").contentWindow.SceneForgeWorkflow?.flushForClose');wf=page.frames[-1]
    await page.evaluate('SceneForgeStorage.observeWindow(document.querySelector("#workflowFrame").contentWindow)');await wf.evaluate("assets.set('fixture-media',new Blob(['x'.repeat(2*1024*1024)],{type:'video/mp4'}));project.name='Initial saved';save()")
    warm=await page.evaluate(HOST);assert warm['ok'],warm;assert not await page.evaluate('SceneForgeStorage.state.dirty')
+   # Metadata-only saves must never open unchanged project/media cursors.
+   await page.evaluate("""async()=>{window.exitCursorReads=[];const old=IDBObjectStore.prototype.openCursor;IDBObjectStore.prototype.openCursor=function(...args){exitCursorReads.push([this.transaction.db.name,this.name,args.length]);return old.apply(this,args)};await io('prefs','readwrite','incremental-fixture',{value:1});await SceneForgeStorage.flush();}""")
+   reads=await page.evaluate('exitCursorReads');assert reads and all(r[1]=='prefs'and r[2]==1 for r in reads),reads
+   assert any(r['key']=='incremental-fixture'for r in lib.snapshot()['records'])
+   await page.evaluate("""async()=>{await new Promise((ok,no)=>{const tx=db.transaction('prefs','readwrite');tx.objectStore('prefs').delete('incremental-fixture');tx.oncomplete=ok;tx.onerror=()=>no(tx.error)});await SceneForgeStorage.flush()}""")
+   assert not any(r['key']=='incremental-fixture'for r in lib.snapshot()['records'])
    await wf.evaluate("(()=>{window.exitWrites=0;const old=IDBObjectStore.prototype.put;IDBObjectStore.prototype.put=function(...args){if(this.name==='projects')exitWrites++;return old.apply(this,args)};})()")
    before=len(requests);idle=await page.evaluate('''async fn=>{const at=performance.now();const result=await eval('('+fn+')')();return {result,ms:performance.now()-at}}''',HOST);assert idle['result']['ok']and idle['ms']<500,idle;assert await wf.evaluate('exitWrites')==0;assert not any(method=='POST'and path.endswith('/snapshot')for method,path in requests[before:]),requests[before:];assert not await page.evaluate("(()=>{const e=new Event('beforeunload',{cancelable:true});dispatchEvent(e);return e.defaultPrevented})()")
    # One new workflow edit: the host's two flush calls must write it only once.
@@ -62,6 +68,8 @@ async def main():
    await ed.evaluate('(()=>{SceneForgeEditor.isExporting=window.exitIsExporting})()');await page.evaluate("document.querySelector('#standaloneEditorDemo').remove();document.querySelector('#exitWorkflowHidden').id='workflowFrame'")
    # Failed canonical save still warns, retaining the newer browser draft.
    reject=True;await wf.evaluate("project.name='Unsynced edit retained';save()");failed=await page.evaluate(HOST);assert not failed['ok'];assert await wf.evaluate("(async()=>{const p=await readProject(project.id);return p.name})()")=='Unsynced edit retained';assert not await page.evaluate('SceneForgeStorage.state.active');assert await page.evaluate("(()=>{const e=new Event('beforeunload',{cancelable:true});dispatchEvent(e);return e.defaultPrevented})()")
+   report=await page.evaluate("JSON.parse(localStorage.getItem('sceneforge-close-error'))");assert report['stage']in ['Ghi kho dữ liệu trên máy','Kiểm tra kho dữ liệu']and 'Fixture save conflict'in report['error'],report
+   assert 'Fixture save conflict'in await page.locator('#sfCloseDiagnostic').inner_text()
    assert not errors,errors;await browser.close()
   await client.aclose()
  print('idle_flush_ms='+str(round(idle['ms'],2)))

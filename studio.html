@@ -625,6 +625,15 @@ function chooseMusic(state,rows,mode,selected,key){
 window.SFProviderReceipts={jobWireId,jobPostFailure,jobReadRecord,jobReadError,workflowJsonObject,pendingStates,persistIntent,chooseMusic};
 })();
 
+// Keep close failures visible: the native host otherwise discards the error.
+window.SceneForgeCloseTrace={async step(stage,action){
+ const at=performance.now();let panel;
+ const show=(detail)=>{panel??=document.getElementById('sfCloseDiagnostic');if(!panel){panel=document.createElement('div');panel.id='sfCloseDiagnostic';panel.style.cssText='position:fixed;z-index:2147483647;left:24px;right:24px;bottom:24px;padding:18px;background:#291b16;color:#ffe5c4;border:1px solid #ad7745;border-radius:12px;white-space:pre-wrap;font:14px system-ui';document.body.append(panel);}panel.textContent=detail;};
+ const timer=setTimeout(()=>show('Đang đóng · '+stage+'\nĐang chờ lưu dữ liệu. Chưa xác nhận lưu xong.'),2500);
+ try{const result=await action();clearTimeout(timer);panel?.remove();return result;}
+ catch(e){clearTimeout(timer);const report={stage,error:String(e?.message||e),elapsed_ms:Math.round(performance.now()-at),at:new Date().toISOString()};try{localStorage.setItem('sceneforge-close-error',JSON.stringify(report));}catch{}show('Chưa đóng được · '+stage+'\n'+report.error+'\nDữ liệu chưa được xác nhận lưu xong. Chụp thông báo này để kiểm tra.');throw e;}
+}};
+
 // IndexedDB remains a recoverable working cache. Verified SQLite checkpoints own the durable library.
 window.SceneForgeStorage=(()=>{
  const enabled=['localhost','127.0.0.1'].includes(location.hostname)&&new URLSearchParams(location.search).get('demo')!=='1';
@@ -671,7 +680,38 @@ window.SceneForgeStorage=(()=>{
   if(Array.isArray(value)){const out=[];for(const v of value)out.push(await decode(v,media));return out;}
   const out={};for(const[k,v]of Object.entries(value))out[k]=await decode(v,media);return out;
  }
- async function prepare(){const generation=epoch,changes=new Set(dirty),raw=await readAll(),seen=new Set();for(const row of raw){const id=identity(row.db,row.store,row.key);seen.add(id);if(fullScan||!records.has(id)||changes.has(id)||changes.has(identity(row.db,row.store,null)))records.set(id,{...row,value:await encode(row.value,id)});}for(const id of records.keys())if(!seen.has(id))records.delete(id);if(generation!==epoch)throw Error('Dữ liệu đang thay đổi; sẽ lưu lại khi ổn định.');return [...records.values()].sort((a,b)=>identity(a.db,a.store,a.key).localeCompare(identity(b.db,b.store,b.key)));}
+ async function prepare(){
+  const generation=epoch,changes=new Set(dirty);
+  // Normal saves read only changed keys. Loading every unchanged video here
+  // makes closing a large library wait on gigabytes of IndexedDB reads.
+  const next=new Map(records);
+  if(fullScan){
+   const raw=await readAll();next.clear();
+   for(const row of raw){const id=identity(row.db,row.store,row.key);next.set(id,{...row,value:await encode(row.value,id)});}
+  }else{
+   const groups=new Map();
+   for(const id of changes){const[d,s,k]=JSON.parse(id),group=identity(d,s,null);if(!groups.has(group))groups.set(group,{d,s,keys:[]});groups.get(group).keys.push(k);}
+   for(const{d,s,keys}of groups.values()){
+    const db=await open(d);
+    try{
+     const rows=await new Promise((ok,no)=>{
+      const tx=db.transaction(s),store=tx.objectStore(s),out=[];
+      tx.oncomplete=()=>ok(out);tx.onerror=()=>no(tx.error);tx.onabort=()=>no(tx.error);
+      if(keys.includes(null)){
+       const req=store.openCursor();req.onsuccess=()=>{const c=req.result;if(c){out.push({db:d,store:s,key:c.key,value:c.value});c.continue();}};
+      }else for(const key of keys){const req=store.openCursor(IDBKeyRange.only(key));req.onsuccess=()=>{const c=req.result;if(c)out.push({db:d,store:s,key:c.key,value:c.value});};}
+     });
+     if(keys.includes(null)){for(const[id,row]of next)if(row.db===d&&row.store===s)next.delete(id);}
+     else for(const key of keys)next.delete(identity(d,s,key));
+     for(const row of rows){const id=identity(d,s,row.key);next.set(id,{...row,value:await encode(row.value,id)});}
+    }finally{db.close();}
+   }
+  }
+  if(generation!==epoch)throw Error('Dữ liệu đang thay đổi; sẽ lưu lại khi ổn định.');
+  records.clear();for(const[id,row]of next)records.set(id,row);
+  return [...records.values()].sort((a,b)=>identity(a.db,a.store,a.key).localeCompare(identity(b.db,b.store,b.key)));
+ }
+
  async function hydrate(snapshot){
   // Decode every referenced file BEFORE changing any working database.
   const media=new Map(),decoded=[];for(const row of snapshot.records)decoded.push({...row,value:await decode(row.value,media)});
@@ -702,9 +742,9 @@ window.SceneForgeStorage=(()=>{
  }
  async function flush(){
   if(window.SceneForgeApp?.flush)await window.SceneForgeApp.flush();
-  if(!managed)return;if(!active||editing)throw Error(error||'Kho máy chưa sẵn sàng lưu thay đổi.');
+  if(!managed)return;if(!active||editing)return SceneForgeCloseTrace.step('Kiểm tra kho dữ liệu',()=>{throw Error(error||'Kho máy chưa sẵn sàng lưu thay đổi.');});
   let result;for(let attempt=0;attempt<4;attempt++){
-   try{result=await checkpoint();if(!dirty.size&&!busy)return result;}
+   try{result=await SceneForgeCloseTrace.step('Ghi kho dữ liệu trên máy',()=>checkpoint());if(!dirty.size&&!busy)return result;}
    catch(e){if(!String(e.message).includes('Dữ liệu đang thay đổi')||attempt===3)throw e;}
    await new Promise(resolve=>setTimeout(resolve,0));
   }throw Error('Thay đổi mới vẫn đang được ghi; chưa thể xác nhận đã lưu xong.');
@@ -805,8 +845,8 @@ function renderRoomProgress(){
 }
 async function flushPersistentFrames(){
  const wf=$('#workflowFrame')?.contentWindow?.SceneForgeWorkflow,ed=$('#standaloneEditorDemo')?.contentWindow?.SceneForgeEditor;
- if(wf)await(wf.flushForClose?wf.flushForClose():wf.flushRoom?.());
- if(ed)await(ed.flushForClose?ed.flushForClose():ed.flushRoom?.());
+ if(wf)await SceneForgeCloseTrace.step('Lưu phòng video / ảnh',()=>wf.flushForClose?wf.flushForClose():wf.flushRoom?.());
+ if(ed)await SceneForgeCloseTrace.step('Lưu bản dựng',()=>ed.flushForClose?ed.flushForClose():ed.flushRoom?.());
  // Deliver saved-room messages before the checkpoint reads their metadata.
  await new Promise(resolve=>setTimeout(resolve,0));
 }
