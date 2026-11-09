@@ -1,0 +1,31 @@
+{
+  "version": "2026.11.09.4695",
+  "file": "SceneForge-Update-20261109-v46.95-Simple-Fingerprint.exe",
+  "bytes": 3986944,
+  "sha256": "ac2f3c6d3647d116c65b629ad1b631a075baad9d38c4fcaaf2622237a3cfadaf",
+  "files": [
+    {
+      "path": "app/local_engine/fingerprints.py",
+      "bytes": 6544,
+      "sha256": "86356f8c39c46728d2d801a83154c0d57286bce3231f67b3721867963b526bc3"
+    },
+    {
+      "path": "app/dist/web-demo/index.html",
+      "bytes": 1071762,
+      "sha256": "b6d77f3ab6ffb9ad9d9a6f8a869b2338aad5cc2b1b1ea9edf0c946af546c9807"
+    }
+  ],
+  "minimum_patch": "2026.11.09.4694",
+  "embedded_files_verified": true,
+  "launcher_code_unchanged": true,
+  "baseline_source_commit": "f647aa3",
+  "inline_fingerprint_toggle": true,
+  "one_status_request_per_account_panel": true,
+  "no_diagram_rerender_on_toggle": true,
+  "automatic_default_configuration": true,
+  "advanced_parameters_collapsed": true,
+  "toggle_applies_next_browser_open": true,
+  "existing_custom_parameters_preserved": true,
+  "live_provider_login_tested": false,
+  "windows_installer_tested": false
+}

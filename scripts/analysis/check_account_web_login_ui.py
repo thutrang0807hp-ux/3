@@ -47,7 +47,7 @@ async def backend_checks():
  assert 'pending'in obj.logins and not closed;assert(await ns['confirm'](obj,{'id':'pending'}))['id']=='saved'and closed==['pending']
 
 async def main():
- await backend_checks();html=(Path('index.html')if Path('index.html').exists()else ROOT/'index.html').read_text();posts=[];accounts=[];fail=True;delay=False;opening=asyncio.Event();release=asyncio.Event()
+ await backend_checks();html=(Path('index.html')if Path('index.html').exists()else ROOT/'index.html').read_text();posts=[];accounts=[];fpconfigs={};fail=True;delay=False;opening=asyncio.Event();release=asyncio.Event()
  services=['flow','muse','gemini_chat','grok','chatgpt','meta']
  async with async_playwright()as p:
   b=await p.chromium.launch(executable_path='/usr/bin/chromium',args=['--no-sandbox']);page=await b.new_page(viewport={'width':1440,'height':1050});errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
@@ -68,8 +68,14 @@ async def main():
    elif path=='gemini-chat/confirm':
     if fail:fail=False;await r.fulfill(status=409,json={'detail':'Hoàn tất đăng nhập trước'})
     else:accounts.append({'id':'saved-gemini','service':'gemini_chat','name':'Gemini Chat','state':'ready','enabled':True,'active':True});await r.fulfill(json={'id':'saved-gemini'})
+   elif path.startswith('accounts/fingerprint-status'):
+    await r.fulfill(json={'accounts':[{'account_id':a['id'],'available':True,'enabled':fpconfigs.get(a['id'],{}).get('enabled',False)}for a in accounts]})
+   elif path.endswith('/toggle')and path.startswith('accounts/fingerprint/'):
+    aid=path.split('/')[2];fpconfigs.setdefault(aid,{})['enabled']=body['enabled'];await r.fulfill(json={'enabled':body['enabled'],'apply_next_open':True})
    elif path.startswith('accounts/fingerprint/'):
-    await r.fulfill(json={'enabled':body.get('enabled',False),'cores':body.get('cores',8),'memory':body.get('memory',8),'width':body.get('width',1280),'height':body.get('height',800),'id':'fixture-fingerprint'})
+    aid=path.split('/')[2];cfg={'enabled':False,'cores':8,'memory':8,'width':1280,'height':800,'id':'fixture-fingerprint',**fpconfigs.get(aid,{}),**body}
+    if r.request.method=='POST':fpconfigs[aid]=cfg
+    await r.fulfill(json=cfg)
    elif path=='accounts/connect':await r.fulfill(json={'id':'pending-muse'})
    elif path=='accounts/save-login':accounts.append({'id':'pending-muse','service':'muse','name':'Muse','state':'unverified','enabled':True});await r.fulfill(json={'saved':True})
    elif path=='accounts/check':await r.fulfill(status=409,json={'detail':'SDK not ready'})
@@ -90,9 +96,10 @@ async def main():
   await page.evaluate('accountScreen("flow")');await page.locator('#connectAccount').click();await expect(page.locator('#flowWebStatus')).to_contain_text('Đăng nhập Flow');assert any(path=='flow/web-login'for path,_ in posts)
   # Reopen passes the existing logical account id rather than creating a new profile.
   accounts.append({'id':'meta-profile','service':'meta','name':'Meta saved','state':'ready','enabled':True});await page.evaluate('accountScreen("meta")');await page.locator('[data-account-profile="meta-profile"]').click();await expect(page.locator('#accountWebSave')).to_be_enabled();assert any(path=='web-images/meta/login'and body.get('account_id')=='meta-profile'for path,body in posts);await page.locator('#accountWebBack').click()
-  await page.locator('[data-account-fingerprint="meta-profile"]').click();await expect(page.locator('#fpEnabled')).not_to_be_checked();await page.locator('#fpEnabled').check();await page.locator('#fpCores').select_option('12');await page.locator('#fpSave').click();await expect(page.locator('#fpStatus')).to_contain_text('Đã bật');assert any(path=='accounts/fingerprint/meta-profile'and body.get('cores')==12 and body.get('enabled')is True for path,body in posts);await page.locator('#fpBack').click()
+  await expect(page.locator('[data-account-fp-toggle="meta-profile"]')).to_be_enabled();await page.evaluate('window.fpGraphBefore=document.querySelector(".acctGraph")');await page.locator('[data-account-fp-toggle="meta-profile"]').click();await expect(page.locator('[data-account-fp-toggle="meta-profile"]')).to_have_attribute('aria-pressed','true');assert await page.locator('#fpSettings').count()==0;assert await page.evaluate('fpGraphBefore===document.querySelector(".acctGraph")');assert any(path=='accounts/fingerprint/meta-profile/toggle'and body=={'enabled':True}for path,body in posts);await page.locator('.acctRowDetails summary').first.click();await page.locator('[data-account-fingerprint="meta-profile"]').click();await expect(page.locator('#fpEnabled')).to_be_checked();await page.locator('#fpEnabled').check();await page.locator('#fpAdvanced summary').click();await page.locator('#fpCores').select_option('12');await page.locator('#fpSave').click();await expect(page.locator('#fpStatus')).to_contain_text('Đã bật');assert any(path=='accounts/fingerprint/meta-profile'and body.get('cores')==12 and body.get('enabled')is True for path,body in posts);await page.locator('#fpBack').click()
   # Closing while browser launch is pending cleans up the late login, never shows it in the next tab.
   delay=True;opening.clear();await page.evaluate('accountScreen("gemini_chat")');await page.locator('#connectAccount').click();await opening.wait();await page.locator('#accountWebBack').click();release.set();await page.wait_for_timeout(200);assert any(path=='gemini-chat/login/pending-gemini/cancel'for path,_ in posts)
+  await page.evaluate('accountScreen("meta")');await expect(page.locator('[data-account-fp-toggle="meta-profile"]')).to_have_attribute('aria-pressed','true');await page.locator('.acctCompactTable').scroll_into_view_if_needed();await page.screenshot(path='/tmp/sceneforge-simple-fingerprint-v95.png')
   assert not any('/jobs'in path or path.endswith('/generate')or 'pairs'in path for path,_ in posts);assert not errors,errors;await b.close()
  print('PASS six-service web-login dispatch without pairing codes; Gemini retry keeps window; saved sessions reused; pending/late login cleanup; Muse save/cancel serialization preserves saved account; no generation; mocked provider verification only')
 if __name__=='__main__':asyncio.run(main())

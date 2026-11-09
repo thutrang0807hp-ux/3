@@ -38,7 +38,7 @@ async def apply(context,cfg):
  for page in context.pages:
   await page.set_viewport_size({'width':cfg['width'],'height':cfg['height']})
   await page.evaluate(script)
-def resolve_profile(vault,data,aid):
+def resolve_profile(vault,data,aid,create=False):
  account=next((a for a in vault.rows('accounts')if a['id']==aid),None)
  if not account:raise HTTPException(404,'Không còn tài khoản.')
  if account['service']=='flow':
@@ -48,10 +48,33 @@ def resolve_profile(vault,data,aid):
   return flow_profile_path(data,binding.get('profile_key'))
  from .browser_profiles import profiles
  manager=profiles(vault,data);entry=manager.registry().get(aid)
+ if not entry and create:entry=manager.reserve(account['service'],aid)
  if not entry:raise HTTPException(409,'Bấm Mở phiên và lưu một lần để tạo profile trước.')
  if entry.get('service')!=account['service']:raise HTTPException(409,'Profile không khớp dịch vụ.')
  return manager.path(entry['service'],entry['key'])
 def install_fingerprints(app,vault,data,busy):
+ @app.get('/local-api/accounts/fingerprint-status')
+ async def overview(service:str=''):
+  out=[]
+  for account in vault.rows('accounts'):
+   if service and account['service']!=service:continue
+   try:cfg=read_config(resolve_profile(vault,data,account['id']));out.append({'account_id':account['id'],'available':True,'enabled':cfg['enabled']})
+   except HTTPException as error:
+    # Other services can lazily create their owned profile on the first toggle.
+    out.append({'account_id':account['id'],'available':account['service']!='flow'and error.status_code==409,'enabled':False,'note':error.detail})
+   except (OSError,ValueError):out.append({'account_id':account['id'],'available':False,'enabled':False,'note':'Chưa đọc được cấu hình profile này.'})
+  return {'accounts':out}
+ @app.post('/local-api/accounts/fingerprint/{aid}/toggle')
+ async def toggle(aid:str,body:dict):
+  if set(body)!={'enabled'}or type(body.get('enabled'))is not bool:raise HTTPException(400,'Chỉ nhận trạng thái bật/tắt.')
+  path=resolve_profile(vault,data,aid,create=True)
+  def perform():
+   with _LOCK:
+    cfg=read_config(path);cfg['enabled']=body['enabled'];return write_config(path,cfg)
+  # Only change disk configuration. Running pages keep their captured settings;
+  # the switch takes effect on the next browser launch, never mid-generation.
+  return {**await asyncio.to_thread(perform),'apply_next_open':True}
+
  @app.get('/local-api/accounts/fingerprint/{aid}')
  async def get(aid:str):
   cfg=read_config(resolve_profile(vault,data,aid));return {k:v for k,v in cfg.items()if k!='seed'}
