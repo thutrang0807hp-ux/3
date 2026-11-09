@@ -1,0 +1,9 @@
+# .106 — compact manual save and immutable workflow media reuse
+
+Manual save progress uses the existing toolbar state instead of the large delayed-close diagnostic panel. Genuine save errors remain visible and recorded. Expected changing-data retries no longer create a false failure panel. Starting a new manual save clears an old panel; close progress remains available.
+
+Workflow IDB writes already copy immutable Blob values synchronously. Observe successful workflow asset-list writes and retain only source Blob handles, keyed to the corresponding record/asset position, with at most four recent records. Previously verified source Blob hashes can be reused when encoding a later persisted version of the same workflow, including after the bounded byte cache evicts prior media. Changed Blob objects still take the existing strong comparison/upload path. No file names, sizes or timestamps alone qualify media for hash reuse.
+
+Each prepare captures its own media-hint map, validates persisted asset keys, and stages new hash proofs. Promote proofs only after the mutation generation is unchanged. Hydration/explicit cache reset clears these hints and hashes. This does not change the snapshot format, server-side asset existence checks, writer lease or save-failure protection. The first save of unverified media, changed assets and cold sessions may still require reading/uploading media.
+
+Validation uses real Chromium, IndexedDB and SQLite: a delayed manual save remains in toolbar with no big panel after 2.7 seconds; unchanged workflow media performs no 1 MiB comparison reads after byte-cache eviction; replacing a clip under the same asset key/size/type stores the new SHA-256. Clean close remains a no-op; real canonical failure shows an error and retains the local draft. No native Windows save timing or installer run.

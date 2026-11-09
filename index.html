@@ -645,9 +645,9 @@ window.SFProviderReceipts={jobWireId,jobPostFailure,jobReadRecord,jobReadError,w
 window.SceneForgeCloseTrace={async step(stage,action){
  const at=performance.now();let panel;
  const show=(detail)=>{panel??=document.getElementById('sfCloseDiagnostic');if(!panel){panel=document.createElement('div');panel.id='sfCloseDiagnostic';panel.style.cssText='position:fixed;z-index:2147483647;left:24px;right:24px;bottom:24px;padding:18px;background:#291b16;color:#ffe5c4;border:1px solid #ad7745;border-radius:12px;white-space:pre-wrap;font:14px system-ui';document.body.append(panel);}panel.textContent=detail;};
- const timer=setInterval(()=>show((window.SceneForgeManualSave?'Đang lưu dự án · ':'Đang đóng · ')+stage+'\n'+(window.SceneForgeStorage?.state?.phase||'Đang chờ lưu dữ liệu.')+'\nChưa xác nhận lưu xong.'),2500);
+ const manual=!!window.SceneForgeManualSave;const timer=manual?null:setInterval(()=>show('Đang đóng · '+stage+'\n'+(window.SceneForgeStorage?.state?.phase||'Đang chờ lưu dữ liệu.')+'\nChưa xác nhận lưu xong.'),2500);
  try{const result=await action();clearInterval(timer);panel?.remove();return result;}
- catch(e){clearInterval(timer);const report={stage,phase:window.SceneForgeStorage?.state?.phase||'',error:String(e?.message||e),elapsed_ms:Math.round(performance.now()-at),at:new Date().toISOString()};try{localStorage.setItem('sceneforge-close-error',JSON.stringify(report));}catch{}show('Chưa đóng được · '+stage+'\n'+report.error+'\nDữ liệu chưa được xác nhận lưu xong. Chụp thông báo này để kiểm tra.');throw e;}
+ catch(e){clearInterval(timer);if(String(e.message).includes('Dữ liệu đang thay đổi')){panel?.remove();throw e;}const report={stage,phase:window.SceneForgeStorage?.state?.phase||'',error:String(e?.message||e),elapsed_ms:Math.round(performance.now()-at),at:new Date().toISOString()};try{localStorage.setItem('sceneforge-close-error',JSON.stringify(report));}catch{}show((manual?'Chưa lưu được · ':'Chưa đóng được · ')+stage+'\n'+report.error+'\nDữ liệu chưa được xác nhận lưu xong. Chụp thông báo này để kiểm tra.');throw e;}
 }};
 
 // IndexedDB remains a recoverable working cache. Verified SQLite checkpoints own the durable library.
@@ -657,12 +657,35 @@ window.SceneForgeStorage=(()=>{
  let lease=null,editing=false;
  let diskRoot='',libraryId='',comparing=false;
  let managed=false,revision=0,epoch=0,suppress=0,busy=null,timer=null,active=false,error='',lastSaved=0,phase='';
- const records=new Map(),dirty=new Set(),blobCache=new Map(),urlCache=new Map();let fullScan=true;
+ const records=new Map(),dirty=new Set(),blobCache=new Map(),urlCache=new Map(),workflowMedia=new Map();let immutableHashes=new WeakMap();let fullScan=true;
  const identity=(d,s,k)=>JSON.stringify([d,s,k]);
  function announce(){dispatchEvent(new CustomEvent('sceneforge:storage-status'));}
  async function api(path,body,method){const res=await fetch('/local-api/library/'+path,{method:method||(body===undefined?'GET':'POST'),headers:body===undefined?{}:{'Content-Type':'application/json','X-SceneForge-Local':'1'},body:body===undefined?undefined:JSON.stringify(body)});if(!res.ok){let data;try{data=await res.json();}catch{}const e=Error(data?.detail||'Không đọc được kho trên máy.');e.status=res.status;throw e;}return res.json();}
  function change(d,s,k){if(suppress||!schemas[d]?.includes(s))return;dirty.add(identity(d,s,k));epoch++;localStorage.setItem('sceneforge-library-dirty','1');announce();if(active&&!timer)timer=setTimeout(()=>{timer=null;checkpoint().catch(()=>{});},1800);}
- function observeWindow(w){if(!enabled||w.IDBObjectStore.prototype.__sfStorage)return;const proto=w.IDBObjectStore.prototype;Object.defineProperty(proto,'__sfStorage',{value:true});for(const method of ['put','add','delete','clear']){const old=proto[method];proto[method]=function(...args){const tx=this.transaction,d=tx.db.name,s=this.name;if(!schemas[d]?.includes(s))return old.apply(this,args);const req=old.apply(this,args),key=method==='delete'?args[0]:undefined;tx.addEventListener('complete',()=>change(d,s,method==='clear'?null:method==='delete'?key:req.result),{once:true});return req;};}}
+ function observeWindow(w){
+  if(!enabled||w.IDBObjectStore.prototype.__sfStorage)return;
+  const proto=w.IDBObjectStore.prototype;Object.defineProperty(proto,'__sfStorage',{value:true});
+  for(const method of ['put','add','delete','clear']){const old=proto[method];proto[method]=function(...args){
+   const tx=this.transaction,d=tx.db.name,s=this.name;if(!schemas[d]?.includes(s))return old.apply(this,args);
+   // IDB copies Blob bytes synchronously. Keep only the immutable source
+   // handles from our workflow's asset list, not mutable project metadata.
+   const source=d==='sceneforge-workflows'&&s==='projects'&&['put','add'].includes(method)&&Array.isArray(args[0]?.assetEntries)?args[0].assetEntries.map(entry=>Array.isArray(entry)&&entry[1] instanceof w.Blob?{key:entry[0],blob:entry[1]}:null):null;
+   const req=old.apply(this,args),key=method==='delete'?args[0]:undefined;
+   tx.addEventListener('complete',()=>{
+    if(d==='sceneforge-workflows'&&s==='projects'){
+     if(method==='clear')workflowMedia.clear();
+     else{const id=identity(d,s,method==='delete'?key:req.result);workflowMedia.delete(id);if(source){workflowMedia.set(id,source);while(workflowMedia.size>4)workflowMedia.delete(workflowMedia.keys().next().value);}}
+    }
+    change(d,s,method==='clear'?null:method==='delete'?key:req.result);
+   },{once:true});return req;
+  };}
+ }
+ function immutableSource(path,value,session){
+  const match=path.match(/^(.*)\/assetEntries\/([0-9]+)\/1$/);if(!match)return null;
+  const source=session?.media.get(match[1])?.[Number(match[2])];
+  return source?.blob.size===value.size&&source.blob.type===value.type?source.blob:null;
+ }
+
  function open(name){return new Promise((ok,no)=>{const req=indexedDB.open(name,1);req.onupgradeneeded=()=>(schemas[name]||schemas['sceneforge-app-shell']).forEach(s=>req.result.createObjectStore(s,name==='sceneforge-workflows'?{keyPath:'id'}:undefined));req.onsuccess=()=>ok(req.result);req.onerror=()=>no(req.error);});}
  async function hasLocalRecords(){for(const[d,stores]of Object.entries(schemas)){const db=await open(d);try{for(const store of stores){const count=await new Promise((ok,no)=>{const r=db.transaction(store).objectStore(store).count();r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error);});if(count)return true;}}finally{db.close();}}return false;}
  async function readAll(demo=false){const out=[];for(const[d,stores]of Object.entries(schemas)){const db=await open(demo&&d==='sceneforge-app-shell'?'sceneforge-app-showcase':d);try{for(const s of stores)await new Promise((ok,no)=>{const req=db.transaction(s).objectStore(s).openCursor();req.onsuccess=()=>{const c=req.result;if(!c)return ok();out.push({db:d,store:s,key:c.key,value:c.value});c.continue();};req.onerror=()=>no(req.error);});}finally{db.close();}}return out;}
@@ -679,19 +702,19 @@ window.SceneForgeStorage=(()=>{
 
  function cachePut(cache,key,value){cache.delete(key);cache.set(key,value);const url=cache===urlCache,limit=url?32:128,budget=(url?16:128)*1024*1024;let bytes=[...cache.entries()].reduce((n,[k,v])=>n+(url?k.length*2:v.blob?.size||0),0);while(cache.size>limit||bytes>budget){const oldest=cache.keys().next().value;if(oldest===undefined)break;bytes-=url?oldest.length*2:cache.get(oldest).blob?.size||0;cache.delete(oldest);}}
  async function reusableHash(blob){if(blob.size<8*1024*1024||!window.SceneForgePortable?.fingerprintWorker)return null;const hash=await contentHash(blob);const found=await api('assets/check',{hash,size:blob.size});return found.exists?hash:null;}
- async function encode(value,path=''){
-  if(value instanceof Blob){if(comparing){const h=await contentHash(value);return {$sf:value instanceof File?'file':'blob',hash:h,type:value.type,name:value.name,lastModified:value.lastModified};}const prior=blobCache.get(path);let hash;if(prior&&await equalBlob(prior.blob,value))hash=prior.hash;else{hash=await reusableHash(value);if(!hash){const res=await fetch('/local-api/library/assets',{method:'POST',headers:{'X-SceneForge-Local':'1','Content-Type':value.type||'application/octet-stream'},body:value});if(!res.ok)throw Error('Chưa ghi được file vào kho.');const asset=await res.json();hash=asset.hash;}cachePut(blobCache,path,{blob:value,hash});}return {$sf:value instanceof File?'file':'blob',hash,type:value.type,name:value.name,lastModified:value.lastModified};}
-  if(typeof value==='string'&&/^data:(image|audio|video)\//.test(value)){let marker=urlCache.get(value);if(!marker){const blob=await(await fetch(value)).blob();marker={...await encode(blob,path),$sf:'dataurl'};cachePut(urlCache,value,marker);}return marker;}
+ async function encode(value,path='',session=null){
+  if(value instanceof Blob){if(comparing){const h=await contentHash(value);return {$sf:value instanceof File?'file':'blob',hash:h,type:value.type,name:value.name,lastModified:value.lastModified};}const source=immutableSource(path,value,session),known=source&&immutableHashes.get(source);if(known)return {$sf:value instanceof File?'file':'blob',hash:known,type:value.type,name:value.name,lastModified:value.lastModified};const prior=blobCache.get(path);let hash;if(prior&&await equalBlob(prior.blob,value))hash=prior.hash;else{hash=await reusableHash(value);if(!hash){const res=await fetch('/local-api/library/assets',{method:'POST',headers:{'X-SceneForge-Local':'1','Content-Type':value.type||'application/octet-stream'},body:value});if(!res.ok)throw Error('Chưa ghi được file vào kho.');const asset=await res.json();hash=asset.hash;}cachePut(blobCache,path,{blob:value,hash});}if(source)session.proofs.set(source,hash);return {$sf:value instanceof File?'file':'blob',hash,type:value.type,name:value.name,lastModified:value.lastModified};}
+  if(typeof value==='string'&&/^data:(image|audio|video)\//.test(value)){let marker=urlCache.get(value);if(!marker){const blob=await(await fetch(value)).blob();marker={...await encode(blob,path,session),$sf:'dataurl'};cachePut(urlCache,value,marker);}return marker;}
   if(value===undefined)return {$sf:'undefined'};
   if(value===null||typeof value!=='object')return value;
   if(value instanceof Date)return {$sf:'date',value:value.toISOString()};
-  if(value instanceof ArrayBuffer)return {$sf:'buffer-asset',asset:await encode(new Blob([value]),path+'/$binary')};
-  if(ArrayBuffer.isView(value))return {$sf:'typed-asset',type:value.constructor.name,asset:await encode(new Blob([new Uint8Array(value.buffer,value.byteOffset,value.byteLength).slice()]),path+'/$binary')};
-  if(value instanceof Map)return {$sf:'map',entries:await encode([...value.entries()],path+'/map')};
-  if(value instanceof Set)return {$sf:'set',values:await encode([...value],path+'/set')};
+  if(value instanceof ArrayBuffer)return {$sf:'buffer-asset',asset:await encode(new Blob([value]),path+'/$binary',session)};
+  if(ArrayBuffer.isView(value))return {$sf:'typed-asset',type:value.constructor.name,asset:await encode(new Blob([new Uint8Array(value.buffer,value.byteOffset,value.byteLength).slice()]),path+'/$binary',session)};
+  if(value instanceof Map)return {$sf:'map',entries:await encode([...value.entries()],path+'/map',session)};
+  if(value instanceof Set)return {$sf:'set',values:await encode([...value],path+'/set',session)};
   if(typeof value.getFile==='function'||typeof value.getDirectoryHandle==='function')return {$sf:'handle',name:value.name};
-  if(Array.isArray(value)){const out=[];for(let i=0;i<value.length;i++)out.push(await encode(value[i],path+'/'+i));return out;}
-  const out={};for(const[k,v]of Object.entries(value))out[k]=await encode(v,path+'/'+k);return out;
+  if(Array.isArray(value)){const out=[];for(let i=0;i<value.length;i++)out.push(await encode(value[i],path+'/'+i,session));return out;}
+  const out={};for(const[k,v]of Object.entries(value))out[k]=await encode(v,path+'/'+k,session);return out;
  }
  async function decode(value,media=new Map()){
   if(!value||typeof value!=='object')return value;
@@ -708,13 +731,13 @@ window.SceneForgeStorage=(()=>{
   const out={};for(const[k,v]of Object.entries(value))out[k]=await decode(v,media);return out;
  }
  async function prepare(){
-  const generation=epoch,changes=new Set(dirty);
+  const generation=epoch,changes=new Set(dirty),session={media:new Map(workflowMedia),proofs:new Map()};
   // Normal saves read only changed keys. Loading every unchanged video here
   // makes closing a large library wait on gigabytes of IndexedDB reads.
   const next=new Map(records);
   if(fullScan){
    const raw=await readAll();next.clear();
-   for(const row of raw){const id=identity(row.db,row.store,row.key);next.set(id,{...row,value:await encode(row.value,id)});}
+   for(const row of raw){const id=identity(row.db,row.store,row.key);next.set(id,{...row,value:await encode(row.value,id,session)});}
   }else{
    const groups=new Map();
    for(const id of changes){const[d,s,k]=JSON.parse(id),group=identity(d,s,null);if(!groups.has(group))groups.set(group,{d,s,keys:[]});groups.get(group).keys.push(k);}
@@ -730,16 +753,17 @@ window.SceneForgeStorage=(()=>{
      });
      if(keys.includes(null)){for(const[id,row]of next)if(row.db===d&&row.store===s)next.delete(id);}
      else for(const key of keys)next.delete(identity(d,s,key));
-     for(const row of rows){const id=identity(d,s,row.key);next.set(id,{...row,value:await encode(row.value,id)});}
+     for(const row of rows){const id=identity(d,s,row.key),source=session.media.get(id);if(source&&(!Array.isArray(row.value?.assetEntries)||source.length!==row.value.assetEntries.length||source.some((entry,i)=>entry&&entry.key!==row.value.assetEntries[i]?.[0])))session.media.delete(id);next.set(id,{...row,value:await encode(row.value,id,session)});}
     }finally{db.close();}
    }
   }
   if(generation!==epoch)throw Error('Dữ liệu đang thay đổi; sẽ lưu lại khi ổn định.');
+  for(const[blob,hash]of session.proofs)immutableHashes.set(blob,hash);
   records.clear();for(const[id,row]of next)records.set(id,row);
   return [...records.values()].sort((a,b)=>identity(a.db,a.store,a.key).localeCompare(identity(b.db,b.store,b.key)));
  }
 
- async function hydrate(snapshot){
+ async function hydrate(snapshot){workflowMedia.clear();immutableHashes=new WeakMap();
   // Decode every referenced file BEFORE changing any working database.
   const media=new Map(),decoded=[];for(const row of snapshot.records)decoded.push({...row,value:await decode(row.value,media)});
   localStorage.setItem('sceneforge-library-hydrating',String(snapshot.revision));suppress++;try{for(const[d,stores]of Object.entries(schemas)){const db=await open(d);try{await new Promise((ok,no)=>{const tx=db.transaction(stores,'readwrite');for(const s of stores)tx.objectStore(s).clear();for(const row of decoded.filter(r=>r.db===d)){const s=tx.objectStore(row.store);s.keyPath?s.put(row.value):s.put(row.value,row.key);}tx.oncomplete=ok;tx.onerror=()=>no(tx.error);tx.onabort=()=>no(tx.error);});}finally{db.close();}}}finally{suppress--;}
@@ -784,7 +808,7 @@ window.SceneForgeStorage=(()=>{
  if(enabled)observeWindow(window);
  function pause(){active=false;clearTimeout(timer);}
  async function edit(fn){if(editing)throw Error('Đang cập nhật thư viện.');if(managed&&!active)throw Error('Thư viện chưa sẵn sàng để thu gọn.');if(busy)await busy;editing=true;clearTimeout(timer);try{return await fn();}finally{editing=false;if(active&&dirty.size)timer=setTimeout(()=>checkpoint().catch(()=>{}),1800);}}
- return {ready,edit,markMutation,clearMediaCache:()=>{blobCache.clear();urlCache.clear();},observeWindow,rawRecords:readAll,checkpoint,flush,api,decode,hydrate,hashBlob,pinBlob,browserBundle,useDisk,pause,get managed(){return managed;},get state(){return {enabled,managed,revision,root:diskRoot,active,error,lastSaved,busy:!!busy,dirty:dirty.size,phase};}};
+ return {ready,edit,markMutation,clearMediaCache:()=>{blobCache.clear();urlCache.clear();workflowMedia.clear();immutableHashes=new WeakMap();},observeWindow,rawRecords:readAll,checkpoint,flush,api,decode,hydrate,hashBlob,pinBlob,browserBundle,useDisk,pause,get managed(){return managed;},get state(){return {enabled,managed,revision,root:diskRoot,active,error,lastSaved,busy:!!busy,dirty:dirty.size,phase};}};
 })();
 
 let appBootReady=false;
@@ -3192,7 +3216,7 @@ const accountFPSimplePaintBefore=paintAccounts;paintAccounts=function(){accountF
   control.title=manualError||s.error||(s.managed?'Lưu dự án vào kho trên máy · Ctrl+S':'Lưu bản nháp trình duyệt · Ctrl+S');
  }
  async function saveProject(){if(saving)return saving;if(!appBootReady)throw Error('Đang mở dữ liệu, hãy chờ một chút.');
-  manualError='';window.SceneForgeManualSave=true;saving=(async()=>{await SceneForgeStorage.flush();await new Promise(r=>setTimeout(r,0));const s=SceneForgeStorage.state;if(s.dirty||draftDirty())throw Error('Có thay đổi mới trong lúc lưu. Bấm Lưu lại khi thao tác đã xong.');toast(s.managed?'Đã lưu dự án vào kho trên máy.':'Đã lưu bản nháp trong trình duyệt.');return {saved:true,durable:s.managed};})();paint();
+  manualError='';document.getElementById('sfCloseDiagnostic')?.remove();window.SceneForgeManualSave=true;saving=(async()=>{await SceneForgeStorage.flush();await new Promise(r=>setTimeout(r,0));const s=SceneForgeStorage.state;if(s.dirty||draftDirty())throw Error('Có thay đổi mới trong lúc lưu. Bấm Lưu lại khi thao tác đã xong.');toast(s.managed?'Đã lưu dự án vào kho trên máy.':'Đã lưu bản nháp trong trình duyệt.');return {saved:true,durable:s.managed};})();paint();
   try{return await saving;}catch(e){manualError=e.message;toast('Chưa lưu được: '+e.message);throw e;}finally{saving=null;window.SceneForgeManualSave=false;paint();}
  }
  const beforeSaveView=showView;showView=async function(...args){const pending=beforeSaveView.apply(this,args);paint();try{return await pending;}finally{paint();}};

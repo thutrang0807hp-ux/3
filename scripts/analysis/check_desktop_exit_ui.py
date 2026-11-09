@@ -13,12 +13,12 @@ ROOT=Path('/workspace/3')
 HOST="""async()=>{try{await window.SceneForgeApp?.flush?.();await window.SceneForgeStorage?.flush?.();return {type:'sf-desktop-flush',ok:true};}catch(e){return {type:'sf-desktop-flush',ok:false,error:e.message};}}"""
 async def main():
  paths=['index.html','workflow.html','photos.html','native/index.html'];html={p:(Path(p)if Path(p).exists()else ROOT/p).read_text()for p in paths}
- html['index.html']=html['index.html'].replace('return {ready,edit,','return {testHasLocalRecords:hasLocalRecords,testContentHash:contentHash,testEqualBlob:equalBlob,ready,edit,')
+ html['index.html']=html['index.html'].replace('return {ready,edit,','return {testEvictByteCache:()=>blobCache.clear(),testHasLocalRecords:hasLocalRecords,testContentHash:contentHash,testEqualBlob:equalBlob,ready,edit,')
  with tempfile.TemporaryDirectory(prefix='sf-exit96-')as td:
   root=Path(td);pkg=root/'exit_runtime';pkg.mkdir();(pkg/'__init__.py').write_text('')
   with zipfile.ZipFile(ROOT/'downloads/v46/SceneForge-Veo-v46-Source.zip')as z:
    for n in ['library.py','library_api.py','library_lock.py','storage_lifecycle.py','schema.py','instance.py','storage_jobs.py']:(pkg/n).write_bytes(z.read('local_engine/'+n))
-  sys.path.insert(0,td);api=importlib.import_module('exit_runtime.library_api');app=FastAPI();data=root/'data';data.mkdir();lib=api.install_library(app,data);client=httpx.AsyncClient(transport=httpx.ASGITransport(app=app),base_url='http://local');requests=[];reject=False
+  sys.path.insert(0,td);api=importlib.import_module('exit_runtime.library_api');app=FastAPI();data=root/'data';data.mkdir();lib=api.install_library(app,data);client=httpx.AsyncClient(transport=httpx.ASGITransport(app=app),base_url='http://local');requests=[];reject=False;slow_save=False;save_seen=asyncio.Event();release_save=asyncio.Event()
   async with async_playwright()as p:
    browser=await p.chromium.launch(executable_path='/usr/bin/chromium',args=['--no-sandbox']);page=await browser.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
    async def route(r):
@@ -26,6 +26,7 @@ async def main():
     if path.startswith('/local-api/library/'):
      requests.append((r.request.method,path))
      if reject and r.request.method=='POST'and path.endswith('/snapshot'):await r.fulfill(status=409,json={'detail':'Fixture save conflict'});return
+     if slow_save and r.request.method=='POST'and path.endswith('/snapshot'):save_seen.set();await release_save.wait()
      res=await client.request(r.request.method,path+('?' +urlsplit(r.request.url).query if urlsplit(r.request.url).query else''),content=r.request.post_data_buffer,headers={'Content-Type':r.request.headers.get('content-type','application/json')});await r.fulfill(status=res.status_code,body=res.content,content_type=res.headers.get('content-type','application/json'));return
     if path.startswith('/local-api/'):
      await r.fulfill(json=[]if path in ['/local-api/logs','/local-api/accounts']else{'engines':[],'accounts':[]});return
@@ -47,11 +48,24 @@ async def main():
    await page.evaluate("""async()=>{await new Promise((ok,no)=>{const tx=db.transaction('prefs','readwrite');tx.objectStore('prefs').delete('incremental-fixture');tx.oncomplete=ok;tx.onerror=()=>no(tx.error)});await SceneForgeStorage.flush()}""")
    assert not any(r['key']=='incremental-fixture'for r in lib.snapshot()['records'])
    # Save from inside the workflow with Ctrl+S, then close without redoing work.
+   await page.evaluate('SceneForgeStorage.testEvictByteCache()')
+   slow_save=True
+   await page.evaluate("(()=>{window.mediaChunkReads=0;window.oldBlobArrayBuffer=Blob.prototype.arrayBuffer;Blob.prototype.arrayBuffer=function(...args){if(this.size===1048576)mediaChunkReads++;return oldBlobArrayBuffer.apply(this,args)};})()")
    await wf.evaluate("project.name='Manual durable save';save();document.dispatchEvent(new KeyboardEvent('keydown',{key:'s',ctrlKey:true,bubbles:true,cancelable:true}))")
+   await asyncio.wait_for(save_seen.wait(),10);await page.wait_for_timeout(2700)
+   assert await page.locator('#projectSaveStatus').inner_text()=='Đang lưu…'
+   assert await page.locator('#sfCloseDiagnostic').count()==0,await page.evaluate("({manual:window.SceneForgeManualSave,diagnostic:document.querySelector('#sfCloseDiagnostic')?.textContent,last:localStorage.getItem('sceneforge-close-error')})")
+   assert await page.evaluate('mediaChunkReads')==0
+   slow_save=False;release_save.set()
    await page.wait_for_function("document.querySelector('#projectSaveStatus').textContent==='Đã lưu'")
    assert next(r for r in lib.snapshot()['records']if r['db']=='sceneforge-workflows'and r['key']=='exit-room')['value']['name']=='Manual durable save'
    before=len(requests);assert (await page.evaluate(HOST))['ok']
    assert not any(method=='POST'and path.endswith('/snapshot')for method,path in requests[before:])
+   # A replacement with identical key/size/type is a new immutable Blob.
+   await wf.evaluate("assets.set('fixture-media',new Blob(['y'.repeat(2*1024*1024)],{type:'video/mp4'}));save()")
+   await page.evaluate('SceneForgeApp.saveProject()')
+   changed=next(r for r in lib.snapshot()['records']if r['db']=='sceneforge-workflows'and r['key']=='exit-room')['value']['assetEntries'][0][1]
+   assert changed['hash']==hashlib.sha256(b'y'*(2*1024*1024)).hexdigest(),changed
    await wf.evaluate("(()=>{window.exitWrites=0;const old=IDBObjectStore.prototype.put;IDBObjectStore.prototype.put=function(...args){if(this.name==='projects')exitWrites++;return old.apply(this,args)};})()")
    before=len(requests);idle=await page.evaluate('''async fn=>{const at=performance.now();const result=await eval('('+fn+')')();return {result,ms:performance.now()-at}}''',HOST);assert idle['result']['ok']and idle['ms']<500,idle;assert await wf.evaluate('exitWrites')==0;assert not any(method=='POST'and path.endswith('/snapshot')for method,path in requests[before:]),requests[before:];assert not await page.evaluate("(()=>{const e=new Event('beforeunload',{cancelable:true});dispatchEvent(e);return e.defaultPrevented})()")
    # One new workflow edit: the host's two flush calls must write it only once.
@@ -85,5 +99,5 @@ async def main():
    assert not errors,errors;await browser.close()
   await client.aclose()
  print('idle_flush_ms='+str(round(idle['ms'],2)))
- print('PASS actual host handshake: clean exit <500ms with zero workflow writes/checkpoints; edit saved once to IndexedDB+SQLite with media; active scan draft saves without weakening room-switch guard; failed canonical save returns false and retains local edit. Chromium fixture only, not Windows UI.')
+ print('PASS quiet delayed manual save; unchanged immutable media skips chunk reads even after byte-cache eviction; same-size replacement clip uses new hash; actual host handshake: clean exit <500ms with zero workflow writes/checkpoints; edit saved once to IndexedDB+SQLite with media; active scan draft saves without weakening room-switch guard; failed canonical save returns false and retains local edit. Chromium fixture only, not Windows UI.')
 if __name__=='__main__':asyncio.run(main())
