@@ -1,4 +1,5 @@
 """Stable player geometry, synchronized preview speed and reversible non-destructive trims."""
+from review_ui_helpers import ensure_review_tab
 import asyncio,base64,subprocess,tempfile,zipfile,sys,importlib,json
 import httpx,io,math,array,hashlib
 from PIL import Image,ImageDraw
@@ -41,28 +42,28 @@ async def main():
 
    downloads=[];page.on('download',lambda d:downloads.append(d))
    # Small real completed MP4; native capability is supplied by the real API with only the dialog mocked.
-   await dialog.locator('[data-cap-end-number]').fill('0.2');await dialog.locator('[data-cap-end-number]').dispatch_event('change');await dialog.locator('[data-cap-cut-clip]').select_option('1');await dialog.locator('[data-cap-end-number]').fill('0.2');await dialog.locator('[data-cap-end-number]').dispatch_event('change');await dialog.locator('[data-cap-export-size]').select_option('720')
-   await dialog.locator('[data-cap-export]').click();await expect(dialog.locator('[data-cap-export-status]')).to_contain_text('Đã hủy chọn nơi lưu',timeout=60000)
+   await ensure_review_tab(page,'[data-cap-end-number]');await dialog.locator('[data-cap-end-number]').fill('0.2');await dialog.locator('[data-cap-end-number]').dispatch_event('change');await ensure_review_tab(page,'[data-cap-cut-clip]');await dialog.locator('[data-cap-cut-clip]').select_option('1');await ensure_review_tab(page,'[data-cap-end-number]');await dialog.locator('[data-cap-end-number]').fill('0.2');await dialog.locator('[data-cap-end-number]').dispatch_event('change');await ensure_review_tab(page,'[data-cap-export-size]');await dialog.locator('[data-cap-export-size]').select_option('720')
+   await ensure_review_tab(page,'[data-cap-export]');await dialog.locator('[data-cap-export]').click();await expect(dialog.locator('[data-cap-export-status]')).to_contain_text('Đã hủy chọn nơi lưu',timeout=60000)
    assert len(models)==1 and len(dialog_calls)==1 and await page.evaluate('SFAudioNodes.getState().captionPreview.exportReady')
    assert selected.read_bytes()==b'old destination' and not downloads
-   await dialog.locator('[data-cap-download]').click();await expect(dialog.locator('[data-cap-export-status]')).to_contain_text(str(selected))
+   await ensure_review_tab(page,'[data-cap-download]');await dialog.locator('[data-cap-download]').click();await expect(dialog.locator('[data-cap-export-status]')).to_contain_text(str(selected))
    assert selected.read_bytes()!=b'old destination' and selected.read_bytes()[:4]!=b'old ' and len(models)==1 and not downloads
    digest=hashlib.sha256(selected.read_bytes()).hexdigest();meta=json.loads(subprocess.check_output(['ffprobe','-v','error','-show_streams','-of','json',str(selected)]));assert meta['streams'][0]['codec_name']=='h264'
    # Failed native save preserves the completed export, then offers an explicit browser picker.
-   await dialog.locator('[data-cap-download]').click();await expect(dialog.locator('[data-cap-export-status]')).to_contain_text('Chưa lưu được video')
+   await ensure_review_tab(page,'[data-cap-download]');await dialog.locator('[data-cap-download]').click();await expect(dialog.locator('[data-cap-export-status]')).to_contain_text('Chưa lưu được video')
    assert await page.evaluate('SFAudioNodes.getState().captionPreview.exportReady') and len(models)==1
-   await dialog.locator('[data-cap-browser-save]').click();await expect(dialog.locator('[data-cap-export-status]')).to_contain_text('Đã hủy chọn nơi lưu')
+   await ensure_review_tab(page,'[data-cap-browser-save]');await dialog.locator('[data-cap-browser-save]').click();await expect(dialog.locator('[data-cap-export-status]')).to_contain_text('Đã hủy chọn nơi lưu')
    assert len(models)==1 and not downloads
-   await page.evaluate("pickerMode='write-error'");await dialog.locator('[data-cap-download]').click();await expect(dialog.locator('[data-cap-export-status]')).to_contain_text('disk fixture')
+   await page.evaluate("pickerMode='write-error'");await ensure_review_tab(page,'[data-cap-download]');await dialog.locator('[data-cap-download]').click();await expect(dialog.locator('[data-cap-export-status]')).to_contain_text('disk fixture')
    assert await page.evaluate('writerAborted&&SFAudioNodes.getState().captionPreview.exportReady')
-   await page.evaluate("pickerMode='ok'");await dialog.locator('[data-cap-download]').click();await expect(dialog.locator('[data-cap-export-status]')).to_contain_text('Bản đã đặt tên.mp4')
+   await page.evaluate("pickerMode='ok'");await ensure_review_tab(page,'[data-cap-download]');await dialog.locator('[data-cap-download]').click();await expect(dialog.locator('[data-cap-export-status]')).to_contain_text('Bản đã đặt tên.mp4')
    assert await page.evaluate('savedHash')==digest and await page.evaluate('writerClosed')
    calls=await page.evaluate('pickerCalls');assert all(c['activated']for c in calls);assert calls[-1]['options']['suggestedName'].endswith('.mp4')
    assert len(models)==1 and len(dialog_calls)==3 and not downloads
    # Unsupported environments expose an explicit download fallback, never an automatic one.
-   await page.evaluate('showSaveFilePicker=undefined');await dialog.locator('[data-cap-download]').click();await expect(dialog.locator('[data-cap-export-status]')).to_contain_text('chưa hỗ trợ chọn nơi lưu')
+   await page.evaluate('showSaveFilePicker=undefined');await ensure_review_tab(page,'[data-cap-download]');await dialog.locator('[data-cap-download]').click();await expect(dialog.locator('[data-cap-export-status]')).to_contain_text('chưa hỗ trợ chọn nơi lưu')
    assert not downloads
-   async with page.expect_download()as fallback:await dialog.locator('[data-cap-browser-download]').click()
+   async with page.expect_download()as fallback:await ensure_review_tab(page,'[data-cap-browser-download]');await dialog.locator('[data-cap-browser-download]').click()
    exported=Path(tmp)/'fallback.mp4';await(await fallback.value).save_as(str(exported));assert hashlib.sha256(exported.read_bytes()).hexdigest()==digest and len(models)==1
    # New route cannot be used to supply a destination path or from an untrusted origin.
    rid=next(iter(jobs))
@@ -80,6 +81,6 @@ async def main():
     else:raise AssertionError('expected write failure')
    finally:saver.shutil.copyfileobj=original_copy
    assert destination.read_bytes()==b'keep me' and not list(Path(tmp).glob('.SceneForge-*.tmp'))
-   await dialog.locator('[data-cap-close]').click();assert not errors,errors;await browser.close();await client.aclose()
+   await ensure_review_tab(page,'[data-cap-close]');await dialog.locator('[data-cap-close]').click();assert not errors,errors;await browser.close();await client.aclose()
  print('PASS real MP4 Save As with mocked native choice, Unicode path and overwrite; native/browser cancel, failed write and retry preserve one rendered file; picker has click activation; SHA matches; no automatic downloads; route rejects destination injection; failed copy preserves old file')
 if __name__=='__main__':asyncio.run(main())

@@ -1,4 +1,5 @@
 """Real MP4 playback, live grouping, non-lossy export cues and viewer cleanup."""
+from review_ui_helpers import ensure_review_tab
 import asyncio,base64,subprocess,tempfile
 from pathlib import Path
 from playwright.async_api import async_playwright,expect
@@ -16,7 +17,7 @@ async def main():
    # Preview may show stale cues, but actual handoff must retain the stale-data guard.
    assert await page.evaluate('''async()=>{try{await SFAudioNodes.preparePayload({clips:[],audio:[],captions:project.merge.captionDraft});return false}catch(e){return e.message.includes('Rà phụ đề')}}''')
    await page.locator('#node-captions [data-an=caption-preview]').click();dialog=page.locator('#anCaptionDialog');await expect(dialog).to_be_visible();await expect(dialog.locator('[data-cap-status]')).to_contain_text('cần rà')
-   await dialog.locator('[data-cap-play]').click();await page.wait_for_function('document.querySelector("#anCaptionDialog video[data-cap-active]").currentTime>0.15');assert await page.evaluate('SFAudioNodes.getState().captionPreview.time')>0
+   await ensure_review_tab(page,'[data-cap-play]');await dialog.locator('[data-cap-play]').click();await page.wait_for_function('document.querySelector("#anCaptionDialog video[data-cap-active]").currentTime>0.15');assert await page.evaluate('SFAudioNodes.getState().captionPreview.time')>0
    # Deliberately stall persistence: style updates must remain synchronous and local.
    await page.evaluate("window.savedStyleStore=storeProject;window.styleSaveWaiters=[];window.styleSaveCalls=0;storeProject=()=>{styleSaveCalls++;return new Promise(resolve=>styleSaveWaiters.push(resolve))};window.styleVideo=document.querySelector('#anCaptionDialog video[data-cap-active]');window.styleCanvas=document.querySelector('#anCaptionDialog canvas');window.styleFrame=document.querySelector('[id^=frame-]')")
    hashes=[]
@@ -28,27 +29,27 @@ async def main():
     if style=='tiktok':assert await dialog.locator('canvas[data-cap-overlay]').evaluate('(c)=>c.getContext("2d").font.startsWith("900 ")')
    assert len(set(hashes))>=3,'Color/background styles must redraw actual overlay pixels (fixture font may map 700/900 to the same glyph)'
    await page.wait_for_function('styleSaveCalls>0')
-   await dialog.locator('[data-an=caption-style][data-id=yellowbox]').click();assert await page.evaluate('project.merge.captionStyle')=='yellowbox'
+   await ensure_review_tab(page,'[data-an=caption-style][data-id=yellowbox]');await dialog.locator('[data-an=caption-style][data-id=yellowbox]').click();assert await page.evaluate('project.merge.captionStyle')=='yellowbox'
    assert await page.evaluate('SFAudioNodes.getState().captionPreview.playing'),'Style change must not pause video'
    await page.evaluate('storeProject=savedStyleStore;for(const resolve of styleSaveWaiters)resolve()')
-   await dialog.locator('[data-an=caption-style][data-id=clean]').click()
+   await ensure_review_tab(page,'[data-an=caption-style][data-id=clean]');await dialog.locator('[data-an=caption-style][data-id=clean]').click()
    first=await dialog.locator('[data-cap-text]').text_content();assert len(first.split())<=5
-   await dialog.locator('[data-cap-seek]').evaluate('(el)=>{el.value=4;el.dispatchEvent(new Event("input",{bubbles:true}))}');await dialog.locator('[data-cap-play]').click()
+   await dialog.locator('[data-cap-seek]').evaluate('(el)=>{el.value=4;el.dispatchEvent(new Event("input",{bubbles:true}))}');await ensure_review_tab(page,'[data-cap-play]');await dialog.locator('[data-cap-play]').click()
    assert await dialog.locator('[data-cap-text]').text_content()!=first
    before=await dialog.locator('canvas[data-cap-overlay]').evaluate('(c)=>c.toDataURL()');time_before=await page.evaluate('SFAudioNodes.getState().captionPreview.time')
-   await dialog.locator('[data-an=caption-style][data-id=box]').click();after=await dialog.locator('canvas[data-cap-overlay]').evaluate('(c)=>c.toDataURL()');assert before!=after
+   await ensure_review_tab(page,'[data-an=caption-style][data-id=box]');await dialog.locator('[data-an=caption-style][data-id=box]').click();after=await dialog.locator('canvas[data-cap-overlay]').evaluate('(c)=>c.toDataURL()');assert before!=after
    assert await page.evaluate('!SFAudioNodes.getState().captionPreview.playing') and abs(await page.evaluate('SFAudioNodes.getState().captionPreview.time')-time_before)<.001
-   await dialog.locator('[data-an=caption-style][data-id=clean]').click()
+   await ensure_review_tab(page,'[data-an=caption-style][data-id=clean]');await dialog.locator('[data-an=caption-style][data-id=clean]').click()
 
-   await dialog.locator('[data-cap-words]').select_option('3');assert len((await dialog.locator('[data-cap-text]').text_content()).split())<=3
-   await dialog.locator('[data-cap-words]').select_option('8');assert len((await dialog.locator('[data-cap-text]').text_content()).split())<=8
-   await dialog.locator('[data-cap-words]').select_option('0');assert await dialog.locator('[data-cap-text]').text_content()==text
-   await dialog.locator('[data-cap-words]').select_option('3');await dialog.locator('[data-cap-size]').evaluate('(el)=>{el.value=48;el.dispatchEvent(new Event("input",{bubbles:true}))}');await dialog.locator('[data-cap-y]').evaluate('(el)=>{el.value=85;el.dispatchEvent(new Event("input",{bubbles:true}))}')
+   await ensure_review_tab(page,'[data-cap-words]');await dialog.locator('[data-cap-words]').select_option('3');assert len((await dialog.locator('[data-cap-text]').text_content()).split())<=3
+   await ensure_review_tab(page,'[data-cap-words]');await dialog.locator('[data-cap-words]').select_option('8');assert len((await dialog.locator('[data-cap-text]').text_content()).split())<=8
+   await ensure_review_tab(page,'[data-cap-words]');await dialog.locator('[data-cap-words]').select_option('0');assert await dialog.locator('[data-cap-text]').text_content()==text
+   await ensure_review_tab(page,'[data-cap-words]');await dialog.locator('[data-cap-words]').select_option('3');await dialog.locator('[data-cap-size]').evaluate('(el)=>{el.value=48;el.dispatchEvent(new Event("input",{bubbles:true}))}');await dialog.locator('[data-cap-y]').evaluate('(el)=>{el.value=85;el.dispatchEvent(new Event("input",{bubbles:true}))}')
    result=await page.evaluate('''async()=>{project.merge.captionDraftSignature=productionCaptionSignature();const p={clips:[],audio:[],captions:project.merge.captionDraft.map(c=>({...c}))};await SFAudioNodes.preparePayload(p);const layers=await SFAudioNodes.captionLayers({...p,captionOptions:{fontSize:48,textY:85},captionStyle:'clean'});return {pages:p.captions,raw:project.merge.captionDraft[0],words:project.merge.captionWords,size:project.merge.captionSize,y:project.merge.captionY,srt:SFAudioNodes.srt(),png:layers.every(l=>l.blob.type==='image/png'&&l.blob.size>0),layerCount:layers.length}}''')
    pages=result['pages'];assert all(len(r['text'].split())<=3 for r in pages) and ' '.join(r['text'] for r in pages)==text
    assert pages[0]['start']==0 and pages[-1]['end']==8 and all(abs(a['end']-b['start'])<1e-7 for a,b in zip(pages,pages[1:]))
    assert result['raw']['text']==text and result['raw']['manual'] and result['words']==3 and result['size']==48 and result['y']==85 and result['png'] and result['layerCount']==len(pages)
-   await dialog.locator('[data-cap-close]').click();await expect(dialog).to_have_count(0);assert await page.evaluate('SFAudioNodes.getState().captionPreview===null')
+   await ensure_review_tab(page,'[data-cap-close]');await dialog.locator('[data-cap-close]').click();await expect(dialog).to_have_count(0);assert await page.evaluate('SFAudioNodes.getState().captionPreview===null')
    assert await page.evaluate('viewerCreated.every(u=>viewerRevoked.includes(u))'),'Viewer must revoke all created media URLs'
    await page.evaluate("window.nodeStyleStore=storeProject;window.nodeStyleWaiters=[];window.nodeStyleSaveCalls=0;storeProject=()=>{nodeStyleSaveCalls++;return new Promise(resolve=>nodeStyleWaiters.push(resolve))};const n=document.querySelector('#node-captions');view.x=30-n.offsetLeft;view.y=50-n.offsetTop;applyView()")
    await page.locator('#node-captions [data-an=caption-style][data-id=tiktok]').click();await page.wait_for_function('nodeStyleSaveCalls>0')
@@ -61,9 +62,9 @@ async def main():
    assert not errors,errors
    await page.close();html=Path('photos.html').read_text();page=await browser.new_page(viewport={'width':1450,'height':1050});await page.route('**/*',route);await page.goto('http://127.0.0.1:43891/photos.html');await page.wait_for_function('!!window.SFAudioNodes&&!!window.SceneForgeWorkflow')
    await page.evaluate("""async({video,text})=>{const file=new File([Uint8Array.from(atob(video),c=>c.charCodeAt(0))],'fixture.mp4',{type:'video/mp4'});window.SceneForgeApp={photoBridge:{engine:async()=>({}),listRecipes:async()=>[],saveDraft:async()=>{},getFile:async key=>key==='clip'?file:null,putFile:async()=>{}}};const refs=Object.fromEntries(['person','outfit','product','background'].map(k=>[k,{images:[],description:''}]));const d=newDraft();d.refs=refs;d.voice.mode='native';d.beats=[{id:'b1',name:'Cảnh 1',type:'wide',seconds:8,text,clips:[{id:'pc1',key:'clip',part:'a',version:1,duration:8}],clipPlanning:{mode:'legacy',continuity:false}}];await SceneForgeWorkflow.openRoom({id:'photo-caption',name:'Photo caption',refs,product:{id:'prod',name:'Sản phẩm',sceneBank:[]},photoDraft:d});const post=photoProduction();post.captions=true;post.captionWords=5;post.cues=[{start:0,end:8,text,manual:true}];post.cueSignature=photoCueSignature();render();await SFAudioNodes.refresh();const n=document.querySelector('[data-node=captions]');view.z=1;view.x=30-n.offsetLeft;view.y=50-n.offsetTop;applyView();}""",{'video':video,'text':text})
-   await page.locator('[data-node=captions] [data-an=caption-preview]').click();dialog=page.locator('#anCaptionDialog');await expect(dialog).to_be_visible();await dialog.locator('[data-cap-play]').click();await page.wait_for_function('document.querySelector("#anCaptionDialog video[data-cap-active]").currentTime>0.1')
-   await dialog.locator('[data-cap-words]').select_option('0');assert await dialog.locator('[data-cap-text]').text_content()==text
-   await dialog.locator('[data-cap-words]').select_option('3');await dialog.locator('[data-an=caption-style][data-id=yellowbox]').click();assert await page.evaluate('photoProduction().style')=='yellowbox';await dialog.locator('[data-cap-close]').click()
+   await page.locator('[data-node=captions] [data-an=caption-preview]').click();dialog=page.locator('#anCaptionDialog');await expect(dialog).to_be_visible();await ensure_review_tab(page,'[data-cap-play]');await dialog.locator('[data-cap-play]').click();await page.wait_for_function('document.querySelector("#anCaptionDialog video[data-cap-active]").currentTime>0.1')
+   await ensure_review_tab(page,'[data-cap-words]');await dialog.locator('[data-cap-words]').select_option('0');assert await dialog.locator('[data-cap-text]').text_content()==text
+   await ensure_review_tab(page,'[data-cap-words]');await dialog.locator('[data-cap-words]').select_option('3');await ensure_review_tab(page,'[data-an=caption-style][data-id=yellowbox]');await dialog.locator('[data-an=caption-style][data-id=yellowbox]').click();assert await page.evaluate('photoProduction().style')=='yellowbox';await ensure_review_tab(page,'[data-cap-close]');await dialog.locator('[data-cap-close]').click()
    result=await page.evaluate("""async()=>{const r=await photoBuildDraftPayload();const layers=await SFAudioNodes.captionLayers(r.payload);return {pages:r.payload.captions,layers:layers.length,text:photoProduction().cues[0].text,style:r.payload.captionStyle}}""")
    assert all(len(r['text'].split())<=3 for r in result['pages']) and ' '.join(r['text'] for r in result['pages'])==text and result['text']==text and result['layers']==len(result['pages']) and result['style']=='yellowbox'
    await browser.close()

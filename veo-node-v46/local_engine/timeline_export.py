@@ -37,6 +37,8 @@ def validate(body):
   for k,d,lo,hi in [('start',0,0,600),('duration',1,.02,600),('mediaIn',0,0,36000),('speed',1,.25,3),('opacity',1,0,1),('scale',1,.1,4),('rotation',0,-360,360),('x',0,-100,100),('y',0,-100,100),('volume',1,0,20),('fadeIn',0,0,600),('fadeOut',0,0,600),('transitionDuration',.5,.01,5)]:r[k]=number(row,k,d,lo,hi)
   r['transition']=row.get('transition','none')
   if r['transition'] not in ('none','fade','dissolve','slide','wipe'):raise ValueError('Chuyển cảnh chưa được hỗ trợ bởi FFmpeg.')
+  r['transitionAudio']=row.get('transitionAudio','paired');r['transitionHandles']=row.get('transitionHandles','source')
+  if r['transitionAudio']not in ('paired','cut')or r['transitionHandles']not in ('source','hold'):raise ValueError('Thiết lập chuyển cảnh không hợp lệ.')
   r['direction']=row.get('direction','left')
   if r['direction'] not in ('left','right','up','down'):raise ValueError('Hướng chuyển cảnh không hợp lệ.')
   if row.get('easing','linear')!='linear':raise ValueError('FFmpeg chưa hỗ trợ đường cong chuyển cảnh này. Chọn Tuyến tính hoặc dùng bản ghi trình duyệt.')
@@ -86,6 +88,8 @@ def graph(model,metas):
   # Retain a hidden guard frame past the enabled interval so EOF cannot drop
   # the last visible frame. Keep EOF repetition off for finite base timelines.
   chain=[f'trim=start={max(0,source)}',f'setpts=(PTS-STARTPTS)/{r["speed"]}',f'fps={fps}',f'tpad=start_mode=clone:start_duration={pad}:stop_mode=clone:stop_duration={length}',f'trim=duration={length+1/fps}']
+  if r.get('transitionHandles')=='hold':
+   chain=[f'trim=start={r["mediaIn"]}:duration={r["duration"]*r["speed"]}',f'setpts=(PTS-STARTPTS)/{r["speed"]}',f'fps={fps}',f'tpad=start_mode=clone:start_duration={pre}:stop_mode=clone:stop_duration={length+1/fps}',f'trim=duration={length+1/fps}']
   fit='increase' if r['fit']=='cover' else 'decrease'
   chain+=[f'scale={w}:{h}:force_original_aspect_ratio={fit}:force_divisible_by=2', 'setsar=1','format=rgba']
   if r['fit']=='cover':chain+=[f'crop={w}:{h}']
@@ -130,7 +134,7 @@ def graph(model,metas):
   neighbours=[x for x in rows if x['track']==r['track']and x['kind']!='audio']
   before=next((x for x in neighbours if abs(x['start']+x['duration']-r['start'])<.001),None)
   after=next((x for x in neighbours if abs(r['start']+r['duration']-x['start'])<.001),None)
-  if (before and before['transition']in ('dissolve','slide','wipe'))or(after and r['transition']in ('dissolve','slide','wipe')):
+  if r.get('transitionAudio')!='cut'and((before and before['transition']in ('dissolve','slide','wipe'))or(after and r['transition']in ('dissolve','slide','wipe'))):
    raise ValueError('Chuyển cảnh có tiếng gốc: hãy tắt tiếng clip và dùng track âm thanh riêng để xuất FFmpeg đúng bản xem.')
   chain+=[f'adelay={round(r["start"]*1000)}:all=1'];filters.append(f'[{n}:a]'+','.join(chain)+f'[a{n}]');audios.append(f'[a{n}]')
  filters.append(f'[{base}]format=yuv420p[outv]')

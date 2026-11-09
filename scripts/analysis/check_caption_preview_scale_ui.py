@@ -1,4 +1,5 @@
 """Browser bounds for long captions in a tiny node; original text/settings retained."""
+from review_ui_helpers import ensure_review_tab
 import asyncio,re
 from pathlib import Path
 from playwright.async_api import async_playwright

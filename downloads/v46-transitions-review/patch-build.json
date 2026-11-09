@@ -1,0 +1,37 @@
+{
+  "version": "2026.11.09.4688",
+  "file": "SceneForge-Update-20261109-v46.88-Transitions-Review.exe",
+  "bytes": 3986944,
+  "sha256": "2475b298894dbeed2d718e2bcae420d1398a290a6f49566fb5b535107c50bd66",
+  "files": [
+    {
+      "path": "app/local_engine/timeline_export.py",
+      "bytes": 20642,
+      "sha256": "d6d2e70d78a5eae54ecd9aec33eb03e7cb43f2e0b6a1c1efda8c914aa9552f34"
+    },
+    {
+      "path": "app/dist/web-demo/workflow.html",
+      "bytes": 939130,
+      "sha256": "52e8d1a535582f7da65f6fefaac4aacded488f29e834f0e3bf34deced9bbb0e6"
+    },
+    {
+      "path": "app/dist/web-demo/photos.html",
+      "bytes": 598349,
+      "sha256": "7dcd729023e17273dd266e05d0ccbf7ad0d51a6b8e3dda64da53345857230118"
+    }
+  ],
+  "minimum_patch": "2026.11.09.4687",
+  "embedded_files_verified": true,
+  "launcher_code_unchanged": true,
+  "baseline_source_commit": "26f42fe",
+  "visual_transitions": [
+    "none",
+    "dissolve",
+    "fade"
+  ],
+  "speech_timing_preserved": true,
+  "trimmed_source_tail_excluded": true,
+  "compact_review_tabs": true,
+  "sticky_export_controls": true,
+  "windows_installer_tested": false
+}

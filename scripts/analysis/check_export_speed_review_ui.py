@@ -1,4 +1,5 @@
 """Stable player geometry, synchronized preview speed and reversible non-destructive trims."""
+from review_ui_helpers import ensure_review_tab
 import asyncio,base64,subprocess,tempfile,zipfile,sys,importlib,json
 import httpx,io,math,array
 from PIL import Image,ImageDraw
@@ -34,34 +35,34 @@ async def main():
    await page.locator('#node-captions [data-an=caption-preview]').click();dialog=page.locator('#anCaptionDialog');await expect(dialog).to_be_visible()
 
    await expect(dialog.locator('[data-cap-export]')).to_be_enabled()
-   await dialog.locator('[data-cap-play]').click();await page.wait_for_function('document.querySelector("video[data-cap-active]").currentTime>.15')
+   await ensure_review_tab(page,'[data-cap-play]');await dialog.locator('[data-cap-play]').click();await page.wait_for_function('document.querySelector("video[data-cap-active]").currentTime>.15')
    # Simulate a stalled media clock while readyState remains ready. Timeline must not run ahead.
    fixed=await page.evaluate("""()=>{const v=document.querySelector('video[data-cap-active]');window.clockDescriptor=Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype,'currentTime');const at=v.currentTime;Object.defineProperty(v,'currentTime',{configurable:true,get:()=>at,set:value=>clockDescriptor.set.call(v,value)});return at}""")
    await page.wait_for_timeout(400);state=await page.evaluate('SFAudioNodes.getState().captionPreview');assert abs(state['time']-fixed)<.03,state
-   await dialog.locator('[data-cap-play]').click();await page.evaluate("delete document.querySelector('video[data-cap-active]').currentTime")
-   await dialog.locator('[data-cap-end-number]').fill('2.117');await dialog.locator('[data-cap-end-number]').dispatch_event('change')
-   await dialog.locator('[data-cap-source]').click();source=page.locator('.anSourceDialog');await expect(source).to_be_visible()
+   await ensure_review_tab(page,'[data-cap-play]');await dialog.locator('[data-cap-play]').click();await page.evaluate("delete document.querySelector('video[data-cap-active]').currentTime")
+   await ensure_review_tab(page,'[data-cap-end-number]');await dialog.locator('[data-cap-end-number]').fill('2.117');await dialog.locator('[data-cap-end-number]').dispatch_event('change')
+   await ensure_review_tab(page,'[data-cap-source]');await dialog.locator('[data-cap-source]').click();source=page.locator('.anSourceDialog');await expect(source).to_be_visible()
    await page.wait_for_function("document.querySelector('.anSourceDialog video').currentTime>1.05")
    assert not await page.evaluate('SFAudioNodes.getState().captionPreview.playing');assert abs(await source.locator('video').evaluate('v=>v.duration')-3)<.02
    await source.locator('button').click();await expect(source).to_have_count(0)
-   await dialog.locator('.anLogoTools summary').click();await dialog.locator('[data-cap-logo-file]').set_input_files(str(logo));await expect(dialog.locator('[data-cap-logo-status]')).to_contain_text('Đã thêm')
+   await ensure_review_tab(page,'.anLogoTools summary');await dialog.locator('.anLogoTools summary').click();await ensure_review_tab(page,'[data-cap-logo-file]');await dialog.locator('[data-cap-logo-file]').set_input_files(str(logo));await expect(dialog.locator('[data-cap-logo-status]')).to_contain_text('Đã thêm')
    assert await page.evaluate('SFAudioNodes.logoSettings().enabled&&assets.has(SFAudioNodes.logoSettings().key)')
-   await dialog.locator('[data-cap-logo-width]').fill('25');await dialog.locator('[data-cap-logo-corner=tl]').click();await dialog.locator('[data-cap-logo-opacity]').fill('0.8');await dialog.locator('[data-cap-logo-plate]').uncheck()
+   await ensure_review_tab(page,'[data-cap-logo-width]');await dialog.locator('[data-cap-logo-width]').fill('25');await ensure_review_tab(page,'[data-cap-logo-corner=tl]');await dialog.locator('[data-cap-logo-corner=tl]').click();await ensure_review_tab(page,'[data-cap-logo-opacity]');await dialog.locator('[data-cap-logo-opacity]').fill('0.8');await ensure_review_tab(page,'[data-cap-logo-plate]');await dialog.locator('[data-cap-logo-plate]').uncheck()
    assert await page.evaluate("(()=>{const c=document.querySelector('[data-cap-logo-layer]'),d=c.getContext('2d').getImageData(151,103,1,1).data;return d[0]===229&&Math.abs(d[3]-204)<2})()")
-   await dialog.locator('[data-cap-logo-corner=br]').click();await dialog.locator('[data-cap-logo-opacity]').fill('1');await dialog.locator('[data-cap-logo-plate]').check();await dialog.locator('[data-cap-logo-plate-color]').fill('#123456')
-   await dialog.locator('[data-cap-color]').fill('#12ab34');await dialog.locator('[data-cap-bg-color]').fill('#2345cd');await dialog.locator('[data-cap-bg-enabled]').check();await dialog.locator('[data-cap-bg-opacity]').fill('0.4');await dialog.locator('[data-cap-y]').fill('50');await dialog.locator('[data-cap-words]').select_option('3');await dialog.locator('[data-cap-words]').dispatch_event('input')
+   await ensure_review_tab(page,'[data-cap-logo-corner=br]');await dialog.locator('[data-cap-logo-corner=br]').click();await ensure_review_tab(page,'[data-cap-logo-opacity]');await dialog.locator('[data-cap-logo-opacity]').fill('1');await ensure_review_tab(page,'[data-cap-logo-plate]');await dialog.locator('[data-cap-logo-plate]').check();await ensure_review_tab(page,'[data-cap-logo-plate-color]');await dialog.locator('[data-cap-logo-plate-color]').fill('#123456')
+   await ensure_review_tab(page,'[data-cap-color]');await dialog.locator('[data-cap-color]').fill('#12ab34');await ensure_review_tab(page,'[data-cap-bg-color]');await dialog.locator('[data-cap-bg-color]').fill('#2345cd');await ensure_review_tab(page,'[data-cap-bg-enabled]');await dialog.locator('[data-cap-bg-enabled]').check();await ensure_review_tab(page,'[data-cap-bg-opacity]');await dialog.locator('[data-cap-bg-opacity]').fill('0.4');await ensure_review_tab(page,'[data-cap-y]');await dialog.locator('[data-cap-y]').fill('50');await ensure_review_tab(page,'[data-cap-words]');await dialog.locator('[data-cap-words]').select_option('3');await dialog.locator('[data-cap-words]').dispatch_event('input')
    await expect(dialog.locator('[data-cap-export]')).to_be_enabled();assert not await page.evaluate('SFAudioNodes.getState().captionPreview.joined');assert models==[]
 
    # Stale captions are blocked before the final renderer is started and controls recover.
-   await page.evaluate('project.merge.audioChanged=true');await dialog.locator('[data-cap-export]').click();await expect(dialog.locator('[data-cap-export-status]')).to_contain_text('Phụ đề cần rà')
+   await page.evaluate('project.merge.audioChanged=true');await ensure_review_tab(page,'[data-cap-export]');await dialog.locator('[data-cap-export]').click();await expect(dialog.locator('[data-cap-export-status]')).to_contain_text('Phụ đề cần rà')
    assert len(models)==0;await expect(dialog.locator('[data-cap-export]')).to_be_enabled()
-   await dialog.locator('[data-cap-review-open]').click();await dialog.locator('[data-cap-cue="0"][data-field=text]').fill('MỘT hai ba bốn năm sáu');await dialog.locator('[data-cap-cue="0"][data-field=end]').fill('2.95');await dialog.locator('[data-cap-review-accept]').click()
+   await ensure_review_tab(page,'[data-cap-review-open]');await dialog.locator('[data-cap-review-open]').click();await ensure_review_tab(page,'[data-cap-cue="0"][data-field=text]');await dialog.locator('[data-cap-cue="0"][data-field=text]').fill('MỘT hai ba bốn năm sáu');await ensure_review_tab(page,'[data-cap-cue="0"][data-field=end]');await dialog.locator('[data-cap-cue="0"][data-field=end]').fill('2.95');await ensure_review_tab(page,'[data-cap-review-accept]');await dialog.locator('[data-cap-review-accept]').click()
    await expect(dialog.locator('[data-cap-export-status]')).to_contain_text('Đã giữ bản phụ đề');assert await page.evaluate('!project.merge.audioChanged&&project.merge.captionDraft[0].text.startsWith("MỘT")&&project.merge.captionDraft[0].end===2.95')
-   await dialog.locator('[data-cap-final-rate]').select_option('1.5');assert await dialog.locator('[data-cap-rate]').input_value()=='1.5';await expect(dialog.locator('[data-cap-final-duration]')).to_contain_text('3.41s')
+   await ensure_review_tab(page,'[data-cap-final-rate]');await dialog.locator('[data-cap-final-rate]').select_option('1.5');assert await dialog.locator('[data-cap-rate]').input_value()=='1.5';await expect(dialog.locator('[data-cap-final-duration]')).to_contain_text('3.41 giây')
 
-   await dialog.locator('[data-cap-export-size]').select_option('720');await dialog.locator('[data-cap-rate]').select_option('2')
+   await ensure_review_tab(page,'[data-cap-export-size]');await dialog.locator('[data-cap-export-size]').select_option('720');await ensure_review_tab(page,'[data-cap-rate]');await dialog.locator('[data-cap-rate]').select_option('2')
    async with page.expect_download(timeout=90000) as pending:
-    await dialog.locator('[data-cap-export]').click();await page.wait_for_function('!SFAudioNodes.getState().captionPreview.exportBusy',timeout=60000);assert await page.evaluate('SFAudioNodes.getState().captionPreview.exportReady'),await dialog.locator('[data-cap-export-status]').inner_text();await dialog.locator('[data-cap-browser-download]').click()
+    await ensure_review_tab(page,'[data-cap-export]');await dialog.locator('[data-cap-export]').click();await page.wait_for_function('!SFAudioNodes.getState().captionPreview.exportBusy',timeout=60000);assert await page.evaluate('SFAudioNodes.getState().captionPreview.exportReady'),await dialog.locator('[data-cap-export-status]').inner_text();await ensure_review_tab(page,'[data-cap-browser-download]');await dialog.locator('[data-cap-browser-download]').click()
    download=await pending.value;assert download.suggested_filename.endswith('-thanh-pham.mp4');output=Path(tmp)/'final.mp4';await download.save_as(str(output))
    await page.wait_for_function('!SFAudioNodes.getState().captionPreview.exportBusy&&SFAudioNodes.getState().captionPreview.exportReady')
    model=models[-1];assert model['width']==720 and model['height']==1280 and model['fps']==30 and abs(model['duration']-5.117/1.5)<1/30+.001
@@ -84,41 +85,41 @@ async def main():
    # Voice has ended here; nonzero final audio proves short background music repeats to the end.
    pcm=subprocess.check_output(['ffmpeg','-v','error','-ss','3.2','-i',str(output),'-t','0.15','-vn','-ac','1','-ar','48000','-f','s16le','-']);samples=array.array('h',pcm);rms=math.sqrt(sum(x*x for x in samples)/len(samples));assert rms>150,rms;frequency=sum(1 for i in range(1,len(samples)) if samples[i-1]<=0<samples[i])/.15;assert abs(frequency-880)<40,frequency
    created=len(models)
-   async with page.expect_download():await dialog.locator('[data-cap-browser-download]').click()
+   async with page.expect_download():await ensure_review_tab(page,'[data-cap-browser-download]');await dialog.locator('[data-cap-browser-download]').click()
    assert len(models)==created,'Download again must reuse completed MP4'
    # Also render the 1080p path using a short retained interval in each original clip.
    for index in ['0','1']:
-    await dialog.locator('[data-cap-cut-clip]').select_option(index);await dialog.locator('[data-cap-end-number]').fill('0.2');await dialog.locator('[data-cap-end-number]').dispatch_event('change')
-   await expect(dialog.locator('[data-cap-export]')).to_be_enabled();await dialog.locator('[data-cap-export-size]').select_option('1080');await dialog.locator('[data-cap-final-rate]').select_option('0.5')
+    await ensure_review_tab(page,'[data-cap-cut-clip]');await dialog.locator('[data-cap-cut-clip]').select_option(index);await ensure_review_tab(page,'[data-cap-end-number]');await dialog.locator('[data-cap-end-number]').fill('0.2');await dialog.locator('[data-cap-end-number]').dispatch_event('change')
+   await expect(dialog.locator('[data-cap-export]')).to_be_enabled();await ensure_review_tab(page,'[data-cap-export-size]');await dialog.locator('[data-cap-export-size]').select_option('1080');await ensure_review_tab(page,'[data-cap-final-rate]');await dialog.locator('[data-cap-final-rate]').select_option('0.5')
    async with page.expect_download(timeout=90000) as pending1080:
-    await dialog.locator('[data-cap-export]').click();await page.wait_for_function('!SFAudioNodes.getState().captionPreview.exportBusy',timeout=60000);assert await page.evaluate('SFAudioNodes.getState().captionPreview.exportReady'),await dialog.locator('[data-cap-export-status]').inner_text();await dialog.locator('[data-cap-browser-download]').click()
+    await ensure_review_tab(page,'[data-cap-export]');await dialog.locator('[data-cap-export]').click();await page.wait_for_function('!SFAudioNodes.getState().captionPreview.exportBusy',timeout=60000);assert await page.evaluate('SFAudioNodes.getState().captionPreview.exportReady'),await dialog.locator('[data-cap-export-status]').inner_text();await ensure_review_tab(page,'[data-cap-browser-download]');await dialog.locator('[data-cap-browser-download]').click()
    final1080=Path(tmp)/'final1080.mp4';await(await pending1080.value).save_as(str(final1080))
    meta1080=json.loads(subprocess.check_output(['ffprobe','-v','error','-show_streams','-show_format','-of','json',str(final1080)]));v1080=next(r for r in meta1080['streams'] if r['codec_type']=='video');assert (v1080['width'],v1080['height'])==(1080,1920) and abs(float(meta1080['format']['duration'])-.8)<.07
    for at in [0.39,0.41,0.44]:
     frame1080=subprocess.check_output(['ffmpeg','-v','error','-ss',str(at),'-i',str(final1080),'-frames:v','1','-f','image2pipe','-vcodec','png','-threads','1','-']);im1080=Image.open(io.BytesIO(frame1080)).convert('RGB');assert sum(sum(p) for p in im1080.resize((12,20)).get_flattened_data())/240>60,('Slow join black frame',at)
    await dialog.locator('aside').evaluate('e=>e.scrollTop=0');await dialog.screenshot(path='/tmp/sceneforge-export-speed-v85.png')
    # Skip stale captions only by an explicit one-off action; preserve the draft and its warning.
-   await page.evaluate('project.merge.audioChanged=true');await dialog.locator('[data-cap-final-rate]').select_option('1');await dialog.locator('[data-cap-export]').click();await expect(dialog.locator('[data-cap-caption-review]')).to_be_visible()
+   await page.evaluate('project.merge.audioChanged=true');await ensure_review_tab(page,'[data-cap-final-rate]');await dialog.locator('[data-cap-final-rate]').select_option('1');await ensure_review_tab(page,'[data-cap-export]');await dialog.locator('[data-cap-export]').click();await expect(dialog.locator('[data-cap-caption-review]')).to_be_visible()
    before=len(models)
    async with page.expect_download(timeout=90000) as no_captions:
-    await dialog.locator('[data-cap-export-no-captions]').click();await page.wait_for_function('!SFAudioNodes.getState().captionPreview.exportBusy',timeout=60000);assert await page.evaluate('SFAudioNodes.getState().captionPreview.exportReady'),await dialog.locator('[data-cap-export-status]').inner_text();await dialog.locator('[data-cap-browser-download]').click()
+    await ensure_review_tab(page,'[data-cap-export-no-captions]');await dialog.locator('[data-cap-export-no-captions]').click();await page.wait_for_function('!SFAudioNodes.getState().captionPreview.exportBusy',timeout=60000);assert await page.evaluate('SFAudioNodes.getState().captionPreview.exportReady'),await dialog.locator('[data-cap-export-status]').inner_text();await ensure_review_tab(page,'[data-cap-browser-download]');await dialog.locator('[data-cap-browser-download]').click()
    await(await no_captions.value).save_as(str(Path(tmp)/'without-captions.mp4'));assert len(models)==before+1 and not any(r['track']=='captions' for r in models[-1]['clips']);assert any(r['track']=='logo' for r in models[-1]['clips'])
    assert await page.evaluate('project.merge.captions&&project.merge.audioChanged&&project.merge.captionDraft[0].text.startsWith("MỘT")')
    await expect(dialog.locator('[data-cap-export-status]')).to_contain_text('không kèm phụ đề')
    # A normal export must not silently reuse the no-caption final.
-   await dialog.locator('[data-cap-export]').click();await expect(dialog.locator('[data-cap-export-status]')).to_contain_text('Phụ đề cần rà');assert len(models)==before+1
-   await dialog.locator('[data-cap-review-accept]').click();await expect(dialog.locator('[data-cap-export-status]')).to_contain_text('Đã giữ bản phụ đề')
+   await ensure_review_tab(page,'[data-cap-export]');await dialog.locator('[data-cap-export]').click();await expect(dialog.locator('[data-cap-export-status]')).to_contain_text('Phụ đề cần rà');assert len(models)==before+1
+   await ensure_review_tab(page,'[data-cap-review-accept]');await dialog.locator('[data-cap-review-accept]').click();await expect(dialog.locator('[data-cap-export-status]')).to_contain_text('Đã giữ bản phụ đề')
    # New caption settings retire the old final; cancellation recovers all editing controls.
-   await dialog.locator('[data-cap-color]').fill('#ff9933');await expect(dialog.locator('[data-cap-download]')).to_be_hidden()
-   hold_start=True;await dialog.locator('[data-cap-export]').click();await asyncio.wait_for(start_entered.wait(),15);await dialog.locator('[data-cap-export-cancel]').click();start_gate.set()
+   await ensure_review_tab(page,'[data-cap-color]');await dialog.locator('[data-cap-color]').fill('#ff9933');await expect(dialog.locator('[data-cap-download]')).to_be_hidden()
+   hold_start=True;await ensure_review_tab(page,'[data-cap-export]');await dialog.locator('[data-cap-export]').click();await asyncio.wait_for(start_entered.wait(),15);await ensure_review_tab(page,'[data-cap-export-cancel]');await dialog.locator('[data-cap-export-cancel]').click();start_gate.set()
    await expect(dialog.locator('[data-cap-export-status]')).to_contain_text('Đã hủy');await expect(dialog.locator('[data-cap-color]')).to_be_enabled();await expect(dialog.locator('[data-cap-export]')).to_be_enabled();assert not await page.evaluate('SFAudioNodes.getState().captionPreview.exportReady')
    assert any(method=='POST' and path.endswith('/cancel') for method,path in requests)
-   await dialog.locator('[data-cap-logo-enabled]').uncheck();assert await page.evaluate('!SFAudioNodes.logoSettings().enabled');assert await page.evaluate('(async()=>await SFAudioNodes.logoLayer()===null)()')
-   await dialog.locator('[data-cap-logo-enabled]').check();await expect(dialog.locator('[data-cap-logo-status]')).to_contain_text('Logo đã sẵn sàng')
-   await dialog.locator('[data-cap-close]').click();await page.locator('#node-captions [data-an=caption-preview]').click();dialog=page.locator('#anCaptionDialog');await expect(dialog.locator('[data-cap-logo-status]')).to_contain_text('Logo đã sẵn sàng')
+   await ensure_review_tab(page,'[data-cap-logo-enabled]');await dialog.locator('[data-cap-logo-enabled]').uncheck();assert await page.evaluate('!SFAudioNodes.logoSettings().enabled');assert await page.evaluate('(async()=>await SFAudioNodes.logoLayer()===null)()')
+   await ensure_review_tab(page,'[data-cap-logo-enabled]');await dialog.locator('[data-cap-logo-enabled]').check();await expect(dialog.locator('[data-cap-logo-status]')).to_contain_text('Đã thêm')
+   await ensure_review_tab(page,'[data-cap-close]');await dialog.locator('[data-cap-close]').click();await page.locator('#node-captions [data-an=caption-preview]').click();dialog=page.locator('#anCaptionDialog');await expect(dialog.locator('[data-cap-logo-status]')).to_contain_text('Logo đã sẵn sàng')
    assert await page.evaluate('SFAudioNodes.logoSettings().width===25&&SFAudioNodes.logoSettings().plateColor==="#123456"')
-   await dialog.locator('.anLogoTools summary').click();await dialog.locator('[data-cap-logo-remove]').click();assert await page.evaluate('!SFAudioNodes.logoSettings().key&&!SFAudioNodes.logoSettings().enabled')
-   await dialog.locator('[data-cap-close]').click();await page.evaluate("project.scenes[1].clips[0].asset='missing';render()");await page.locator('#node-captions [data-an=caption-preview]').click();dialog=page.locator('#anCaptionDialog');await expect(dialog.locator('[data-cap-export]')).to_be_disabled();await expect(dialog.locator('[data-cap-export-status]')).to_contain_text('Còn thiếu')
-   await dialog.locator('[data-cap-close]').click();assert not errors,errors;await browser.close();await client.aclose()
+   await ensure_review_tab(page,'.anLogoTools summary');await dialog.locator('.anLogoTools summary').click();await ensure_review_tab(page,'[data-cap-logo-remove]');await dialog.locator('[data-cap-logo-remove]').click();assert await page.evaluate('!SFAudioNodes.logoSettings().key&&!SFAudioNodes.logoSettings().enabled')
+   await ensure_review_tab(page,'[data-cap-close]');await dialog.locator('[data-cap-close]').click();await page.evaluate("project.scenes[1].clips[0].asset='missing';render()");await page.locator('#node-captions [data-an=caption-preview]').click();dialog=page.locator('#anCaptionDialog');await expect(dialog.locator('[data-cap-export]')).to_be_disabled();await expect(dialog.locator('[data-cap-export-status]')).to_contain_text('Còn thiếu')
+   await ensure_review_tab(page,'[data-cap-close]');await dialog.locator('[data-cap-close]').click();assert not errors,errors;await browser.close();await client.aclose()
  print('PASS inline stale-caption review preserves edited text/times; explicit no-caption export leaves source draft unchanged; actual 1.5x 720p and 0.5x 1080p MP4s with retimed voice/music/captions/logo and preserved 880Hz pitch; no stale cache reuse; cancel recovery')
 if __name__=='__main__':asyncio.run(main())
