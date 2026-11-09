@@ -3176,12 +3176,13 @@ const accountFPSimplePaintBefore=paintAccounts;paintAccounts=function(){accountF
 // Explicit durable save uses the same failure-checked path as native close.
 (()=>{
  const control=document.createElement('div');control.id='projectSaveControl';control.innerHTML='<button id="saveProjectNow" type="button" title="Lưu dự án · Ctrl+S" aria-label="Lưu dự án · Ctrl+S"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 3h13l4 4v14H3V3zM7 3v6h9V3M7 21v-8h10v8"/></svg><small>Lưu dự án</small></button><span id="projectSaveStatus" role="status" aria-live="polite">Đang mở…</span>';
- document.querySelector('.railBottom').before(control);
- const style=document.createElement('style');style.textContent='#projectSaveControl{width:58px;margin-top:16px;text-align:center}#projectSaveControl button{height:54px;width:54px;padding:6px;display:flex;flex-direction:column;align-items:center;gap:4px;color:#d4f53c}#projectSaveControl button small{font-size:9px;white-space:nowrap}#projectSaveStatus{display:block;font-size:9px;line-height:1.4;color:#93a4ad;padding:4px 0}#projectSaveControl[data-state=error] #projectSaveStatus{color:#f5ad80}#projectSaveControl[data-state=saved] #projectSaveStatus{color:#68ca93}';document.head.append(style);
+ function mount(){const target=currentView==='analysis'?document.querySelector('#workspaceHeaderControls'):currentView==='editor'?document.querySelector('.roomBar'):document.querySelector('.deskActions');if(target&&control.parentElement!==target)target.prepend(control);}
+ mount();
+ const style=document.createElement('style');style.textContent='#projectSaveControl{display:flex;align-items:center;gap:7px;flex-shrink:0;min-width:0}#projectSaveControl button{display:inline-flex;align-items:center;gap:6px;padding:7px 9px;border:1px solid #364332;border-radius:8px;background:#20281c;color:#d4f53c;white-space:nowrap;height:32px}#projectSaveControl button svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linejoin:round}#projectSaveControl button small{font-size:11px;font-weight:600}#projectSaveStatus{font-size:10px;line-height:1.3;color:#93a4ad;max-width:60px}#projectSaveControl[data-state=error] #projectSaveStatus{color:#f5ad80}#projectSaveControl[data-state=saved] #projectSaveStatus{color:#68ca93}@media(max-width:1100px){.roomBar #projectSaveControl{gap:4px}.roomBar #projectSaveControl button small{font-size:10px}.roomBar #projectSaveStatus{font-size:9px;max-width:42px}.roomBar #projectSaveControl button{padding:6px}}';document.head.append(style);
  const drafts=new Map();let saving=null,manualError='';
  const owns=w=>[...document.querySelectorAll('iframe')].some(f=>f.contentWindow===w);
  const draftDirty=()=>[...drafts].some(([w,dirty])=>dirty&&owns(w));
- function paint(){for(const w of drafts.keys())if(!owns(w))drafts.delete(w);const s=SceneForgeStorage.state;let state='pending',text='Chờ lưu';
+ function paint(){mount();for(const w of drafts.keys())if(!owns(w))drafts.delete(w);const s=SceneForgeStorage.state;let state='pending',text='Chờ lưu';
   if(!appBootReady){text='Đang mở…';state='loading';}
   else if(saving||s.busy){text='Đang lưu…';state='saving';}
   else if(manualError||s.error||s.managed&&!s.active){text='Lưu lỗi';state='error';}
@@ -3194,6 +3195,7 @@ const accountFPSimplePaintBefore=paintAccounts;paintAccounts=function(){accountF
   manualError='';window.SceneForgeManualSave=true;saving=(async()=>{await SceneForgeStorage.flush();await new Promise(r=>setTimeout(r,0));const s=SceneForgeStorage.state;if(s.dirty||draftDirty())throw Error('Có thay đổi mới trong lúc lưu. Bấm Lưu lại khi thao tác đã xong.');toast(s.managed?'Đã lưu dự án vào kho trên máy.':'Đã lưu bản nháp trong trình duyệt.');return {saved:true,durable:s.managed};})();paint();
   try{return await saving;}catch(e){manualError=e.message;toast('Chưa lưu được: '+e.message);throw e;}finally{saving=null;window.SceneForgeManualSave=false;paint();}
  }
+ const beforeSaveView=showView;showView=async function(...args){const pending=beforeSaveView.apply(this,args);paint();try{return await pending;}finally{paint();}};
  window.SceneForgeApp.saveProject=saveProject;
  document.querySelector('#saveProjectNow').onclick=()=>saveProject().catch(()=>{});
  document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'&&!e.altKey){e.preventDefault();if(!e.repeat)saveProject().catch(()=>{});}},true);

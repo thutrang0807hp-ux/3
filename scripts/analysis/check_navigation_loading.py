@@ -24,6 +24,7 @@ rooms=[{id:'r',name:'Fixture',productId:'p',mode:'reference',stage:'review',crea
 importPendingVersions=async()=>{};
 for(const id of ['workflowFrame','standaloneEditorDemo']){const f=document.createElement('iframe');f.id=id;document.querySelector('#roomFrames').append(f);f.contentWindow.SceneForgeWorkflow={getState:()=>({analysis:{status:'idle'}}),isScanning:()=>false,flushRoom:async()=>{}};f.contentWindow.SceneForgeEditor={flushRoom:async()=>{},isExporting:()=>false};}
 await showView('analysis');
+check(document.querySelector('#workspaceHeaderControls #saveProjectNow')&&!document.querySelector('.rail #saveProjectNow'),'Save is not in the workspace toolbar');
 // A recipe read completes after a different tab was selected.
 const originalLibrary=recipeLibrary;let releaseLibrary;recipeLibrary=()=>new Promise(r=>releaseLibrary=r);
 document.querySelector('#g6OpenRecipes').click();await turn();
@@ -35,8 +36,10 @@ await showView('analysis');const api=document.querySelector('#workflowFrame').co
 api.flushRoom=async()=>{strictCalls++;throw Error('fixture blocked strict flush')};
 document.querySelector('.rail [data-view=overview]').click();await turn();await turn();
 check(currentView==='overview'&&strictCalls===0,'View navigation waited for a retained frame flush');
+check(!!document.querySelector('.deskActions #saveProjectNow'),'Home save missing');
 document.querySelector('.rail [data-view=editor]').click();await turn();
-check(currentView==='editor'&&strictCalls===0,'Editor navigation forced a retained-frame save');api.flushRoom=async()=>{};
+check(currentView==='editor'&&strictCalls===0,'Editor navigation forced a retained-frame save');
+check(document.querySelector('#projectSaveControl').parentElement.matches('.roomBar'),'Editor save hidden in analysis-only controls');api.flushRoom=async()=>{};
 // Start a cold analysis frame; revisit it while its API is delayed.
 document.querySelector('#workflowFrame').remove();let releaseAPI,opens=0,waits=0;
 const originalWait=waitAPI,originalPayload=roomPayload;
