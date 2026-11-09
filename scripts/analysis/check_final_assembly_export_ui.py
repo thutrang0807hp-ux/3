@@ -14,12 +14,12 @@ async def main():
   runtime=Path(tmp)/'runtime82';runtime.mkdir();(runtime/'__init__.py').write_text('')
   with zipfile.ZipFile('/workspace/3/downloads/v42/SceneForge-Veo-v42-Source.zip') as archive:
    for name in ['timeline_export.py','local_jobs.py','schema.py']:(runtime/name).write_bytes(archive.read('local_engine/'+name))
-  patched=Path('local_engine/timeline_export.py');patched=patched if patched.is_file() else Path('/workspace/3/veo-node-v46/local_engine/timeline_export.py');(runtime/'timeline_export.py').write_bytes(patched.read_bytes())
+  patched=Path('local_engine/timeline_export.py');patched=patched if patched.is_file() else Path('/workspace/3/veo-node-v46/local_engine/timeline_export.py');(runtime/'timeline_export.py').write_bytes(patched.read_bytes());save_module=patched.with_name('export_save_as.py');(runtime/'export_save_as.py').write_bytes(save_module.read_bytes())
   sys.path.insert(0,tmp);renderer=importlib.import_module('runtime82.timeline_export');app=FastAPI();renderer.install_timeline_exports(app,Path(tmp))
   client=httpx.AsyncClient(transport=httpx.ASGITransport(app=app),base_url='http://local');requests=[];models=[];hold_start=False;start_entered=asyncio.Event();start_gate=asyncio.Event()
   async with async_playwright() as p:
    browser=await p.chromium.launch(executable_path='/usr/bin/chromium',args=['--no-sandbox']);page=await browser.new_page(viewport={'width':1450,'height':1050});errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
-   await page.add_init_script("window.previewAudioElements=[];const OriginalAudio=Audio;window.Audio=function(...args){const el=new OriginalAudio(...args);previewAudioElements.push(el);return el};Audio.prototype=OriginalAudio.prototype")
+   await page.add_init_script("window.showSaveFilePicker=undefined;window.previewAudioElements=[];const OriginalAudio=Audio;window.Audio=function(...args){const el=new OriginalAudio(...args);previewAudioElements.push(el);return el};Audio.prototype=OriginalAudio.prototype")
    async def route(r):
     if '/local-api/export/timeline' in r.request.url:
      path=r.request.url.split('/local-api/')[1];requests.append((r.request.method,path))
@@ -51,7 +51,7 @@ async def main():
    assert len(models)==1;await expect(dialog.locator('[data-cap-export]')).to_be_enabled();await page.evaluate('project.merge.audioChanged=false')
    await dialog.locator('[data-cap-export-size]').select_option('720');await dialog.locator('[data-cap-rate]').select_option('2')
    async with page.expect_download(timeout=90000) as pending:
-    await dialog.locator('[data-cap-export]').click();await page.wait_for_function('!SFAudioNodes.getState().captionPreview.exportBusy',timeout=60000);assert await page.evaluate('SFAudioNodes.getState().captionPreview.exportReady'),await dialog.locator('[data-cap-export-status]').inner_text()
+    await dialog.locator('[data-cap-export]').click();await page.wait_for_function('!SFAudioNodes.getState().captionPreview.exportBusy',timeout=60000);assert await page.evaluate('SFAudioNodes.getState().captionPreview.exportReady'),await dialog.locator('[data-cap-export-status]').inner_text();await dialog.locator('[data-cap-browser-download]').click()
    download=await pending.value;assert download.suggested_filename.endswith('-thanh-pham.mp4');output=Path(tmp)/'final.mp4';await download.save_as(str(output))
    await page.wait_for_function('!SFAudioNodes.getState().captionPreview.exportBusy&&SFAudioNodes.getState().captionPreview.exportReady')
    model=models[-1];assert model['width']==720 and model['height']==1280 and model['fps']==30 and abs(model['duration']-5.117)<1/30+.001
@@ -70,14 +70,14 @@ async def main():
    # Voice has ended here; nonzero final audio proves short background music repeats to the end.
    pcm=subprocess.check_output(['ffmpeg','-v','error','-ss','4.85','-i',str(output),'-t','0.15','-vn','-ac','1','-ar','48000','-f','s16le','-']);samples=array.array('h',pcm);rms=math.sqrt(sum(x*x for x in samples)/len(samples));assert rms>150,rms
    created=len(models)
-   async with page.expect_download():await dialog.locator('[data-cap-download]').click()
+   async with page.expect_download():await dialog.locator('[data-cap-browser-download]').click()
    assert len(models)==created,'Download again must reuse completed MP4'
    # Also render the 1080p path using a short retained interval in each original clip.
    for index in ['0','1']:
     await dialog.locator('[data-cap-cut-clip]').select_option(index);await dialog.locator('[data-cap-end-number]').fill('0.2');await dialog.locator('[data-cap-end-number]').dispatch_event('change')
    await dialog.locator('[data-cap-joined]').click();await page.wait_for_function('SFAudioNodes.getState().captionPreview.joined',timeout=60000);await dialog.locator('[data-cap-export-size]').select_option('1080')
    async with page.expect_download(timeout=90000) as pending1080:
-    await dialog.locator('[data-cap-export]').click();await page.wait_for_function('!SFAudioNodes.getState().captionPreview.exportBusy',timeout=60000);assert await page.evaluate('SFAudioNodes.getState().captionPreview.exportReady'),await dialog.locator('[data-cap-export-status]').inner_text()
+    await dialog.locator('[data-cap-export]').click();await page.wait_for_function('!SFAudioNodes.getState().captionPreview.exportBusy',timeout=60000);assert await page.evaluate('SFAudioNodes.getState().captionPreview.exportReady'),await dialog.locator('[data-cap-export-status]').inner_text();await dialog.locator('[data-cap-browser-download]').click()
    final1080=Path(tmp)/'final1080.mp4';await(await pending1080.value).save_as(str(final1080))
    meta1080=json.loads(subprocess.check_output(['ffprobe','-v','error','-show_streams','-show_format','-of','json',str(final1080)]));v1080=next(r for r in meta1080['streams'] if r['codec_type']=='video');assert (v1080['width'],v1080['height'])==(1080,1920) and abs(float(meta1080['format']['duration'])-.4)<.07
    await dialog.locator('aside').evaluate('e=>e.scrollTop=0');await dialog.screenshot(path='/tmp/sceneforge-final-export-v83.png')

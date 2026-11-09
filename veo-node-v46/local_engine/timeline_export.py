@@ -263,16 +263,19 @@ def install_timeline_exports(app,data,lock=None,store=None):
     try:f.unlink(missing_ok=True)
     except PermissionError:pass # The active upload closes/removes its own .part on Windows.
   return public(j)
- @app.get('/local-api/export/timeline/{id}/file')
- async def download(id:str):
+ def resolve_export_file(id):
   j=get(id)
   if j['state']!='done':raise HTTPException(409,'FFmpeg: MP4 chưa xong.')
   if hasattr(jobs,'storage')and j.get('room_id'):
    stored=jobs.storage.file('export-'+id)
    if stored is None and (j['dir']/'output.mp4').is_file():j['result']=jobs.storage.capture_export(id,j['room_id'],j['dir']/'output.mp4');stored=jobs.storage.file('export-'+id)
-   if stored:return FileResponse(stored,media_type='video/mp4',filename='video.mp4')
+   if stored:return stored
   if not(j['dir']/'output.mp4').is_file():
    j.update(state='error',error='MP4 tạm đã hết hạn hoặc bị chuyển khỏi máy.')
    raise HTTPException(410,j['error'])
-  return FileResponse(j['dir']/'output.mp4',media_type='video/mp4',filename='sceneforge.mp4')
+  return j['dir']/'output.mp4'
+ @app.get('/local-api/export/timeline/{id}/file')
+ async def download(id:str):return FileResponse(resolve_export_file(id),media_type='video/mp4',filename='sceneforge.mp4')
+ from .export_save_as import install_export_save_as
+ install_export_save_as(app,resolve_export_file)
  return jobs

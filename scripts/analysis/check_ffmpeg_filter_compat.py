@@ -9,7 +9,7 @@ async def main():
   root=Path(td);package=root/'compat_runtime';package.mkdir();(package/'__init__.py').write_text('')
   with zipfile.ZipFile('/workspace/3/downloads/v46/SceneForge-Veo-v46-Source.zip') as archive:
    for name in ['local_jobs.py','schema.py']:(package/name).write_bytes(archive.read('local_engine/'+name))
-  source=Path('local_engine/timeline_export.py');source=source if source.is_file() else Path('/workspace/3/veo-node-v46/local_engine/timeline_export.py');(package/'timeline_export.py').write_bytes(source.read_bytes())
+  source=Path('local_engine/timeline_export.py');source=source if source.is_file() else Path('/workspace/3/veo-node-v46/local_engine/timeline_export.py');(package/'timeline_export.py').write_bytes(source.read_bytes());(package/'export_save_as.py').write_bytes(source.with_name('export_save_as.py').read_bytes())
   media=root/'source.mp4';real=shutil.which('ffmpeg');subprocess.run([real,'-v','error','-f','lavfi','-i','color=c=red:size=240x426:rate=30','-t','0.3','-c:v','libx264','-pix_fmt','yuv420p',str(media)],check=True)
   modefile=root/'mode';log=root/'calls.jsonl';binpath=root/'bin';binpath.mkdir();wrapper=binpath/'ffmpeg'
   wrapper.write_text('#!'+sys.executable+'\n'+f"""import os,sys,json
