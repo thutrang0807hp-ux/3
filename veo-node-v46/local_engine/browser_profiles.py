@@ -1,4 +1,4 @@
-"""App-owned persistent profiles and stable native browser settings; no spoofing.
+"""App-owned persistent profiles and optional explicit device parameter overrides.
 
 The identity ID is local bookkeeping, not an anti-detection fingerprint. Browser
 updates and OS changes may still change the browser's real fingerprint.
@@ -63,7 +63,10 @@ class Profiles:
   await lease.acquire()
   try:
    from .google_login import open_google_login
-   cfg=self.settings(entry);login=await open_google_login(url,self.data,profile=self.path(entry['service'],entry['key']),keep_profile=True,executable=cfg['executable'])
+   cfg=self.settings(entry)
+   from .fingerprints import read_config
+   fp=read_config(self.path(entry['service'],entry['key']))
+   login=await open_google_login(url,self.data,profile=self.path(entry['service'],entry['key']),keep_profile=True,executable=cfg['executable'],device_profile=fp if fp['enabled']else None)
    login.profile_release=lease.release
    marker=self.path(entry['service'],entry['key'])/'sceneforge-seeded'
    if cookies:
@@ -107,7 +110,10 @@ class Profiles:
     if error.status_code!=503:raise
     cfg=self.settings(entry,pw.chromium.executable_path)
    path=self.path(entry['service'],entry['key']);marker=path/'sceneforge-seeded'
-   context=await pw.chromium.launch_persistent_context(str(path),executable_path=cfg['executable'],headless=False,viewport=cfg['viewport'],args=['--disk-cache-size=67108864','--media-cache-size=33554432'])
+   from .fingerprints import read_config,apply
+   fp=read_config(path);viewport={'width':fp['width'],'height':fp['height']}if fp['enabled']else cfg['viewport']
+   context=await pw.chromium.launch_persistent_context(str(path),executable_path=cfg['executable'],headless=False,viewport=viewport,args=['--disk-cache-size=67108864','--media-cache-size=33554432'])
+   await apply(context,fp)
    if storage:
     current={(c['domain'],c['path'],c['name'])for c in await context.cookies()}
     missing=[c for c in storage.get('cookies',[])if (c.get('domain'),c.get('path','/'),c.get('name'))not in current]

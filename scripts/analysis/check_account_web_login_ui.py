@@ -68,6 +68,8 @@ async def main():
    elif path=='gemini-chat/confirm':
     if fail:fail=False;await r.fulfill(status=409,json={'detail':'Hoàn tất đăng nhập trước'})
     else:accounts.append({'id':'saved-gemini','service':'gemini_chat','name':'Gemini Chat','state':'ready','enabled':True,'active':True});await r.fulfill(json={'id':'saved-gemini'})
+   elif path.startswith('accounts/fingerprint/'):
+    await r.fulfill(json={'enabled':body.get('enabled',False),'cores':body.get('cores',8),'memory':body.get('memory',8),'width':body.get('width',1280),'height':body.get('height',800),'id':'fixture-fingerprint'})
    elif path=='accounts/connect':await r.fulfill(json={'id':'pending-muse'})
    elif path=='accounts/save-login':accounts.append({'id':'pending-muse','service':'muse','name':'Muse','state':'unverified','enabled':True});await r.fulfill(json={'saved':True})
    elif path=='accounts/check':await r.fulfill(status=409,json={'detail':'SDK not ready'})
@@ -88,6 +90,7 @@ async def main():
   await page.evaluate('accountScreen("flow")');await page.locator('#connectAccount').click();await expect(page.locator('#flowWebStatus')).to_contain_text('Đăng nhập Flow');assert any(path=='flow/web-login'for path,_ in posts)
   # Reopen passes the existing logical account id rather than creating a new profile.
   accounts.append({'id':'meta-profile','service':'meta','name':'Meta saved','state':'ready','enabled':True});await page.evaluate('accountScreen("meta")');await page.locator('[data-account-profile="meta-profile"]').click();await expect(page.locator('#accountWebSave')).to_be_enabled();assert any(path=='web-images/meta/login'and body.get('account_id')=='meta-profile'for path,body in posts);await page.locator('#accountWebBack').click()
+  await page.locator('[data-account-fingerprint="meta-profile"]').click();await expect(page.locator('#fpEnabled')).not_to_be_checked();await page.locator('#fpEnabled').check();await page.locator('#fpCores').select_option('12');await page.locator('#fpSave').click();await expect(page.locator('#fpStatus')).to_contain_text('Đã bật');assert any(path=='accounts/fingerprint/meta-profile'and body.get('cores')==12 and body.get('enabled')is True for path,body in posts);await page.locator('#fpBack').click()
   # Closing while browser launch is pending cleans up the late login, never shows it in the next tab.
   delay=True;opening.clear();await page.evaluate('accountScreen("gemini_chat")');await page.locator('#connectAccount').click();await opening.wait();await page.locator('#accountWebBack').click();release.set();await page.wait_for_timeout(200);assert any(path=='gemini-chat/login/pending-gemini/cancel'for path,_ in posts)
   assert not any('/jobs'in path or path.endswith('/generate')or 'pairs'in path for path,_ in posts);assert not errors,errors;await b.close()

@@ -69,6 +69,11 @@ async def lifespan(app):
  await BROWSER_BRIDGE.close()
  await BATCH_IMAGES.close()
  await FLOW_PROVIDER.close()
+ from .google_login import _FLOW_DEVICE_LOGINS
+ for device_login in list(_FLOW_DEVICE_LOGINS):
+  try:await device_login.close()
+  except Exception:pass
+ _FLOW_DEVICE_LOGINS.clear()
  await MUSE_PROVIDER.close()
  await GEMINI_CHAT.close()
  await WEB_IMAGES.close()
@@ -555,6 +560,13 @@ BROWSER_BRIDGE=install_browser_bridge(app,GEMINI_CHAT,FLOW_ACCOUNTS)
 
 from .simple_flow import install_simple_flow
 SIMPLE_FLOW=install_simple_flow(app,DATA,VAULT,REQUESTS,FLOW_PROVIDER)
+
+from .fingerprints import install_fingerprints
+def fingerprint_busy(aid):
+ from .browser_profiles import profiles
+ entry=profiles(VAULT,DATA).registry().get(aid)
+ return bool(entry and profiles(VAULT,DATA).lease(entry).locked()or aid in WEB_IMAGES.assignments.values()or aid in FLOW_PROVIDER.assignments.values()or aid in GEMINI_CHAT.phases.values()or GEMINI_CHAT.lock(aid).locked()or aid in MUSE_PROVIDER.phases.values()or MUSE_PROVIDER.lock(aid).locked()or account(aid)['service']=='flow'and SIMPLE_FLOW.busy())
+install_fingerprints(app,VAULT,DATA,fingerprint_busy)
 
 if frontend.is_dir():app.mount('/',StaticFiles(directory=frontend,html=True),name='frontend')
 

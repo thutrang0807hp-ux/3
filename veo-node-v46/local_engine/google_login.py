@@ -105,8 +105,8 @@ class InteractiveLogin:
         await self.close()
 
 
-async def open_google_login(url, data, *, profile=None, keep_profile=False, executable=None):
-    if url not in ('https://gemini.google.com/', 'https://labs.google/fx/tools/flow','https://muse.ai/'):
+async def open_google_login(url, data, *, profile=None, keep_profile=False, executable=None, device_profile=None):
+    if url not in ('https://gemini.google.com/', 'https://labs.google/fx/tools/flow','https://muse.ai/','https://flow.google.com/'):
         raise ValueError('Unsupported Google login destination')
     executable = executable or installed_browser()
     root = Path(data)/'login-sessions'
@@ -116,7 +116,7 @@ async def open_google_login(url, data, *, profile=None, keep_profile=False, exec
     (profile/'DevToolsActivePort').unlink(missing_ok=True)
     # Dedicated writable profile is required by Chrome 136+ for local CDP.
     args = [executable, '--user-data-dir='+str(profile), '--remote-debugging-address=127.0.0.1',
-            '--remote-debugging-port=0', '--window-size=1280,800', '--disk-cache-size=67108864', '--media-cache-size=33554432', '--no-first-run', '--no-default-browser-check', '--new-window', url]
+            '--remote-debugging-port=0', '--window-size=1280,800', '--disk-cache-size=67108864', '--media-cache-size=33554432', '--no-first-run', '--no-default-browser-check', '--new-window', 'about:blank'if device_profile else url]
     try:
         process = subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                                    **({'creationflags':0x08000000} if os.name == 'nt' else {}))
@@ -129,6 +129,14 @@ async def open_google_login(url, data, *, profile=None, keep_profile=False, exec
         if process.poll() is not None:
             break
         if (profile/'DevToolsActivePort').is_file():
+            if device_profile:
+                try:
+                    await login.cookies()
+                    from .fingerprints import apply
+                    context=login.connection.contexts[0];await apply(context,device_profile)
+                    page=context.pages[0]if context.pages else await context.new_page();await page.goto(url,wait_until='domcontentloaded',timeout=45000)
+                except BaseException:
+                    await login.close();raise
             return login
         await asyncio.sleep(.2)
     await login.close()
@@ -136,6 +144,7 @@ async def open_google_login(url, data, *, profile=None, keep_profile=False, exec
 
 
 _FLOW_WEB_PROCESSES=[]
+_FLOW_DEVICE_LOGINS=[]
 
 def flow_profile_path(data,profile_key=None):
     if profile_key is None:return Path(data)/'browser-profiles'/'flow-web'
@@ -155,6 +164,14 @@ async def open_flow_web_login(data,auto_connect=False,profile_key=None):
         if not Path(executable).is_file():raise HTTPException(409,'Cài lại trình duyệt đã dùng cho profile Flow trước khi mở lại.')
     else:
         temp=identity.with_suffix('.tmp');temp.write_text(json.dumps({'executable':executable,'window':[1280,800]}));os.replace(temp,identity)
+    from .fingerprints import read_config
+    fp=read_config(profile)
+    if fp['enabled']:
+        for old in list(_FLOW_DEVICE_LOGINS):
+            if old.process.poll()is not None:await old.close();_FLOW_DEVICE_LOGINS.remove(old)
+        login=await open_google_login('https://flow.google.com/',data,profile=profile,keep_profile=True,executable=executable,device_profile=fp)
+        _FLOW_DEVICE_LOGINS.append(login);_FLOW_WEB_PROCESSES.append(login.process)
+        return {'opened':True,'message':'Đã mở Flow với fingerprint tùy chỉnh của profile. Không bảo đảm phiên còn hiệu lực; chưa tạo video.'}
     args=[executable,'--user-data-dir='+str(profile.resolve()),'--window-size=1280,800','--disk-cache-size=67108864','--media-cache-size=33554432','--no-first-run',
           '--no-default-browser-check','--new-window','https://flow.google.com/']
     if auto_connect:args[1:1]=['--remote-debugging-address=127.0.0.1','--remote-debugging-port=0']
