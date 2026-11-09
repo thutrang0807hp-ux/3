@@ -1,0 +1,26 @@
+{
+  "version": "2026.11.09.4691",
+  "file": "SceneForge-Update-20261109-v46.91-Compact-Accounts.exe",
+  "bytes": 3986944,
+  "sha256": "8757ecaf43b69796921d4c510da8b2e4228b4304ca554347ee96ca75552f3d87",
+  "files": [
+    {
+      "path": "app/dist/web-demo/index.html",
+      "bytes": 1063343,
+      "sha256": "2cfeab8092b03a05b86234cc3e85d38dfb2825db9aceacf21b6aea0ba5466e42"
+    }
+  ],
+  "minimum_patch": "2026.11.09.4690",
+  "embedded_files_verified": true,
+  "launcher_code_unchanged": true,
+  "baseline_source_commit": "96a08cb",
+  "ui_only": true,
+  "compact_account_overview": true,
+  "six_column_account_table": true,
+  "responsive_mobile_account_cards": true,
+  "long_account_names_truncated_with_full_details": true,
+  "direct_row_remove_with_confirmation": true,
+  "existing_account_remove_api_preserved": true,
+  "duplicate_flow_login_button_removed": true,
+  "windows_installer_tested": false
+}
