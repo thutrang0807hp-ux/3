@@ -511,3 +511,7 @@ from .flow_managed_driver import FlowManagedDriver
 from .flow_extension_driver import FlowExtensionDriver
 FLOW_PROVIDER.web_ui=FlowExtensionDriver(FlowManagedDriver(DATA,VAULT),BROWSER_BRIDGE.relay,FLOW_ACCOUNTS)
 FLOW_ACCOUNTS.web_ui=FLOW_PROVIDER.web_ui
+
+# Apply branding only to the matching desktop host; browser/worker startup is unchanged.
+from .desktop_icon import install_desktop_icon
+DESKTOP_ICON_THREAD=install_desktop_icon(DATA,ROOT)
