@@ -13,7 +13,7 @@ ROOT=Path('/workspace/3')
 HOST="""async()=>{try{await window.SceneForgeApp?.flush?.();await window.SceneForgeStorage?.flush?.();return {type:'sf-desktop-flush',ok:true};}catch(e){return {type:'sf-desktop-flush',ok:false,error:e.message};}}"""
 async def main():
  paths=['index.html','workflow.html','photos.html','native/index.html'];html={p:(Path(p)if Path(p).exists()else ROOT/p).read_text()for p in paths}
- html['index.html']=html['index.html'].replace('return {ready,edit,','return {testContentHash:contentHash,testEqualBlob:equalBlob,ready,edit,')
+ html['index.html']=html['index.html'].replace('return {ready,edit,','return {testHasLocalRecords:hasLocalRecords,testContentHash:contentHash,testEqualBlob:equalBlob,ready,edit,')
  with tempfile.TemporaryDirectory(prefix='sf-exit96-')as td:
   root=Path(td);pkg=root/'exit_runtime';pkg.mkdir();(pkg/'__init__.py').write_text('')
   with zipfile.ZipFile(ROOT/'downloads/v46/SceneForge-Veo-v46-Source.zip')as z:
@@ -41,6 +41,7 @@ async def main():
    warm=await page.evaluate(HOST);assert warm['ok'],warm;assert not await page.evaluate('SceneForgeStorage.state.dirty')
    # Metadata-only saves must never open unchanged project/media cursors.
    await page.evaluate("""async()=>{window.exitCursorReads=[];const old=IDBObjectStore.prototype.openCursor;IDBObjectStore.prototype.openCursor=function(...args){exitCursorReads.push([this.transaction.db.name,this.name,args.length]);return old.apply(this,args)};await io('prefs','readwrite','incremental-fixture',{value:1});await SceneForgeStorage.flush();}""")
+   assert await page.evaluate('SceneForgeStorage.testHasLocalRecords()')is True
    reads=await page.evaluate('exitCursorReads');assert reads and all(r[1]=='prefs'and r[2]==1 for r in reads),reads
    assert any(r['key']=='incremental-fixture'for r in lib.snapshot()['records'])
    await page.evaluate("""async()=>{await new Promise((ok,no)=>{const tx=db.transaction('prefs','readwrite');tx.objectStore('prefs').delete('incremental-fixture');tx.oncomplete=ok;tx.onerror=()=>no(tx.error)});await SceneForgeStorage.flush()}""")
