@@ -1,0 +1,60 @@
+{
+  "version": "2026.11.09.4693",
+  "file": "SceneForge-Update-20261109-v46.93-Persistent-Profiles.exe",
+  "bytes": 3986944,
+  "sha256": "65133d054c5728b21707a250fc3734efb7315cf26564b061f4abfadc80ad5cbf",
+  "files": [
+    {
+      "path": "app/local_engine/browser_profiles.py",
+      "bytes": 8810,
+      "sha256": "adc98e4728df6b609421d61cf76fcd79cdd8a3e0dc8269cf49ecb9c94de43228"
+    },
+    {
+      "path": "app/local_engine/google_login.py",
+      "bytes": 9249,
+      "sha256": "a12554d9f1cab107b1bb1e0daa21405036a9a527bf7e55d41a0168bf45a07852"
+    },
+    {
+      "path": "app/local_engine/gemini_chat.py",
+      "bytes": 27561,
+      "sha256": "72a9c35974987e5fe6d59c29c9bb776be5be6800d0b4a54652f77c0f121729c8"
+    },
+    {
+      "path": "app/local_engine/web_images.py",
+      "bytes": 26121,
+      "sha256": "e24b69de5c96b1989c4cb8ede74df9058212867b1a52adb017528d1d1485b332"
+    },
+    {
+      "path": "app/local_engine/server.py",
+      "bytes": 40256,
+      "sha256": "b87c873b1eec54f90f44aabdd13e69bd8d52c0ade689d8470821273d512c1c0d"
+    },
+    {
+      "path": "app/local_engine/monitoring.py",
+      "bytes": 9313,
+      "sha256": "cd1f1878820504e0127d90be6ea5b3f6541ec49d95fb4f940e3e52bfae2dd1e1"
+    },
+    {
+      "path": "app/dist/web-demo/index.html",
+      "bytes": 1064868,
+      "sha256": "d7cb746bb2afa55f4b23f4ddc27835269004dfaf070dfc1ecd8310c9161f815f"
+    }
+  ],
+  "minimum_patch": "2026.11.09.4692",
+  "embedded_files_verified": true,
+  "launcher_code_unchanged": true,
+  "baseline_source_commit": "96e038c",
+  "persistent_per_account_profiles": true,
+  "stable_real_browser_settings": true,
+  "no_random_fingerprint_spoofing": true,
+  "native_browser_graceful_cookie_flush": true,
+  "encrypted_profile_bindings": true,
+  "session_cookie_restore": true,
+  "newer_browser_cookie_preserved": true,
+  "profile_storage_measured": true,
+  "profile_reopen_row_action": true,
+  "real_chromium_restart_tested": true,
+  "headed_windows_browser_tested": false,
+  "live_provider_login_tested": false,
+  "windows_installer_tested": false
+}

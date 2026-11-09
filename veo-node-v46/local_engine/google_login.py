@@ -42,8 +42,9 @@ def installed_browser():
 
 
 class InteractiveLogin:
-    def __init__(self, profile, process):
+    def __init__(self, profile, process, keep_profile=False):
         self.profile, self.process = profile, process
+        self.keep_profile=keep_profile;self.profile_release=None
         self.browser = self.context = self  # Compatible with existing login lifecycle.
         self.pw = None
         self.connection = None
@@ -66,47 +67,63 @@ class InteractiveLogin:
         return await self.connection.contexts[0].cookies()
 
     async def close(self):
-        if self.closed:
-            return
-        self.closed = True
+        if self.closed:return
+        # Persistent Chromium profiles need a graceful browser shutdown to flush
+        # their cookie database. Disconnecting CDP then killing the process loses
+        # recently changed cookies even though the directory itself survives.
+        if self.keep_profile and self.connection is None and self.process.poll() is None:
+            try:await self.cookies()
+            except Exception:pass
+        self.closed=True
         try:
             if self.connection:
+                if self.keep_profile:
+                    try:
+                        session=await self.connection.new_browser_cdp_session()
+                        await session.send('Browser.close')
+                    except Exception:pass  # Browser closing can end the CDP reply.
                 await self.connection.close()
         finally:
-            if self.pw:
-                await self.pw.stop()
-            if self.process.poll() is None:
-                if os.name == 'nt':
-                    await asyncio.to_thread(subprocess.run, ['taskkill', '/PID', str(self.process.pid), '/T', '/F'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=0x08000000)
-                else:
-                    self.process.terminate()
+            try:
+                if self.keep_profile and self.process.poll() is None:
+                    try:await asyncio.to_thread(self.process.wait,timeout=5)
+                    except subprocess.TimeoutExpired:pass
+                if self.process.poll() is None:
+                    if os.name=='nt':
+                        await asyncio.to_thread(subprocess.run,['taskkill','/PID',str(self.process.pid),'/T','/F'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,creationflags=0x08000000)
+                    else:self.process.terminate()
+                    try:await asyncio.to_thread(self.process.wait,timeout=10)
+                    except subprocess.TimeoutExpired:self.process.kill()
+            finally:
                 try:
-                    await asyncio.to_thread(self.process.wait, timeout=10)
-                except subprocess.TimeoutExpired:
-                    self.process.kill()
-            await asyncio.to_thread(shutil.rmtree, self.profile, True)
+                    if self.pw:await self.pw.stop()
+                    if not self.keep_profile:await asyncio.to_thread(shutil.rmtree,self.profile,True)
+                finally:
+                    if self.profile_release:self.profile_release();self.profile_release=None
 
     async def stop(self):
         await self.close()
 
 
-async def open_google_login(url, data):
-    if url not in ('https://gemini.google.com/', 'https://labs.google/fx/tools/flow'):
+async def open_google_login(url, data, *, profile=None, keep_profile=False, executable=None):
+    if url not in ('https://gemini.google.com/', 'https://labs.google/fx/tools/flow','https://muse.ai/'):
         raise ValueError('Unsupported Google login destination')
-    executable = installed_browser()
+    executable = executable or installed_browser()
     root = Path(data)/'login-sessions'
     root.mkdir(parents=True, exist_ok=True, mode=0o700)
-    profile = Path(tempfile.mkdtemp(prefix='google-', dir=root))
+    profile = Path(profile)if profile is not None else Path(tempfile.mkdtemp(prefix='google-', dir=root))
+    profile.mkdir(parents=True,exist_ok=True,mode=0o700)
+    (profile/'DevToolsActivePort').unlink(missing_ok=True)
     # Dedicated writable profile is required by Chrome 136+ for local CDP.
     args = [executable, '--user-data-dir='+str(profile), '--remote-debugging-address=127.0.0.1',
-            '--remote-debugging-port=0', '--no-first-run', '--no-default-browser-check', '--new-window', url]
+            '--remote-debugging-port=0', '--window-size=1280,800', '--disk-cache-size=67108864', '--media-cache-size=33554432', '--no-first-run', '--no-default-browser-check', '--new-window', url]
     try:
         process = subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                                    **({'creationflags':0x08000000} if os.name == 'nt' else {}))
     except OSError:
-        shutil.rmtree(profile, ignore_errors=True)
+        if not keep_profile:shutil.rmtree(profile, ignore_errors=True)
         raise HTTPException(503, 'Chưa mở được Chrome/Edge. Kiểm tra trình duyệt đã cài trên máy.') from None
-    login = InteractiveLogin(profile, process)
+    login = InteractiveLogin(profile, process, keep_profile)
     deadline = time.monotonic()+25
     while time.monotonic() < deadline:
         if process.poll() is not None:
@@ -132,7 +149,13 @@ async def open_flow_web_login(data,auto_connect=False,profile_key=None):
     executable=installed_browser()
     profile=flow_profile_path(data,profile_key)
     profile.mkdir(parents=True,exist_ok=True,mode=0o700)
-    args=[executable,'--user-data-dir='+str(profile.resolve()),'--no-first-run',
+    identity=profile/'sceneforge-browser.json'
+    if identity.exists():
+        saved=json.loads(identity.read_text());executable=saved['executable']
+        if not Path(executable).is_file():raise HTTPException(409,'Cài lại trình duyệt đã dùng cho profile Flow trước khi mở lại.')
+    else:
+        temp=identity.with_suffix('.tmp');temp.write_text(json.dumps({'executable':executable,'window':[1280,800]}));os.replace(temp,identity)
+    args=[executable,'--user-data-dir='+str(profile.resolve()),'--window-size=1280,800','--disk-cache-size=67108864','--media-cache-size=33554432','--no-first-run',
           '--no-default-browser-check','--new-window','https://flow.google.com/']
     if auto_connect:args[1:1]=['--remote-debugging-address=127.0.0.1','--remote-debugging-port=0']
     try:

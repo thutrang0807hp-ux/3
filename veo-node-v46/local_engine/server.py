@@ -49,6 +49,17 @@ async def lifespan(app):
  sweeper=asyncio.create_task(storage_sweeper())
  try:yield
  finally:
+  for ident,login in list(LOGINS.items()):
+   try:
+    await login['browser'].close();await login['playwright'].stop()
+   except Exception:pass
+   finally:
+    LOGINS.pop(ident,None)
+    if login.get('profile_entry'):
+     from .browser_profiles import profiles
+     await profiles(VAULT,DATA).discard(login['profile_entry'])
+    row=next((a for a in VAULT.rows('accounts')if a['id']==ident),None)
+    if row and row.get('state')=='awaiting_login'and not login.get('existing_account'):VAULT.delete('accounts',ident)
   await STOP_VOICE_PREVIEWS()
   await VOICE_RUNTIME.close()
   sweeper.cancel()
@@ -160,15 +171,17 @@ async def connect_account(body:dict):
   browser=await open_google_login('https://labs.google/fx/tools/flow',DATA)
   context=pw=browser
  else:
-  from playwright.async_api import async_playwright
-  pw=await async_playwright().start()
-  try:
-   executable=os.environ.get('SCENEFORGE_BROWSER')
-   browser=await pw.chromium.launch(headless=False,**({'executable_path':executable} if executable else {}))
-   context=await browser.new_context();page=await context.new_page();await page.goto('https://flow.google.com/'if service=='flow'else'https://muse.ai/',wait_until='domcontentloaded',timeout=45000)
-  except Exception:
-   await pw.stop();raise HTTPException(503,'Chưa mở được trình duyệt có cửa sổ. Cài Chromium bằng python -m playwright install chromium trên máy của bạn.')
- id=str(uuid.uuid4());a={'id':id,'service':service,'name':('Flow'if service=='flow'else'Muse')+' '+str(1+len([a for a in VAULT.rows('accounts')if a['service']==service])),'state':'awaiting_login','enabled':True,'active':False,'priority':len(VAULT.rows('accounts')),'credit':None,'credit_at':None,'successes':0,'failures':0,'created_at':time.time()};VAULT.put('accounts',a);LOGINS[id]={'browser':browser,'context':context,'playwright':pw}
+  from .browser_profiles import profiles
+  manager=profiles(VAULT,DATA);existing=body.get('account_id')
+  if existing and (MUSE_PROVIDER.lock(existing).locked()or existing in MUSE_PROVIDER.phases.values()):raise HTTPException(409,'Tài khoản còn đang chạy. Đợi xong trước khi mở profile.')
+  entry=manager.reserve('muse',existing)
+  from .browser_profiles import saved_cookies
+  prior=VAULT.secret('muse-session:'+str(existing))or VAULT.secret('account:'+str(existing))or{}
+  browser=await manager.native(entry,'https://muse.ai/',saved_cookies(prior,'muse'));context=pw=browser
+ id=body.get('account_id')if service=='muse'and body.get('account_id')else str(uuid.uuid4())
+ old=account(id)if service=='muse'and body.get('account_id')else None
+ a=old or {'id':id,'service':service,'name':('Flow'if service=='flow'else'Muse')+' '+str(1+len([a for a in VAULT.rows('accounts')if a['service']==service])),'state':'awaiting_login','enabled':True,'active':False,'priority':len(VAULT.rows('accounts')),'credit':None,'credit_at':None,'successes':0,'failures':0,'created_at':time.time()}
+ VAULT.put('accounts',a);LOGINS[id]={'browser':browser,'context':context,'playwright':pw,**({'profile_entry':entry,'existing_account':bool(old)}if service=='muse'else{})}
  return {'id':id,'message':'Tự đăng nhập và xác minh trong cửa sổ vừa mở, rồi bấm “Lưu phiên đăng nhập”. App không đọc mật khẩu.'}
 @app.post('/local-api/accounts/save-login')
 async def save_login(body:dict):
@@ -185,6 +198,9 @@ async def save_login(body:dict):
    await login['browser'].close();await login['playwright'].stop();del LOGINS[a['id']]
    VAULT.delete_secret('account:'+a['id']);VAULT.delete('accounts',a['id'])
    return {'saved':True,'message':'Đã nhập phiên vào engine và đồng bộ tài khoản thật. Bấm Kiểm tra phiên/credit trước khi chọn tạo.'}
+  if login.get('profile_entry'):
+   from .browser_profiles import profiles
+   profiles(VAULT,DATA).bind(login['profile_entry'],a['id']);a=account(a['id'])
   exp=[c['expires']for c in cookies if c.get('expires',-1)>0];a.update(state='unverified',cookie_expires_at=min(exp)if exp else None,expires_at=None);VAULT.put('accounts',a);await login['browser'].close();await login['playwright'].stop();del LOGINS[a['id']];return {'saved':True,'message':'Phiên đã mã hóa. Chưa xác minh quota hoặc khả năng tạo.'}
 @app.post('/local-api/accounts/cancel-login')
 async def cancel_account_login(body:dict):
@@ -193,14 +209,29 @@ async def cancel_account_login(body:dict):
  async with login.setdefault('lock',asyncio.Lock()):
   if LOGINS.get(ident)is not login:return {'cancelled':False}
   a=account(ident)
-  if a.get('state')!='awaiting_login':return {'cancelled':False,'saved':True}
+  if a.get('state')!='awaiting_login'and not login.get('existing_account'):return {'cancelled':False,'saved':True}
   LOGINS.pop(ident,None)
   try:
    await login['browser'].close()
    await login['playwright'].stop()
   finally:
-   VAULT.delete_secret('account:'+ident);VAULT.delete('accounts',ident)
+   if not login.get('existing_account'):VAULT.delete_secret('account:'+ident);VAULT.delete('accounts',ident)
+   if login.get('profile_entry'):
+    from .browser_profiles import profiles
+    await profiles(VAULT,DATA).discard(login['profile_entry'])
   return {'cancelled':True}
+@app.post('/local-api/accounts/open-profile')
+async def open_saved_profile(body:dict):
+ a=account(body.get('id'))
+ if a['service']!='flow':raise HTTPException(400,'Chỉ dùng đường này cho profile Flow.')
+ if SIMPLE_FLOW.busy():raise HTTPException(409,'Đợi lượt Flow hiện tại xong trước khi mở lại profile.')
+ binding=(VAULT.secret('flow-managed-profiles')or{}).get(a['id'])
+ if not binding:raise HTTPException(409,'Tài khoản Flow này chưa có profile web được lưu. Đăng nhập web một lần để tạo profile.')
+ from .google_login import open_flow_web_login
+ from .flow_browser_probe import probe_flow_browser
+ key=binding.get('profile_key');probe=await probe_flow_browser(DATA,key)
+ if probe['ready']:return {'opened':True,'message':'Profile Flow của tài khoản đã mở. Dùng lại cửa sổ hiện tại.'}
+ return await open_flow_web_login(DATA,auto_connect=True,profile_key=key)
 @app.post('/local-api/accounts/use')
 async def use_account(body:dict):
  a=account(body.get('id'))
@@ -224,12 +255,17 @@ async def check_account(body:dict):
 @app.post('/local-api/accounts/remove')
 async def remove_account(body:dict):
  a=account(body.get('id'))
+ from .browser_profiles import profiles
+ profiles(VAULT,DATA).ensure_idle(a['id'])
  if a['service']in ('grok','chatgpt','meta'):WEB_IMAGES.remove(a['id'])
  if a['service']=='flow':await FLOW_ACCOUNTS.remove(a['id'])
  if a['service']=='gemini_chat':GEMINI_CHAT.remove(a['id'])
  if a['service']=='muse':MUSE_PROVIDER.remove(a['id'])
+ await profiles(VAULT,DATA).remove(a['id'])
  login=LOGINS.pop(a['id'],None)
- if login:await login['browser'].close();await login['playwright'].stop()
+ if login:
+  await login['browser'].close();await login['playwright'].stop()
+  if login.get('profile_entry'):await profiles(VAULT,DATA).discard(login['profile_entry'])
  VAULT.delete_secret('account:'+a['id']);VAULT.delete('accounts',a['id']);return {'ok':True}
 
 gemini_request_lock=asyncio.Lock()

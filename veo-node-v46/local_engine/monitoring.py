@@ -63,7 +63,7 @@ def project_usage(library,sizes,mimes):
 
 def storage_breakdown(library,data):
  from .local_tts import engine_root
- started=time.monotonic();seen=set();entries=0;complete=True;errors=0;counts={k:dict(files=0,images=0,videos=0,audio=0)for k in ('projects','exports','cache','models','working')};asset_sizes={};mimes={}
+ started=time.monotonic();seen=set();entries=0;complete=True;errors=0;counts={k:dict(files=0,images=0,videos=0,audio=0)for k in ('projects','exports','cache','models','working','profiles')};asset_sizes={};mimes={}
  def size(paths,category):
   nonlocal entries,complete,errors
   total=0
@@ -96,10 +96,11 @@ def storage_breakdown(library,data):
   cache=size([library.root/'cache'],'cache')
   working=size([Path(data)/name for name in ('media','timeline-exports','exports','cpu-analysis')],'working')
   models=size([Path(data)/'models',engine_root(Path(data))/'runtime/offline'],'models')
+  profile_bytes=size([Path(data)/'browser-profiles'],'profiles')
   room_usage=project_usage(library,asset_sizes,mimes)
   cache_plan=library.cache_plan();limits=library.jobs_bridge.limits()if getattr(library,'jobs_bridge',None)else{}
  return {'at':time.time(),'root':str(library.root),'output_root':str(output),'models_root':str(Path(data)/'models'),'voice_models_root':str(engine_root(Path(data))/'runtime/offline'),
-  'counts':counts,'room_usage':room_usage,'categories':{'projects':project,'exports':exported,'models':models,'cache':cache,'working':working},'total_bytes':project+exported+models+cache+working,'complete':complete,'errors':errors,
+  'counts':counts,'room_usage':room_usage,'categories':{'projects':project,'exports':exported,'models':models,'cache':cache,'working':working,'profiles':profile_bytes},'total_bytes':project+exported+models+cache+working+profile_bytes,'complete':complete,'errors':errors,
   'free_bytes':min(shutil.disk_usage(library.root).free,shutil.disk_usage(data).free),'safe_cache_bytes':cache_plan['bytes'],'limits':limits,
   'note':'Đo các vùng được app quản lý, không phải toàn bộ ổ hay dung lượng gói cài. Gồm kho, sao lưu, bản xuất, model và tệp làm việc media/ghép/phân tích. File đã lưu tùy ý bên ngoài không được quét. Không đi theo symlink; cache chỉ xóa qua kế hoạch đã kiểm tra.'}
 

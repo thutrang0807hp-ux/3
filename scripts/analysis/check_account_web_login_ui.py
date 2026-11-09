@@ -86,6 +86,8 @@ async def main():
    if service=='muse':await page.locator('#accountWebSave').click();await expect(page.locator('#connectAccount')).to_be_visible();assert not any(path=='accounts/cancel-login'for path,_ in posts)
    else:await page.locator('#accountWebBack').click();await expect(page.locator('#connectAccount')).to_be_visible();assert any(path=='web-images/login/pending-'+service+'/close'for path,_ in posts)
   await page.evaluate('accountScreen("flow")');await page.locator('#connectAccount').click();await expect(page.locator('#flowWebStatus')).to_contain_text('Đăng nhập Flow');assert any(path=='flow/web-login'for path,_ in posts)
+  # Reopen passes the existing logical account id rather than creating a new profile.
+  accounts.append({'id':'meta-profile','service':'meta','name':'Meta saved','state':'ready','enabled':True});await page.evaluate('accountScreen("meta")');await page.locator('[data-account-profile="meta-profile"]').click();await expect(page.locator('#accountWebSave')).to_be_enabled();assert any(path=='web-images/meta/login'and body.get('account_id')=='meta-profile'for path,body in posts);await page.locator('#accountWebBack').click()
   # Closing while browser launch is pending cleans up the late login, never shows it in the next tab.
   delay=True;opening.clear();await page.evaluate('accountScreen("gemini_chat")');await page.locator('#connectAccount').click();await opening.wait();await page.locator('#accountWebBack').click();release.set();await page.wait_for_timeout(200);assert any(path=='gemini-chat/login/pending-gemini/cancel'for path,_ in posts)
   assert not any('/jobs'in path or path.endswith('/generate')or 'pairs'in path for path,_ in posts);assert not errors,errors;await b.close()

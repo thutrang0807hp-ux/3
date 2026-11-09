@@ -96,10 +96,16 @@ class GeminiChat(MuseProvider):
             if len(self.logins) >= 5:
                 raise HTTPException(409, 'Đóng các cửa sổ đăng nhập chưa lưu trước khi mở thêm.')
             from .google_login import open_google_login
-            login = await open_google_login('https://gemini.google.com/', self.data)
+            from .browser_profiles import profiles
+            ident=body.get('account_id')
+            if ident and (self.lock(ident).locked()or ident in self.phases.values()):raise HTTPException(409,'Đợi tác vụ tài khoản xong trước khi mở lại profile.')
+            manager=profiles(self.vault,self.data);entry=manager.reserve('gemini_chat',ident)
+            from .browser_profiles import saved_cookies
+            prior=self.vault.secret('gemini-chat-session:'+str(body.get('account_id')))or{}
+            login = await manager.native(entry,'https://gemini.google.com/',saved_cookies(prior,'gemini_chat'))
             browser = context = pw = login
             aid = 'gchat-account-' + uuid.uuid4().hex
-            self.logins[aid] = {'name': name.strip(), 'browser': browser, 'context': context, 'pw': pw}
+            self.logins[aid] = {'name': name.strip(), 'browser': browser, 'context': context, 'pw': pw,'profile_entry':entry}
             return {'id': aid, 'awaiting_login': True}
         return await self.import_session(name.strip(), supplied)
 
@@ -111,6 +117,9 @@ class GeminiChat(MuseProvider):
         # Keep the interactive window available when sign-in is incomplete or
         # verification fails. Close only after a verified session was committed.
         result = await self.import_session(login['name'], cookies)
+        if login.get('profile_entry'):
+            from .browser_profiles import profiles
+            profiles(self.vault,self.data).bind(login['profile_entry'],result['id'])
         await self.cancel_login(body['id'])
         return result
 
@@ -119,6 +128,9 @@ class GeminiChat(MuseProvider):
         if login:
             await login['browser'].close()
             await login['pw'].stop()
+            if login.get('profile_entry'):
+                from .browser_profiles import profiles
+                await profiles(self.vault,self.data).discard(login['profile_entry'])
         return {'ok': True}
 
     async def import_session(self, name, supplied):
@@ -407,10 +419,8 @@ class GeminiChat(MuseProvider):
 
     async def close(self):
         await super().close()
-        for login in self.logins.values():
-            await login['browser'].close()
-            await login['pw'].stop()
-        self.logins.clear()
+        for ident in list(self.logins):
+            await self.cancel_login(ident)
 
 
 def install_gemini_chat(app, vault, data, ledger):
