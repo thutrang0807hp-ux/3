@@ -1,0 +1,35 @@
+{
+  "version": "2026.11.09.4690",
+  "file": "SceneForge-Update-20261109-v46.90-Web-Accounts.exe",
+  "bytes": 3986944,
+  "sha256": "1e112fc30da777bdb4c5df48a5b1555552bbe8b1aeac28749e7c6cd997a4735f",
+  "files": [
+    {
+      "path": "app/local_engine/server.py",
+      "bytes": 38049,
+      "sha256": "88291f45afef4488202eab58b03dc252eb381fee0aedd67219e008ac62da78ed"
+    },
+    {
+      "path": "app/local_engine/gemini_chat.py",
+      "bytes": 26708,
+      "sha256": "8512c31652925f1dd8d141e9b8de823996b8fdec26d52dca0b3dbdcd551f5cd2"
+    },
+    {
+      "path": "app/dist/web-demo/index.html",
+      "bytes": 1053134,
+      "sha256": "08d010b33368db115f846873e3b19c5ce5d81ca9b610dde728baf4ac1b4434b1"
+    }
+  ],
+  "minimum_patch": "2026.11.09.4689",
+  "embedded_files_verified": true,
+  "launcher_code_unchanged": true,
+  "baseline_source_commit": "9967922",
+  "primary_web_login_for_six_services": true,
+  "pairing_extension_advanced_only": true,
+  "gemini_retry_keeps_login_window": true,
+  "muse_login_save_cancel_serialized": true,
+  "saved_account_survives_cancel": true,
+  "no_generation_on_login": true,
+  "live_provider_login_tested": false,
+  "windows_installer_tested": false
+}

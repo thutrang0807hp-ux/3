@@ -172,17 +172,35 @@ async def connect_account(body:dict):
  return {'id':id,'message':'Tự đăng nhập và xác minh trong cửa sổ vừa mở, rồi bấm “Lưu phiên đăng nhập”. App không đọc mật khẩu.'}
 @app.post('/local-api/accounts/save-login')
 async def save_login(body:dict):
- a=account(body.get('id'));login=LOGINS.get(a['id'])
+ login=LOGINS.get(body.get('id'))
  if not login:raise HTTPException(409,'Không còn cửa sổ đăng nhập. Kết nối lại.')
- suffix='google.com'if a['service']=='flow'else'muse.ai';cookies=[c for c in await login['context'].cookies()if c['domain'].lstrip('.')==suffix or c['domain'].lstrip('.').endswith('.'+suffix)or a['service']=='flow'and(c['domain'].lstrip('.')=='labs.google'or c['domain'].lstrip('.').endswith('.labs.google'))]
- if not cookies:raise HTTPException(400,'Chưa có cookie của đúng dịch vụ. Hoàn tất đăng nhập trước.')
- VAULT.set_secret('account:'+a['id'],{'cookies':cookies})
- if a['service']=='flow':
-  await FLOW_ACCOUNTS.import_session(cookies)
-  await login['browser'].close();await login['playwright'].stop();del LOGINS[a['id']]
-  VAULT.delete_secret('account:'+a['id']);VAULT.delete('accounts',a['id'])
-  return {'saved':True,'message':'Đã nhập phiên vào engine và đồng bộ tài khoản thật. Bấm Kiểm tra phiên/credit trước khi chọn tạo.'}
- exp=[c['expires']for c in cookies if c.get('expires',-1)>0];a.update(state='unverified',cookie_expires_at=min(exp)if exp else None,expires_at=None);VAULT.put('accounts',a);await login['browser'].close();await login['playwright'].stop();del LOGINS[a['id']];return {'saved':True,'message':'Phiên đã mã hóa. Chưa xác minh quota hoặc khả năng tạo.'}
+ async with login.setdefault('lock',asyncio.Lock()):
+  if LOGINS.get(body.get('id'))is not login:raise HTTPException(409,'Cửa sổ đăng nhập đã đóng.')
+  a=account(body.get('id'))
+  suffix='google.com'if a['service']=='flow'else'muse.ai';cookies=[c for c in await login['context'].cookies()if c['domain'].lstrip('.')==suffix or c['domain'].lstrip('.').endswith('.'+suffix)or a['service']=='flow'and(c['domain'].lstrip('.')=='labs.google'or c['domain'].lstrip('.').endswith('.labs.google'))]
+  if not cookies:raise HTTPException(400,'Chưa có cookie của đúng dịch vụ. Hoàn tất đăng nhập trước.')
+  VAULT.set_secret('account:'+a['id'],{'cookies':cookies})
+  if a['service']=='flow':
+   await FLOW_ACCOUNTS.import_session(cookies)
+   await login['browser'].close();await login['playwright'].stop();del LOGINS[a['id']]
+   VAULT.delete_secret('account:'+a['id']);VAULT.delete('accounts',a['id'])
+   return {'saved':True,'message':'Đã nhập phiên vào engine và đồng bộ tài khoản thật. Bấm Kiểm tra phiên/credit trước khi chọn tạo.'}
+  exp=[c['expires']for c in cookies if c.get('expires',-1)>0];a.update(state='unverified',cookie_expires_at=min(exp)if exp else None,expires_at=None);VAULT.put('accounts',a);await login['browser'].close();await login['playwright'].stop();del LOGINS[a['id']];return {'saved':True,'message':'Phiên đã mã hóa. Chưa xác minh quota hoặc khả năng tạo.'}
+@app.post('/local-api/accounts/cancel-login')
+async def cancel_account_login(body:dict):
+ ident=body.get('id');login=LOGINS.get(ident)
+ if not login:return {'cancelled':False}
+ async with login.setdefault('lock',asyncio.Lock()):
+  if LOGINS.get(ident)is not login:return {'cancelled':False}
+  a=account(ident)
+  if a.get('state')!='awaiting_login':return {'cancelled':False,'saved':True}
+  LOGINS.pop(ident,None)
+  try:
+   await login['browser'].close()
+   await login['playwright'].stop()
+  finally:
+   VAULT.delete_secret('account:'+ident);VAULT.delete('accounts',ident)
+  return {'cancelled':True}
 @app.post('/local-api/accounts/use')
 async def use_account(body:dict):
  a=account(body.get('id'))
