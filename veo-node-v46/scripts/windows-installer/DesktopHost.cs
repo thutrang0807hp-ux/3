@@ -15,7 +15,7 @@ using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.WinForms;
 
 [assembly: System.Reflection.AssemblyTitle("SceneForge")]
-[assembly: System.Reflection.AssemblyVersion("2026.11.11.46109")]
+[assembly: System.Reflection.AssemblyVersion("2026.11.11.46110")]
 internal static class DesktopProgram {
  [DllImport("user32.dll")] internal static extern bool SetForegroundWindow(IntPtr h);
  [DllImport("user32.dll")] static extern bool SetProcessDPIAware();
@@ -54,7 +54,7 @@ internal sealed class DesktopWindow:Form {
  }
  void WriteLog(string text){lock(logLock){if(log!=null){log.WriteLine(text);log.Flush();}}}
  void State(string phase,string url=null){
-  var state=new Dictionary<string,object>{{"pid",Process.GetCurrentProcess().Id},{"window",Handle.ToInt64()},{"phase",phase},{"console",false},{"app_version","2026.11.11.46109"},{"backend_pid",backend==null?0:backend.Id}};
+  var state=new Dictionary<string,object>{{"pid",Process.GetCurrentProcess().Id},{"window",Handle.ToInt64()},{"phase",phase},{"console",false},{"app_version","2026.11.11.46110"},{"backend_pid",backend==null?0:backend.Id}};
   if(url!=null)state["url"]=url;
   File.WriteAllText(Path.Combine(data,"desktop-state.json"),json.Serialize(state),new UTF8Encoding(false));
  }
@@ -100,6 +100,7 @@ internal sealed class DesktopWindow:Form {
    if(closing)return;view=new WebView2{Dock=DockStyle.Fill,DefaultBackgroundColor=BackColor};Controls.Add(view);message.BringToFront();
    await view.EnsureCoreWebView2Async(environment);
    view.CoreWebView2.Settings.AreDevToolsEnabled=debugPort>=1024;view.CoreWebView2.Settings.IsStatusBarEnabled=false;
+   view.CoreWebView2.Settings.IsZoomControlEnabled=false;view.ZoomFactor=1.0;
    view.CoreWebView2.NewWindowRequested+=(s,e)=>{e.Handled=true;OpenExternal(e.Uri);};
    view.CoreWebView2.NavigationStarting+=(s,e)=>{if(e.Uri!="about:blank"&&!e.Uri.StartsWith(url,StringComparison.OrdinalIgnoreCase)){e.Cancel=true;if(e.IsUserInitiated)OpenExternal(e.Uri);}};
    view.CoreWebView2.WebMessageReceived+=(s,e)=>{try{var value=json.Deserialize<Dictionary<string,object>>(e.WebMessageAsJson);if(value.ContainsKey("type")&&(string)value["type"]=="sf-desktop-flush"&&closeSaved!=null)closeSaved.TrySetResult(value.ContainsKey("ok")&&(bool)value["ok"]);}catch{}};

@@ -2,8 +2,8 @@
   "target": ".NET Framework 4.8, Windows x64",
   "compiler": "Microsoft.Net.Compilers.Toolset 4.11.0",
   "webview_sdk": "1.0.3537.50",
-  "source_sha256": "edced77f87714e0ef7aefc5840c857c85aec5a34bd948367dfb4fd7a8a41212e",
-  "exe_sha256": "d25f2729bc8f6c39def00a3a752a19dd623c1480b7f1e3946afeb7705fb5bc2a",
+  "source_sha256": "3b6e2f1f4f1d5b83ed76c9adc011b35ab80ef06e6a443623bf961af521aa2ce5",
+  "exe_sha256": "b3c9698465644daec0bde880e4ac606937196e95d2e150c30f4ebc3dfce6eba3",
   "native_windows_run": false,
   "packages": {
     "runtime.tar.gz": "8a09711bfe1c3d6898670efb93ca1e86c8a2d37ad35c0a15f08d8a3399f6be77",
