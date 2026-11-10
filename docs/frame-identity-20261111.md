@@ -1,0 +1,9 @@
+# SceneForge .112 — Reference video frame identity
+
+Adds collapsed controls to sample-video frame node for clothing fallback and optional approved frame anchor. Default behavior remains connected outfit references, otherwise source outfit. User can opt into person-reference clothing when no outfit images are connected. A connected outfit always takes precedence.
+
+Anchor stores scene/frame IDs plus source-role signature, pins selected approved frame against pruning and attaches original asset bytes after the source/role images. It reinforces only person/outfit/product roles whose reference signatures match the anchor scene. Source image still controls pose/crop/camera; original product/person references outrank generated anchor. No anchor for its own scene. Missing file, changed anchor references and over-eight image requests fail without dispatch. Preview rendering remains possible to clear invalid anchor.
+
+Both prompt-writing pack and image-generation directRefs use identical ordered attachment path, and numbered binding appended matches exact anchor index. Video attachments unchanged. Image-only prompt snapshots include identity settings and anchor identity. Edited manual prompts strip previous identity wrapper before rewrapping so old clothing instructions do not accumulate. Existing frame approvals retained and no automatic generation triggered when settings change.
+
+Validation: inline scripts parse; real Chromium fixture checks settings save, approvals preserved, anchor pinned, R4 matches actual PNG anchor bytes in writing and direct dispatch, clothing precedence, image signature invalidation, manual wrapper stripping, missing file/stale reference guards, UI recovery and video still one actual start frame. No Gemini image generation or native Windows installer execution performed. This improves reference conditioning, not guaranteed visual identity.
