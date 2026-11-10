@@ -1,0 +1,9 @@
+# SceneForge .111 — Shared storyboard art direction
+
+Read EcomGen's MIT-licensed packages/agent/src/planner.ts and packages/ecom-suite-forge/skill/references/prompt-contract.md. Concepts used: distinguish product evidence from aesthetic references, shared photographic treatment, shot purpose grounded in the script. This implementation and wording are original; no upstream model, runtime, prompt templates or source code copied. Source: https://github.com/linbei0/EcomGen (reviewed 2026-11-11).
+
+Pure helper scripts/ui/storyboard_guide.js is embedded verbatim in photos.html. Existing actual reference attachment paths remain intact. Every individual keyframe prompt includes role-specific fidelity guidance, shared look, current and neighboring script context, and explicit distinction between text summaries and attached image evidence. Manual prompt remains included. Overall generation and writing get shared planning guidance, with their existing output JSON shapes retained. No new provider calls are introduced.
+
+Collapsed node control stores a room-level shared direction. Style changes invalidate frame input signatures, mark scene prompts dirty/review and keep versions/manual directions. Neighbor script changes affect individual image signatures. No automatic regeneration is triggered by the control. Old images remain but may require review after prompt-contract update. Native host is unchanged from .110.
+
+Validation: photos inline scripts parsed with Node; Chromium real room fixture rendered node, saved shared style, preserved dialogue/manual camera, retained object-shaped production input and writing JSON, invalidated image signature and marked prompts for review. Real imported frame record stored guide/manual/neighbor content in its prompt. No generation jobs dispatched. Update embedded sources/checksums verified. No actual Gemini generation, visual fidelity comparison or native Windows updater execution performed.
