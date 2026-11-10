@@ -15,12 +15,15 @@ using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.WinForms;
 
 [assembly: System.Reflection.AssemblyTitle("SceneForge")]
-[assembly: System.Reflection.AssemblyVersion("2026.11.10.46101")]
+[assembly: System.Reflection.AssemblyVersion("2026.11.11.46109")]
 internal static class DesktopProgram {
  [DllImport("user32.dll")] internal static extern bool SetForegroundWindow(IntPtr h);
  [DllImport("user32.dll")] static extern bool SetProcessDPIAware();
+ [DllImport("shell32.dll", CharSet=CharSet.Unicode)] static extern int SetCurrentProcessExplicitAppUserModelID(string appID);
  [STAThread] static int Main(string[] args) {
   if(args.Contains("--check-runtime")){try{return String.IsNullOrEmpty(CoreWebView2Environment.GetAvailableBrowserVersionString())?2:0;}catch{return 2;}}
+  // Establish taskbar identity before any HWND is created.
+  try{SetCurrentProcessExplicitAppUserModelID("SceneForge.Desktop");}catch{}
   Application.EnableVisualStyles();SetProcessDPIAware();Application.SetCompatibleTextRenderingDefault(false);
   try {
    string root=AppDomain.CurrentDomain.BaseDirectory.TrimEnd('\\');
@@ -43,14 +46,15 @@ internal sealed class DesktopWindow:Form {
  public DesktopWindow(string root,string data,Dictionary<string,object> config){
   this.root=root;this.data=data;this.config=config;logPath=Path.Combine(data,"desktop-startup.log");
   Text="SceneForge";Width=1440;Height=960;MinimumSize=new System.Drawing.Size(1000,680);StartPosition=FormStartPosition.CenterScreen;
+  ShowIcon=true;ShowInTaskbar=true;
   BackColor=System.Drawing.Color.FromArgb(16,19,24);ForeColor=System.Drawing.Color.White;
-  try{string icon=Path.Combine(root,"app","dist","web-demo","icons","SceneForge.ico");if(File.Exists(icon))Icon=new System.Drawing.Icon(icon);}catch{}
+  try{string icon=Path.Combine(root,"app","dist","web-demo","icons","SceneForge.ico");if(File.Exists(icon))Icon=new System.Drawing.Icon(icon);else Icon=System.Drawing.Icon.ExtractAssociatedIcon(Application.ExecutablePath);}catch{}
   message.Dock=DockStyle.Fill;message.Font=new System.Drawing.Font("Segoe UI",13);message.Text="Đang mở SceneForge…";Controls.Add(message);
   Shown+=async(s,e)=>await StartApplication();FormClosing+=async(s,e)=>{if(allowClose)return;e.Cancel=true;await RequestClose();};FormClosed+=(s,e)=>Stop();
  }
  void WriteLog(string text){lock(logLock){if(log!=null){log.WriteLine(text);log.Flush();}}}
  void State(string phase,string url=null){
-  var state=new Dictionary<string,object>{{"pid",Process.GetCurrentProcess().Id},{"window",Handle.ToInt64()},{"phase",phase},{"console",false},{"app_version","2026.11.10.46101"},{"backend_pid",backend==null?0:backend.Id}};
+  var state=new Dictionary<string,object>{{"pid",Process.GetCurrentProcess().Id},{"window",Handle.ToInt64()},{"phase",phase},{"console",false},{"app_version","2026.11.11.46109"},{"backend_pid",backend==null?0:backend.Id}};
   if(url!=null)state["url"]=url;
   File.WriteAllText(Path.Combine(data,"desktop-state.json"),json.Serialize(state),new UTF8Encoding(false));
  }
