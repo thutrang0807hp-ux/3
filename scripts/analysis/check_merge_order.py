@@ -32,8 +32,14 @@ try:
    page.wait_for_function("!!document.querySelector('#anCaptionDialog video[data-cap-active]')&&document.querySelector('#anCaptionDialog video[data-cap-active]').readyState>=2",timeout=15000)
    pixel=page.evaluate("(()=>{const v=document.querySelector('#anCaptionDialog video[data-cap-active]'),c=document.createElement('canvas');c.width=c.height=2;c.getContext('2d').drawImage(v,0,0,2,2);return [...c.getContext('2d').getImageData(0,0,1,1).data]})()")
    assert pixel[0]>200 and pixel[1]<40,pixel
-   page.locator('[data-mo=from-preview]').click();page.wait_for_selector('.moList');assert page.evaluate('SFAudioNodes.getState().captionPreview===null')
-   page.locator('[data-mo=done]').click();page.wait_for_selector('#anCaptionDialog')
+   assert page.locator('#anCaptionDialog [data-mo=from-preview]').count()==0
+   assert page.locator('.moInlineList [data-inline-key]').count()==2
+   page.locator('[data-cap-panel=assemble]').click()
+   page.screenshot(path='/tmp/inline-order-preview.png')
+   page.locator('[data-inline-up]').nth(1).click(timeout=4000)
+   assert page.evaluate('SFMergeOrder.rows()[0].key')==result[1],'inline edit applied before confirmation'
+   page.locator('[data-inline-apply]').click();page.wait_for_function('(key)=>SFMergeOrder.rows()[0].key===key',arg=result[0]);page.wait_for_selector('#anCaptionDialog .moInlineList',state='attached');page.locator('[data-cap-panel=assemble]').click()
+   page.locator('[data-inline-up]').nth(1).click();page.locator('[data-inline-apply]').click();page.wait_for_function('(key)=>SFMergeOrder.rows()[0].key===key',arg=result[1]);page.wait_for_selector('#anCaptionDialog .moInlineList',state='attached');page.locator('[data-cap-panel=assemble]').click()
    page.locator('[data-cap-close]').click();page.wait_for_function('SFAudioNodes.getState().captionPreview===null')
    page.evaluate('SFReferenceNodes.refreshHandoff(project.id)')
    assert page.locator('#node-merge [data-mo=open]').count()==1,'direct clip refresh removed order button'
