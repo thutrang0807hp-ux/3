@@ -32,7 +32,12 @@ try:
    page.wait_for_function("!!document.querySelector('#anCaptionDialog video[data-cap-active]')&&document.querySelector('#anCaptionDialog video[data-cap-active]').readyState>=2",timeout=15000)
    pixel=page.evaluate("(()=>{const v=document.querySelector('#anCaptionDialog video[data-cap-active]'),c=document.createElement('canvas');c.width=c.height=2;c.getContext('2d').drawImage(v,0,0,2,2);return [...c.getContext('2d').getImageData(0,0,1,1).data]})()")
    assert pixel[0]>200 and pixel[1]<40,pixel
+   page.locator('[data-mo=from-preview]').click();page.wait_for_selector('.moList');assert page.evaluate('SFAudioNodes.getState().captionPreview===null')
+   page.locator('[data-mo=done]').click();page.wait_for_selector('#anCaptionDialog')
    page.locator('[data-cap-close]').click();page.wait_for_function('SFAudioNodes.getState().captionPreview===null')
+   page.evaluate('SFReferenceNodes.refreshHandoff(project.id)')
+   assert page.locator('#node-merge [data-mo=open]').count()==1,'direct clip refresh removed order button'
+   assert page.locator('#node-merge [draggable=true][data-merge-clip]').count()==2,'direct clip refresh removed drag binding'
    # Restore persisted order without regenerating any clip; keyboard alternative and reset.
    page.evaluate('project=structuredClone(persisted);render()');assert page.evaluate('SFMergeOrder.rows()[0].key')==result[1]
    page.locator('[data-mo=undo]').click();page.wait_for_function('(key)=>SFMergeOrder.rows()[0].key===key',arg=result[0])
