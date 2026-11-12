@@ -1,0 +1,11 @@
+# Public link import: split audio/video
+
+The screenshot error exactly matches `VideoImport.resolve` in `downloads/v46-flow-cli-direct/SceneForge-v46.50-Full-Source.zip`, entry `SceneForge-v46.50/local_engine/video_import.py`. That baseline source was bundled in the full source archive rather than the tracked module overlay. It filtered for a single format with both codecs and explicitly rejected split streams. The module is now tracked in `veo-node-v46/local_engine/video_import.py`.
+
+.119 retains the HTTP downloader, URL validation, public address pinning, redirect validation, header allowlist and public/no-cookie extraction. If no complete format exists, choose one direct HTTP video stream (up to 1080p) and an audio stream; validate both URLs; stream downloads under one combined input cap; mux local files with FFmpeg (video copy, AAC audio); verify the final media with ffprobe. FFmpeg receives only local files and a file/pipe protocol whitelist. Original direct imports still use the unchanged method signature; the optional download destination is used for split sources. Internal audio URLs are removed from metadata before public job completion.
+
+Temporary reservation increases to 1 GB per active import to account for input and output coexistence; the combined input cap and final output cap remain 500 MB each. Cancellation/failure/release/expiry remove all four possible temporary files. A job is done only after the output probe; merged outputs must contain audio.
+
+Validation: `python veo-node-v46/local_engine/check_video_import_merge.py` uses real FFmpeg/ffprobe and bounded HTTP fixtures, covering successful merge, stripped credential headers, total byte limit, failed audio cleanup, existing complete-format preference, direct MP4 import, cancellation between downloads and temporary cleanup. No live YouTube or Windows installer claim. HLS/DASH playlists without complete direct stream URLs remain unsupported.
+
+Build: `PYTHONPATH=/tmp/sceneforge-packaging-tools python veo-node-v46/scripts/windows-installer/build_video_import_merge_patch.py` (build dependency: dnfile). Delta payload contains only the importer, uses the existing generic launcher, verifies source hashes by reading the embedded ZIP, and requires .62 or newer.
