@@ -123,6 +123,10 @@ def install_library(app,data,busy=lambda:False):
   return await call(read)
  @app.get('/local-api/library/lifecycle/detail/{op_id}')
  async def lifecycle_detail(op_id:str):return await call(library.lifecycle.operation_detail,op_id)
+ @app.post('/local-api/library/lifecycle/detach-recipe-image')
+ async def lifecycle_detach_recipe_image(body:dict):
+  idle()
+  return await call(library.lifecycle.detach_recipe_image,body.get('op_id'),body.get('hash'),body.get('token'),body.get('mutation_id'),body.get('confirm'))
  @app.post('/local-api/library/lifecycle/release-backup-file')
  async def lifecycle_release_backup_file(body:dict):
   idle()

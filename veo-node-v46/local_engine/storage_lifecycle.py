@@ -16,12 +16,14 @@ CREATE TABLE IF NOT EXISTS backend_alias(path TEXT PRIMARY KEY,job_id TEXT,hash 
 CREATE TABLE IF NOT EXISTS purge_copy(op_id TEXT,room_id TEXT,hash TEXT,path TEXT,size INTEGER,state TEXT,PRIMARY KEY(op_id,path));
 CREATE TABLE IF NOT EXISTS deleted_room(room_id TEXT PRIMARY KEY,deleted_at REAL);
 '''
+RECIPE_OWNER='library:recipe-library'
 SAFE_JOBS={'imported','discarded','failed','not_submitted','abandoned','cancelled','applied'}
 
 def owner(row):
  d,s,k=row['db'],row['store'],str(row['key'])
  if d in ('sceneforge-workflows','sceneforge-editor-local'):return k
  if d=='sceneforge-app-shell':
+  if s=='prefs'and k=='recipe-library':return RECIPE_OWNER
   if s=='rooms':return k
   if s=='jobs':return (row.get('value')or{}).get('roomId')
   if s=='files'and not k.startswith(('bank:','cache:','batch:','shared:','library:')):
@@ -63,6 +65,24 @@ def workflow_blockers(value):
  for job in request.get('batches',[request]if request else[]):
   if job.get('state')not in SAFE_JOBS|{'received','planned'}:out.append(job.get('id')or job.get('request_id')or'analysis')
  return out
+
+def recipe_asset_references(value,h,path='$',context=None):
+ out=[]
+ if isinstance(value,dict):
+  if value.get('$sf')in ('blob','file','dataurl'):
+   return [{'recipe_id':(context or{}).get('id'),'name':(context or{}).get('name')or(context or{}).get('title')or 'Ảnh trong Kho kịch bản','path':path}]if value.get('hash')==h else []
+  if context is None and(value.get('name')or value.get('title')):context=value
+  for key,item in value.items():out.extend(recipe_asset_references(item,h,path+'.'+str(key),context))
+ elif isinstance(value,list):
+  for i,item in enumerate(value):out.extend(recipe_asset_references(item,h,path+'['+str(i)+']',context))
+ return out
+
+def detach_recipe_asset(value,h):
+ if isinstance(value,dict):
+  if value.get('$sf')in ('blob','file','dataurl')and value.get('hash')==h:return None
+  return {key:detach_recipe_asset(item,h)for key,item in value.items()}
+ if isinstance(value,list):return [detach_recipe_asset(item,h)for item in value]
+ return value
 
 class Lifecycle:
  def __init__(self,library):self.lib=library;self.active_job=lambda rid:False;self._backup_protection={}
@@ -411,7 +431,9 @@ class Lifecycle:
     reasons=[]
     for d,store,key,value in db.execute('SELECT r.db,r.store,r.key,r.data FROM record r JOIN asset_ref a ON a.db=r.db AND a.store=r.store AND a.key=r.key WHERE a.hash=?',(h,)):
      row={'db':d,'store':store,'key':json.loads(key),'value':json.loads(value)};room=owner(row)
-     reasons.append({'type':'project'if room else'library_reference','room_id':room,'name':names.get(room,room or 'Tư liệu dùng chung'),'store':store,'key':row['key']})
+     if room==RECIPE_OWNER:
+      reasons.append({'type':'recipe_library','room_id':None,'name':'Kho kịch bản','store':store,'key':row['key'],'references':recipe_asset_references(row['value'],h)})
+     else:reasons.append({'type':'project'if room else'library_reference','room_id':room,'name':names.get(room,room or 'Tư liệu dùng chung'),'store':store,'key':row['key']})
     for note, in db.execute('SELECT note FROM pin WHERE hash=?',(h,)):reasons.append({'type':'pin','note':note})
     for expires, in db.execute('SELECT expires FROM upload_lease WHERE hash=? AND expires>?',(h,time.time())):reasons.append({'type':'upload_lease','expires':expires})
     for jid,room,state,result,inputs in db.execute('SELECT id,room_id,state,result_hash,inputs FROM generation_job'):
@@ -421,10 +443,30 @@ class Lifecycle:
     reasons.extend(backup_reasons.get(h,[]))
     actual=self.lib.read_asset_path(h)
     eligible=op[2] not in ('done','cancelled')and op[4]<=time.time()and bool(reasons)and all(r['type']=='backup'and r['can_release']for r in reasons)
-    files.append({'hash':h,'path':str(actual),'bytes':size[0],'mime':size[1],'exists':actual.is_file(),'reasons':reasons,'can_release_backup':eligible})
-   report={'op_id':op_id,'room_id':op[0],'mode':op[1],'state':op[2],'due':op[4],'files':files,'truncated':len(wanted)>200}
+    files.append({'hash':h,'path':str(actual),'bytes':size[0],'mime':size[1],'exists':actual.is_file(),'reasons':reasons,'can_release_backup':eligible,'can_detach_recipe':op[2] not in ('done','cancelled')and op[4]<=time.time()and str(size[1]).startswith('image/')and any(r['type']=='recipe_library'and r['references']for r in reasons)})
+   report={'op_id':op_id,'room_id':op[0],'mode':op[1],'state':op[2],'due':op[4],'revision':int(db.execute("SELECT value FROM meta WHERE key='revision'").fetchone()[0]),'files':files,'truncated':len(wanted)>200}
    report['token']=hashlib.sha256(json.dumps(report,sort_keys=True,ensure_ascii=False).encode()).hexdigest()
    return report
+ def detach_recipe_image(self,op_id,h,token,mutation_id,confirm=False):
+  """Remove only this image's markers; preserve all recipe text and unrelated assets."""
+  from .library import Conflict
+  if confirm is not True:raise ValueError('Cần xác nhận gỡ ảnh khỏi Kho kịch bản.')
+  if not isinstance(mutation_id,str)or not __import__('re').fullmatch(r'[A-Za-z0-9_-]{8,128}',mutation_id):raise ValueError('Cần mã thao tác lưu để khôi phục an toàn.')
+  with self.lib.lock:
+   detail=self.operation_detail(op_id)
+   if detail['token']!=token:raise Conflict('Kho hoặc nơi giữ ảnh đã đổi; xem lại trước khi gỡ.')
+   item=next((f for f in detail['files']if f['hash']==h),None)
+   if not item or not item['can_detach_recipe']:raise ValueError('Không tìm thấy ảnh cần gỡ trong Kho kịch bản của lượt này.')
+   snap=self.lib.snapshot();changed=False
+   for row in snap['records']:
+    if owner(row)==RECIPE_OWNER:
+     before=row['value'];row['value']=detach_recipe_asset(before,h);changed=changed or row['value']!=before
+   if not changed:raise Conflict('Ảnh đã thay đổi; xem lại Kho kịch bản.')
+   self.lib.commit(snap['records'],detail['revision'],mutation_id=mutation_id)
+   # Persist consent so old backups cannot silently restore this detached image.
+   with self.lib.db()as db:db.execute('INSERT OR REPLACE INTO room_release VALUES(?,?,?,?)',(RECIPE_OWNER,h,time.time(),'now:unused'))
+   result=self.process(op_id)
+   return {**result,'snapshot':self.lib.snapshot()}
  def release_backup_file(self,op_id,h,token,confirm=False):
   """Explicitly retire only backup-only copies; never bypass a live holder."""
   from .library import Conflict
