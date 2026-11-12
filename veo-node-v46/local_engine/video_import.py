@@ -1,5 +1,5 @@
 """Bounded public video intake. Downloads are temporary until the browser checkpoints them."""
-import asyncio, hashlib, ipaddress, json, shutil, socket, time, uuid
+import asyncio, hashlib, ipaddress, json, math, re, shutil, socket, time, uuid
 from pathlib import Path
 from urllib.parse import urlsplit, urljoin, urlunsplit
 import httpx
@@ -23,6 +23,30 @@ async def public_url(value):
  except OSError:raise ValueError('Không tìm thấy máy chủ video.') from None
  if not rows or any(not ipaddress.ip_address(row[4][0]).is_global for row in rows):raise ValueError('Không nhận link vào mạng nội bộ hoặc máy cục bộ.')
  return value
+
+def tiktok_watermark_kind(fmt):
+ """Extractor evidence only; never claim to have inspected video pixels."""
+ note=str(fmt.get('format_note')or'').lower();fid=str(fmt.get('format_id')or'').lower()
+ if fmt.get('has_watermark')is True:return 'watermarked'
+ if re.search(r'\bwatermarked\b',note)and not re.search(r'(?:no|not|without)[ -]+watermark',note):return 'watermarked'
+ if fmt.get('has_watermark')is False:return 'declared_unwatermarked'
+ if fid=='play'or fid.startswith('play_addr')or 'direct video'in note or 'playback video'in note:return 'playback'
+ return 'unknown'
+
+def supported_video_size(fmt):
+ """1080p landscape or portrait; unknown dimensions are checked after download."""
+ try:w,h=float(fmt.get('width')or 0),float(fmt.get('height')or 0)
+ except (TypeError,ValueError):return False
+ if not math.isfinite(w)or not math.isfinite(h)or min(w,h)<0:return False
+ return min(w,h)<=1080 and max(w,h)<=1920
+
+def video_format_sets(pool):
+ limited=[f for f in pool if supported_video_size(f)]
+ muxed=[f for f in limited if f.get('vcodec')not in (None,'none')and f.get('acodec')not in (None,'none')]
+ videos=[f for f in limited if f.get('vcodec')not in (None,'none')and f.get('acodec')=='none']
+ audios=[f for f in pool if f.get('acodec')not in (None,'none')and f.get('vcodec')=='none']
+ incomplete=[f for f in limited if f.get('vcodec')!='none'and f.get('acodec')!='none'and(not f.get('vcodec')or not f.get('acodec'))]
+ return muxed,videos,audios,incomplete
 
 class PublicNetwork:
  """Pin every TCP connection to a checked public address, including redirects."""
@@ -97,20 +121,28 @@ class VideoImport:
   raw=await self.subprocess(jid,sys.executable,'-m','yt_dlp','--ignore-config','--no-playlist','--skip-download','--dump-single-json','--no-cache-dir','--retries','0','--extractor-retries','0','--socket-timeout','15',url)
   info=json.loads(raw)
   if info.get('_type') in ('playlist','multi_video') or float(info.get('duration') or 0)>600:raise ValueError('Chọn một video tối đa 10 phút, không phải danh sách.')
+  tiktok=host=='tiktok.com'or host.endswith('.tiktok.com')or str(info.get('extractor_key')or info.get('extractor')or'').lower().startswith('tiktok')
   formats=info.get('formats') or [info]
   # Some extractors omit codecs/protocol for an ordinary MP4 (notably TikTok).
   # Missing codec metadata is not the same as an explicit audio-only/video-only stream.
   if jid in self.jobs:
-   self.jobs[jid]['source_diagnostics']={'extractor':str(info.get('extractor_key')or info.get('extractor')or'')[:80],'format_count':len(formats),'formats':[{'protocol':f.get('protocol'),'vcodec':f.get('vcodec'),'acodec':f.get('acodec'),'height':f.get('height'),'ext':f.get('ext'),'has_url':bool(f.get('url')),'has_drm':bool(f.get('has_drm')),'fragmented':bool(f.get('fragments'))}for f in formats[:30]]}
+   self.jobs[jid]['source_diagnostics']={'extractor':str(info.get('extractor_key')or info.get('extractor')or'')[:80],'format_count':len(formats),'formats':[{'protocol':f.get('protocol'),'vcodec':f.get('vcodec'),'acodec':f.get('acodec'),'height':f.get('height'),'ext':f.get('ext'),'has_url':bool(f.get('url')),'has_drm':bool(f.get('has_drm')),'fragmented':bool(f.get('fragments')),'tiktok_source_kind':tiktok_watermark_kind(f)if tiktok else None}for f in formats[:30]]}
   direct=[f for f in formats if f.get('url') and (f.get('protocol')or urlsplit(f['url']).scheme) in ('http','https') and not f.get('has_drm') and not f.get('fragments') and not urlsplit(f['url']).path.lower().endswith(('.m3u8','.mpd')) and (f.get('filesize') or 0)<=MAX_BYTES]
-  muxed=[f for f in direct if f.get('vcodec') not in (None,'none') and f.get('acodec') not in (None,'none') and (f.get('height') or 0)<=1080]
-  videos=[f for f in direct if f.get('vcodec') not in (None,'none') and f.get('acodec')=='none' and (f.get('height') or 0)<=1080]
-  audios=[f for f in direct if f.get('acodec') not in (None,'none') and f.get('vcodec')=='none']
-  incomplete=[f for f in direct if f.get('vcodec')!='none' and f.get('acodec')!='none' and (not f.get('vcodec')or not f.get('acodec')) and (f.get('height')or 0)<=1080]
+  if tiktok:
+   direct=[f for f in direct if f.get('vcodec')!='bytevc2' and 'unplayable'not in str(f.get('format_note')or'').lower()]
+   audio_only=[f for f in direct if f.get('vcodec')=='none']
+   preferred=[f for f in direct if tiktok_watermark_kind(f)in ('playback','declared_unwatermarked')]
+   not_marked=[f for f in direct if tiktok_watermark_kind(f)!='watermarked']
+   # Select a usable source tier before resolution; an HD download logo must not
+   # outrank a lower-resolution playback file or a playback split stream.
+   for pool in (preferred+audio_only,not_marked,direct):
+    sets=video_format_sets(pool)
+    if sets[0]or(sets[1]and sets[2])or sets[3]:direct=pool;break
+  muxed,videos,audios,incomplete=video_format_sets(direct)
   def headers(f):
    # Extractor credentials must not be forwarded.
    return {k:v for k,v in (f.get('http_headers') or info.get('http_headers') or {}).items() if k.lower() in ('user-agent','referer')}
-  meta={'title':str(info.get('title') or 'Video')[:160]}
+  meta={'title':str(info.get('title') or 'Video')[:160],'source_size_limit':'1080p'}
   if muxed:
    f=max(muxed,key=lambda x:(x.get('height') or 0,x.get('tbr') or 0))
   elif videos and audios:
@@ -123,6 +155,15 @@ class VideoImport:
    meta['codec_metadata_incomplete']=True
    if jid in self.jobs:self.jobs[jid]['phase']='Nguồn thiếu thông tin codec · đang tải để kiểm tra tệp thật'
   else:raise ValueError('Chưa chọn được nguồn tải trong '+str(len(formats))+' định dạng. App chỉ nhận tệp HTTP hoàn chỉnh hoặc luồng hình/tiếng HTTP riêng; xem báo cáo nguồn để biết định dạng trả về.')
+  if tiktok:
+   kind=tiktok_watermark_kind(f);meta['tiktok_source_kind']=kind;meta['tiktok_source_policy']='playback-v1'
+   meta['watermark_pixels_checked']=False
+   if kind=='watermarked':meta['source_notice']='Nguồn TikTok chỉ có bản được đánh dấu có watermark. Video đã tải giữ logo; app chưa xóa logo khỏi hình.'
+   elif kind=='unknown':meta['source_notice']='Chưa xác nhận được bản TikTok không logo; app giữ tệp nguồn tải được, chưa xóa logo khỏi hình.'
+   if jid in self.jobs:
+    self.jobs[jid]['source_diagnostics']['tiktok_source_kind']=kind
+    fid=str(f.get('format_id')or'')
+    self.jobs[jid]['source_diagnostics']['selected_format_id']=fid if re.fullmatch(r'[A-Za-z0-9_.:-]{0,80}',fid)else''
   meta['selected_height']=f.get('height')
   return await public_url(f['url']),headers(f),meta
  async def merge(self,jid,video,audio):
@@ -177,7 +218,7 @@ class VideoImport:
     info=json.loads(raw);video=next((s for s in info.get('streams',[]) if s.get('codec_type')=='video'),None);seconds=float(info.get('format',{}).get('duration') or 0)
     if j.get('merged_audio') and not any(stream.get('codec_type')=='audio' for stream in info.get('streams',[])):raise ValueError('Video sau ghép chưa có tiếng.')
     if not video or not 0<seconds<=600:raise ValueError('Nguồn không phải video hợp lệ từ 0 đến 10 phút.')
-    if meta.get('codec_metadata_incomplete')and(video.get('height')or 0)>1080:raise ValueError('Tệp thực tế vượt giới hạn 1080p của nguồn thiếu thông tin định dạng.')
+    if meta.get('source_size_limit')and not supported_video_size(video):raise ValueError('Tệp thực tế vượt giới hạn 1080p: tối đa 1920×1080 hoặc 1080×1920.')
     ext='webm' if 'webm' in info.get('format',{}).get('format_name','') else 'mp4'
     j.update(state='done',phase='Đã tải · chờ lưu vào dự án',sha256=digest,duration=seconds,width=video.get('width'),height=video.get('height'),name='video-'+digest[:12]+'.'+ext,mime='video/webm' if ext=='webm' else 'video/mp4',**meta)
   except asyncio.CancelledError:j.update(state='cancelled',phase='Đã bỏ lượt tải');self.remove_files(jid)

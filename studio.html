@@ -2997,7 +2997,7 @@ async function checkpoint(){
  throw Error('Dữ liệu chưa ổn định để lưu xuống ổ. Nguồn vẫn giữ; mở lại bộ nhập để dùng tiếp.');
 }
 const available=()=>rooms.filter(r=>r.mode!=='photos'&&!r.trashedAt&&!productFor(r.productId)?.trashedAt);
-const existingBy=meta=>available().find(r=>meta.url_key&&r.sourceURLKey===meta.url_key||meta.sha256&&r.sourceSHA256===meta.sha256);
+const existingBy=meta=>available().find(r=>meta.sha256&&r.sourceSHA256===meta.sha256||meta.url_key&&r.sourceURLKey===meta.url_key&&(!meta.tiktok_source_policy||r.sourceTikTokPolicy===meta.tiktok_source_policy));
 async function open(purpose='video'){
  if(running){toast('Đang nhập hoặc phân tích video; chờ xong trước khi mở lượt khác.');return;}
  const token=++serial,active=g6ActiveProducts();
@@ -3012,12 +3012,12 @@ async function open(purpose='video'){
   if(!r){
    const info=await videoInfo(file);message('Đang lưu nguồn vào thư viện…');
    [r]=await importVideos([file],p,{deferAnalysis:true,allowGemini:false});if(!r)throw Error('Không nhập được video.');
-   Object.assign(r,info,{sourceURLKey:meta.url_key||null,sourceSHA256:meta.sha256||null,sourceModified:file.lastModified,intakePurpose:purpose});await persistRoom(r);
+   Object.assign(r,info,{sourceURLKey:meta.url_key||null,sourceSHA256:meta.sha256||null,sourceModified:file.lastModified,intakePurpose:purpose,sourceTikTokKind:meta.tiktok_source_kind||null,sourceTikTokPolicy:meta.tiktok_source_policy||null,sourceNotice:meta.source_notice||null});await persistRoom(r);
    if(window.SceneForgeStorage?.managed){if(!SceneForgeStorage.state.active)throw Error('Nguồn đã giữ trong trình duyệt. Kho trên ổ đang bị khóa; chưa bỏ bản tải tạm.');await checkpoint();}
   }
   await checkpoint();
   if(meta.id){await engineRequest('video-import/jobs/'+meta.id+'/release',{});downloadId=null;}
-  await finish(r,purpose);
+  await finish(r,purpose);if(meta.source_notice)toast(meta.source_notice);
  };
  q('#viFile').onchange=guard(async()=>{const f=q('#viFile').files[0];if(f)await consume(f);});
  q('#viReuse').onclick=guard(async()=>{const r=roomFor(q('#viExisting').value);if(!r||!available().includes(r))throw Error('Chọn video đang còn trong thư viện.');await finish(r,purpose);});
@@ -3030,14 +3030,15 @@ async function open(purpose='video'){
    if(j.source_diagnostics){const slot=q('#viDownloads');slot.innerHTML='<button id="viSourceReport">Tải báo cáo nguồn video</button>';q('#viSourceReport').onclick=()=>{const safe={app:'SceneForge',id:j.id,state:j.state,error:j.error,source_diagnostics:j.source_diagnostics};const url=URL.createObjectURL(new Blob([JSON.stringify(safe,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='SceneForge-nguon-video-'+j.id+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};}
    throw Error(j.error||'Đã bỏ lượt tải.');
   }
-  const old=existingBy(j);if(old){await checkpoint();await engineRequest('video-import/jobs/'+j.id+'/release',{});return finish(old,purpose);}
+  const old=existingBy(j);if(old){if(j.tiktok_source_policy){Object.assign(old,{sourceTikTokKind:j.tiktok_source_kind,sourceTikTokPolicy:j.tiktok_source_policy,sourceNotice:j.source_notice||null});await persistRoom(old);}await checkpoint();await engineRequest('video-import/jobs/'+j.id+'/release',{});await finish(old,purpose);if(j.source_notice)toast(j.source_notice);return;}
   const res=await fetch('/local-api/video-import/jobs/'+j.id+'/file');if(!res.ok)throw Error('Không nhận được file tải. Mở lại bộ nhập để nhận lại.');
   await consume(new File([await res.blob()],j.name,{type:j.mime,lastModified:0}),j);
  };
  q('#viDownload').onclick=guard(async()=>{
   const url=q('#viURL').value.trim();let normalized;try{const u=new URL(url);u.hash='';normalized=u.href;}catch{throw Error('Dán link video hợp lệ.');}
   const key=[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(normalized)))].map(v=>v.toString(16).padStart(2,'0')).join('');
-  const old=existingBy({url_key:key});if(old)return finish(old,purpose);
+  const host=new URL(normalized).hostname.toLowerCase(),policy=host==='tiktok.com'||host.endsWith('.tiktok.com')?'playback-v1':null;
+  const old=existingBy({url_key:key,tiktok_source_policy:policy});if(old){await finish(old,purpose);if(old.sourceNotice)toast(old.sourceNotice);return;}
   message('Đang đọc link…');await receive(await engineRequest('video-import/jobs',{url:normalized}));
  });
  if(['127.0.0.1','localhost'].includes(location.hostname)&&new URLSearchParams(location.search).get('demo')!=='1'){
