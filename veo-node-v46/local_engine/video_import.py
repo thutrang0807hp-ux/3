@@ -98,10 +98,15 @@ class VideoImport:
   info=json.loads(raw)
   if info.get('_type') in ('playlist','multi_video') or float(info.get('duration') or 0)>600:raise ValueError('Chọn một video tối đa 10 phút, không phải danh sách.')
   formats=info.get('formats') or [info]
-  direct=[f for f in formats if f.get('url') and f.get('protocol','https') in ('http','https') and not f.get('has_drm') and (f.get('filesize') or 0)<=MAX_BYTES]
+  # Some extractors omit codecs/protocol for an ordinary MP4 (notably TikTok).
+  # Missing codec metadata is not the same as an explicit audio-only/video-only stream.
+  if jid in self.jobs:
+   self.jobs[jid]['source_diagnostics']={'extractor':str(info.get('extractor_key')or info.get('extractor')or'')[:80],'format_count':len(formats),'formats':[{'protocol':f.get('protocol'),'vcodec':f.get('vcodec'),'acodec':f.get('acodec'),'height':f.get('height'),'ext':f.get('ext'),'has_url':bool(f.get('url')),'has_drm':bool(f.get('has_drm')),'fragmented':bool(f.get('fragments'))}for f in formats[:30]]}
+  direct=[f for f in formats if f.get('url') and (f.get('protocol')or urlsplit(f['url']).scheme) in ('http','https') and not f.get('has_drm') and not f.get('fragments') and not urlsplit(f['url']).path.lower().endswith(('.m3u8','.mpd')) and (f.get('filesize') or 0)<=MAX_BYTES]
   muxed=[f for f in direct if f.get('vcodec') not in (None,'none') and f.get('acodec') not in (None,'none') and (f.get('height') or 0)<=1080]
   videos=[f for f in direct if f.get('vcodec') not in (None,'none') and f.get('acodec')=='none' and (f.get('height') or 0)<=1080]
   audios=[f for f in direct if f.get('acodec') not in (None,'none') and f.get('vcodec')=='none']
+  incomplete=[f for f in direct if f.get('vcodec')!='none' and f.get('acodec')!='none' and (not f.get('vcodec')or not f.get('acodec')) and (f.get('height')or 0)<=1080]
   def headers(f):
    # Extractor credentials must not be forwarded.
    return {k:v for k,v in (f.get('http_headers') or info.get('http_headers') or {}).items() if k.lower() in ('user-agent','referer')}
@@ -113,7 +118,11 @@ class VideoImport:
    audio=max(audios,key=lambda x:(x.get('abr') or 0,x.get('tbr') or 0))
    if (f.get('filesize') or 0)+(audio.get('filesize') or 0)>MAX_BYTES:raise ValueError('Video và âm thanh vượt tổng giới hạn 500 MB.')
    meta['_audio']={'url':await public_url(audio['url']),'headers':headers(audio)}
-  else:raise ValueError('Chưa tìm được luồng video và âm thanh HTTP để tải; nguồn có thể dùng danh sách phát phân mảnh hoặc yêu cầu đăng nhập.')
+  elif incomplete:
+   f=max(incomplete,key=lambda x:(x.get('height')or 0,x.get('tbr')or 0))
+   meta['codec_metadata_incomplete']=True
+   if jid in self.jobs:self.jobs[jid]['phase']='Nguồn thiếu thông tin codec · đang tải để kiểm tra tệp thật'
+  else:raise ValueError('Chưa chọn được nguồn tải trong '+str(len(formats))+' định dạng. App chỉ nhận tệp HTTP hoàn chỉnh hoặc luồng hình/tiếng HTTP riêng; xem báo cáo nguồn để biết định dạng trả về.')
   meta['selected_height']=f.get('height')
   return await public_url(f['url']),headers(f),meta
  async def merge(self,jid,video,audio):
@@ -168,6 +177,7 @@ class VideoImport:
     info=json.loads(raw);video=next((s for s in info.get('streams',[]) if s.get('codec_type')=='video'),None);seconds=float(info.get('format',{}).get('duration') or 0)
     if j.get('merged_audio') and not any(stream.get('codec_type')=='audio' for stream in info.get('streams',[])):raise ValueError('Video sau ghép chưa có tiếng.')
     if not video or not 0<seconds<=600:raise ValueError('Nguồn không phải video hợp lệ từ 0 đến 10 phút.')
+    if meta.get('codec_metadata_incomplete')and(video.get('height')or 0)>1080:raise ValueError('Tệp thực tế vượt giới hạn 1080p của nguồn thiếu thông tin định dạng.')
     ext='webm' if 'webm' in info.get('format',{}).get('format_name','') else 'mp4'
     j.update(state='done',phase='Đã tải · chờ lưu vào dự án',sha256=digest,duration=seconds,width=video.get('width'),height=video.get('height'),name='video-'+digest[:12]+'.'+ext,mime='video/webm' if ext=='webm' else 'video/mp4',**meta)
   except asyncio.CancelledError:j.update(state='cancelled',phase='Đã bỏ lượt tải');self.remove_files(jid)

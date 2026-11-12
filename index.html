@@ -3040,7 +3040,10 @@ async function open(purpose='video'){
   while(!['done','error','cancelled'].includes(j.state)){
    message(j.phase+' · '+(j.bytes/1024**2).toFixed(1)+' MB');await new Promise(r=>setTimeout(r,1000));j=await engineRequest('video-import/jobs/'+j.id);
   }
-  if(j.state!=='done')throw Error(j.error||'Đã bỏ lượt tải.');
+  if(j.state!=='done'){
+   if(j.source_diagnostics){const slot=q('#viDownloads');slot.innerHTML='<button id="viSourceReport">Tải báo cáo nguồn video</button>';q('#viSourceReport').onclick=()=>{const safe={app:'SceneForge',id:j.id,state:j.state,error:j.error,source_diagnostics:j.source_diagnostics};const url=URL.createObjectURL(new Blob([JSON.stringify(safe,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='SceneForge-nguon-video-'+j.id+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};}
+   throw Error(j.error||'Đã bỏ lượt tải.');
+  }
   const old=existingBy(j);if(old){await checkpoint();await engineRequest('video-import/jobs/'+j.id+'/release',{});return finish(old,purpose);}
   const res=await fetch('/local-api/video-import/jobs/'+j.id+'/file');if(!res.ok)throw Error('Không nhận được file tải. Mở lại bộ nhập để nhận lại.');
   await consume(new File([await res.blob()],j.name,{type:j.mime,lastModified:0}),j);
