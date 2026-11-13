@@ -1,8 +1,8 @@
 /* Shared rules used by both Veo nodes. Backend remains the single Flow dispatcher. */
 (()=>{
  const pending=['prepared','preparing','submitted','queued','running','downloading'];
- function valid(c){return !!c&&c.kind==='video'&&['ingredients','frames'].includes(c.mode)&&['9:16','16:9'].includes(c.ratio)&&['lite','fast','quality'].includes(c.model)&&c.outputs===1&&!(c.mode==='ingredients'&&c.model==='quality');}
- function model(c){if(!valid(c))throw Error('Cấu hình video chưa hợp lệ. Quality cần chế độ Khung hình; mỗi lượt nhận một video.');return 'veo-3.1-'+c.model+'-i2v-8s-'+(c.ratio==='9:16'?'portrait':'landscape');}
+ function valid(c){return !!c&&c.kind==='video'&&['ingredients','frames'].includes(c.mode)&&['9:16','16:9'].includes(c.ratio)&&['lite','fast','quality','omni-1.2-flash'].includes(c.model)&&c.outputs===1&&!(c.mode==='ingredients'&&c.model==='quality');}
+ function model(c){if(!valid(c))throw Error('Cấu hình video chưa hợp lệ. Quality cần chế độ Khung hình; mỗi lượt nhận một video.');return (c.model==='omni-1.2-flash'?c.model:'veo-3.1-'+c.model)+'-i2v-8s-'+(c.ratio==='9:16'?'portrait':'landscape');}
  function ownership(job,record,room,scene,part){if(record.request_id!==job.id||record.result?.room_id!==room||record.result?.scene_id!==scene||record.result?.part!==part)throw Error('Kết quả không khớp phòng, cảnh hoặc phần clip; chưa nhập.');if(job.store_id&&record.store_id!==job.store_id)throw Error('Kết quả thuộc kho dữ liệu khác; chưa nhập.');}
  function unresolved(j){return !!j&&(pending.includes(j.state)||['unknown','missing','invalid','done'].includes(j.state));}
  const yieldUI=()=>new Promise(resolve=>{let done=false;const finish=()=>{if(done)return;done=true;clearTimeout(timer);resolve();},timer=setTimeout(finish,100);requestAnimationFrame(()=>setTimeout(finish,0));});

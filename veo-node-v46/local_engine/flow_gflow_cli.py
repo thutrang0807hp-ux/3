@@ -127,11 +127,27 @@ def command(repo, reference, prompt, project, output, profile='default', setting
     cfg=normalize_settings(settings)
     repo=Path(repo);python=repo/'runtime/python.exe'
     if not python.is_file() and (repo/'python.exe').is_file():python=repo/'python.exe'
+    if cfg['model']=='omni-1.2-flash':
+        # Inspect installed command definitions without importing the external SDK.
+        # A legacy CLI must never silently fall back to its default model.
+        candidates=(repo/'runtime/Lib/site-packages/gflow_cli/cli_video.py',
+                    repo/'src/gflow_cli/cli_video.py',repo/'gflow_cli/cli_video.py')
+        supported=False
+        for path in candidates:
+            try:
+                if path.stat().st_size>2*1024**2:continue
+                text=path.read_text(encoding='utf-8')
+                if re.search(r'[\"\']omni-1\.2-flash[\"\']',text) and '--duration' in text:
+                    supported=True;break
+            except (OSError,UnicodeError):pass
+        if not supported:
+            raise ValueError('GFlow đang dùng chưa xác nhận hỗ trợ Omni 1.2 Flash. Cần cập nhật bộ GFlow; chưa gửi tạo video.')
     mode='r2v' if cfg['mode']=='ingredients' else 'i2v'
     args=[str(python) if python.is_file() else 'py','-m','gflow_cli','video',mode]
     if mode=='r2v':args+=['--ref',str(reference)]
     args+=['--aspect',cfg['ratio'],'--model',MODELS[cfg['model']],'--count','1',
            '--project',project,'--profile',profile,'--out-dir',str(output),'--json','--']
+    if cfg['model']=='omni-1.2-flash':args[-1:-1]=['--duration','8']
     if mode=='i2v':args.append(str(reference))
     return args+[prompt]
 
@@ -230,7 +246,10 @@ async def generate(service, rid, payload, reference):
     cfg=request_settings(payload)
     if prepared.get('preparation_method')=='cli_reference_pipeline' and prepared.get('settings')!=cfg:
         raise SimpleStopped('Cấu hình đã đổi sau chuẩn bị; chưa gửi CLI.')
-    args = command(repo, image, payload['prompt'], project, output, profile, cfg)
+    try:args = command(repo, image, payload['prompt'], project, output, profile, cfg)
+    except ValueError as exc:
+        service.ledger.set_metadata(rid,{'generation_not_started':True,'message':str(exc)})
+        raise SimpleStopped(str(exc)) from None
     env = dict(os.environ, GFLOW_CLI_UPDATE_CHECK='0', NO_COLOR='1', TERM='dumb', PYTHONUTF8='1', PYTHONUNBUFFERED='1', GFLOW_CLI_LOG_LEVEL='INFO', GFLOW_CLI_LOG_FORMAT='json')
     # Same environment as MO-UNG-DUNG.bat when the supplied app is portable.
     if bundled or (repo / 'runtime' / 'python.exe').is_file():

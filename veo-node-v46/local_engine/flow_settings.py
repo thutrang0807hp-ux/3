@@ -16,7 +16,7 @@ class SettingsUnavailable(RuntimeError):
 
 DEFAULTS = {'kind': 'video', 'mode': 'ingredients', 'ratio': '9:16', 'model': 'lite', 'outputs': 1}
 ALLOWED = {'kind': ('video',), 'mode': ('frames', 'ingredients'),
-           'ratio': ('16:9', '9:16'), 'model': ('lite', 'fast', 'quality'), 'outputs': (1, 2, 3, 4)}
+           'ratio': ('16:9', '9:16'), 'model': ('lite', 'fast', 'quality', 'omni-1.2-flash'), 'outputs': (1, 2, 3, 4)}
 LABELS = {'kind': {'video': r'(?:videocam\s*)?(?:Video)', 'image': r'(?:image\s*)?(?:Image|Hình ảnh)'},
           'mode': {'frames': r'(?:crop_free\s*)?(?:Frames|Khung hình)',
                    'ingredients': r'(?:category\s*)?(?:Ingredients|Thành phần)'},
@@ -25,6 +25,8 @@ LABELS = {'kind': {'video': r'(?:videocam\s*)?(?:Video)', 'image': r'(?:image\s*
           'outputs': {i: rf'x\s*{i}' for i in range(1, 5)},
           'model': {m: rf'Veo\s*3\.1\s*[-·–]?\s*{m}(?:\s*(?:arrow_drop_down|keyboard_arrow_down|expand_more))?'
                     for m in ('lite', 'fast', 'quality')}}
+
+LABELS['model']['omni-1.2-flash'] = r'Omni\s*1\.2\s*Flash(?:\s*(?:arrow_drop_down|keyboard_arrow_down|expand_more))?'
 
 
 def validate_settings(value):

@@ -54,8 +54,8 @@
 </style><script id="veo-lifecycle-v113">/* Shared rules used by both Veo nodes. Backend remains the single Flow dispatcher. */
 (()=>{
  const pending=['prepared','preparing','submitted','queued','running','downloading'];
- function valid(c){return !!c&&c.kind==='video'&&['ingredients','frames'].includes(c.mode)&&['9:16','16:9'].includes(c.ratio)&&['lite','fast','quality'].includes(c.model)&&c.outputs===1&&!(c.mode==='ingredients'&&c.model==='quality');}
- function model(c){if(!valid(c))throw Error('Cấu hình video chưa hợp lệ. Quality cần chế độ Khung hình; mỗi lượt nhận một video.');return 'veo-3.1-'+c.model+'-i2v-8s-'+(c.ratio==='9:16'?'portrait':'landscape');}
+ function valid(c){return !!c&&c.kind==='video'&&['ingredients','frames'].includes(c.mode)&&['9:16','16:9'].includes(c.ratio)&&['lite','fast','quality','omni-1.2-flash'].includes(c.model)&&c.outputs===1&&!(c.mode==='ingredients'&&c.model==='quality');}
+ function model(c){if(!valid(c))throw Error('Cấu hình video chưa hợp lệ. Quality cần chế độ Khung hình; mỗi lượt nhận một video.');return (c.model==='omni-1.2-flash'?c.model:'veo-3.1-'+c.model)+'-i2v-8s-'+(c.ratio==='9:16'?'portrait':'landscape');}
  function ownership(job,record,room,scene,part){if(record.request_id!==job.id||record.result?.room_id!==room||record.result?.scene_id!==scene||record.result?.part!==part)throw Error('Kết quả không khớp phòng, cảnh hoặc phần clip; chưa nhập.');if(job.store_id&&record.store_id!==job.store_id)throw Error('Kết quả thuộc kho dữ liệu khác; chưa nhập.');}
  function unresolved(j){return !!j&&(pending.includes(j.state)||['unknown','missing','invalid','done'].includes(j.state));}
  const yieldUI=()=>new Promise(resolve=>{let done=false;const finish=()=>{if(done)return;done=true;clearTimeout(timer);resolve();},timer=setTimeout(finish,100);requestAnimationFrame(()=>setTimeout(finish,0));});
@@ -2409,7 +2409,7 @@ function paintFlowSettingsDock(){
  if(dock.hidden){dock.open=false;return;}
  const cfg=flowSettings(),brief=dock.querySelector('[data-sf-flow-brief]');
  const failed=state().settingsTrial?.driver==='cli-arguments'&&state().settingsTrial.state==='failed';dock.dataset.sync=failed?'error':'normal';dock.querySelector('summary').title=failed?'Chưa lưu được cấu hình: '+state().settingsTrial.message:'Cấu hình video · áp dụng qua CLI khi tạo';
- brief.textContent=(cfg.model==='lite'?'Lite':cfg.model==='fast'?'Fast':'Quality')+' · '+cfg.ratio+' · x'+cfg.outputs;
+ brief.textContent=(cfg.model==='omni-1.2-flash'?'Omni 1.2 Flash':cfg.model==='lite'?'Lite':cfg.model==='fast'?'Fast':'Quality')+' · '+cfg.ratio+' · x'+cfg.outputs;
  const panel=dock.querySelector('.sfFlowSettingsPanel'),html=settingsView();
  if(dock._sfHtml!==html){const focus=doc.activeElement?.dataset?.vnSetting;panel.innerHTML=html;dock._sfHtml=html;if(focus&&dock.open)panel.querySelector('[data-vn-setting="'+focus+'"]')?.focus({preventScroll:true});}
 }
@@ -2441,9 +2441,9 @@ function settingsView(){
  return '<section data-vn-settings><b>Cấu hình tạo video</b><small>Được gửi thẳng vào CLI cùng lượt tạo. Không cần mở Settings trên trang Flow.</small>'+
  segment('mode','CHẾ ĐỘ',[['ingredients','Thành phần',cfg.model==='quality'],['frames','Khung hình']])+
  segment('ratio','TỈ LỆ KHUNG HÌNH',[['9:16','▯ 9:16 Dọc'],['16:9','▭ 16:9 Ngang']])+
- '<label>MODEL<select data-vn-setting="model" '+(locked?'disabled':'')+'>'+model('lite','Veo 3.1 · Lite')+model('fast','Veo 3.1 · Fast')+model('quality','Veo 3.1 · Quality — Khung hình')+'</select></label>'+
+ '<label>MODEL<select data-vn-setting="model" '+(locked?'disabled':'')+'>'+model('omni-1.2-flash','Omni 1.2 Flash')+model('lite','Veo 3.1 · Lite')+model('fast','Veo 3.1 · Fast · Flow báo sắp ngừng')+model('quality','Veo 3.1 · Quality · Flow báo sắp ngừng — Khung hình')+'</select></label>'+
  segment('outputs','SỐ VIDEO MỖI LƯỢT',[[1,'x1'],[2,'x2',true],[3,'x3',true],[4,'x4',true]])+
- '<div class="sfSettingOptions sfSettingDefaults"><span>Thời lượng: mặc định Flow</span><span>Tải về: bản gốc</span></div><small>Workflow hiện nhận một video 8s mỗi lượt. Quality dùng chế độ Khung hình. Chưa ép thời lượng, nâng độ phân giải hoặc hiển thị giá credit chưa xác minh.</small>'+
+ '<div class="sfSettingOptions sfSettingDefaults"><span>Thời lượng: mặc định Flow</span><span>Tải về: bản gốc</span></div><small>Workflow hiện nhận một video 8s mỗi lượt. Omni 1.2 Flash cần bộ GFlow có hỗ trợ model này; credit theo Flow tại lúc tạo. Quality dùng chế độ Khung hình. Chưa ép thời lượng, nâng độ phân giải hoặc hiển thị giá credit chưa xác minh.</small>'+
  '<p data-vn-settings-state role="status">'+escape(settingsSyncPending?.room===project.id?'Đang lưu lựa chọn…':report?.driver==='cli-arguments'&&report.state==='failed'?report.message:'Lựa chọn được áp dụng khi bấm Tạo video; chưa gửi tạo chỉ vì đổi cấu hình.')+'</p></section>';
 }
 function preparedContext(row){const r=state().prepareTrial;return !!r&&r.room_id===project.id&&r.scene_id===row.s.id&&r.part===row.p.id&&r.account_id===remote?.selection?.account_id&&state().prepareBinding===binding(row)&&state().preparePrompt===draft(row).text.trim()&&['kind','mode','ratio','model','outputs'].every(k=>r.settings?.[k]===flowSettings()[k]);}
