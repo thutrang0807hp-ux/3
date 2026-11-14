@@ -31,3 +31,5 @@ SceneForge-Update-20261114-v46.126-Omni-Prompt-Layers.exe
 SHA-256: ac8a516ee64400258a2fa8dace5d9d0f95c64edb6c81e54c6e6e9a487f902e4a
 
 Publication integration: fetched and merged origin/gh-pages 4e30ee2 (v46.125), preserving its download pages and adding every file in its manifest to the cumulative payload. Newer untouched files are checksum-compared with .125 during build. The unpublished local .120 package was superseded by .126 to avoid version collisions.
+
+Final download: v46.127 has the same application payload as .126 and corrects inherited .118 text in the installer labels. Actual manifest/app-build version is 2026.11.14.46127. Package SHA-256: ed98e7a3013330f8d5bf39bb027e84485eb543c49b381f04b4f7d7b22a54c99a. No application logic changed in this correction.

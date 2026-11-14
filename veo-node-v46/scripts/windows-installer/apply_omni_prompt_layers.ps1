@@ -5,7 +5,7 @@ $package=$env:SF_PATCH_ROOT
 $manifest=Get-Content -LiteralPath (Join-Path $package 'patch-manifest.json') -Encoding UTF8 -Raw|ConvertFrom-Json
 $script:failed=$null;$script:working=$false
 $form=New-Object Windows.Forms.Form;$form.Text='Cập nhật SceneForge';$form.Size=New-Object Drawing.Size(700,360);$form.StartPosition='CenterScreen';$form.Font=New-Object Drawing.Font('Segoe UI',10);$form.FormBorderStyle='FixedDialog';$form.MaximizeBox=$false
-$label=New-Object Windows.Forms.Label;$label.Text="Cập nhật gộp .62 → .118: gồm toàn bộ các bản .63–.96.`r`nGiữ dự án, tài khoản, Python và model đã cài.";$label.SetBounds(24,20,640,65);$form.Controls.Add($label)
+$label=New-Object Windows.Forms.Label;$label.Text="Cập nhật gộp .62 → .127: gồm các cập nhật đến .125, Omni và prompt phân tầng.`r`nGiữ dự án, tài khoản, Python và model đã cài.";$label.SetBounds(24,20,640,65);$form.Controls.Add($label)
 $path=New-Object Windows.Forms.TextBox;$path.SetBounds(24,105,530,30);$form.Controls.Add($path)
 $pick=New-Object Windows.Forms.Button;$pick.Text='Chọn…';$pick.SetBounds(565,103,95,32);$pick.Add_Click({$d=New-Object Windows.Forms.FolderBrowserDialog;$d.Description='Chọn thư mục có SceneForge.exe';if($d.ShowDialog($form)-eq 'OK'){$path.Text=$d.SelectedPath};$d.Dispose()});$form.Controls.Add($pick)
 $status=New-Object Windows.Forms.Label;$status.Text='Chọn thư mục đang chạy SceneForge rồi bấm Cập nhật. Không cần cài từng bản trung gian.';$status.SetBounds(24,155,640,80);$form.Controls.Add($status)
@@ -88,7 +88,7 @@ function ApplyUpdate {
 
   }catch{}
   @{version=$manifest.version;installed_at=[DateTime]::UtcNow.ToString('o');backup=$backup}|ConvertTo-Json|Set-Content -LiteralPath (Join-Path $root 'app-build.json') -Encoding UTF8
-  $status.Text='Đã cập nhật gộp lên .118. Mở SceneForge dùng bình thường; không cần chạy lại .63–.96.'
+  $status.Text='Đã cập nhật gộp lên .127. Mở SceneForge dùng bình thường; giữ các cập nhật trước.'
   $go.Text='Mở SceneForge';$go.Tag=Join-Path $root 'SceneForge.exe';$go.Enabled=$true
   if($env:SCENEFORGE_UPDATE_RESULT){@{passed=$true;version=$manifest.version;release=$root;files=$manifest.files.Count}|ConvertTo-Json|Set-Content $env:SCENEFORGE_UPDATE_RESULT -Encoding UTF8}
  }catch{

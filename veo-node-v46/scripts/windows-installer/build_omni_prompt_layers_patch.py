@@ -1,4 +1,4 @@
-"""Build the v46.126 cumulative application update on v46.62 or newer.
+"""Build the v46.127 cumulative application update on v46.62 or newer.
 
 Reuses the verified unsigned generic launcher; only replaces its embedded ZIP.
 No source rewriting, external code, credentials, profiles or models in payload.
@@ -14,8 +14,8 @@ import zipfile
 import dnfile
 
 ROOT = Path(__file__).resolve().parents[3]
-VERSION = '2026.11.14.46126'
-NAME = 'SceneForge-Update-20261114-v46.126-Omni-Prompt-Layers.exe'
+VERSION = '2026.11.14.46127'
+NAME = 'SceneForge-Update-20261114-v46.127-Omni-Prompt-Layers.exe'
 BASELINE = '8178af48a4db6180eb0fb3ef042b04ea21617c7380ca2e106d8e967990eb0c35'
 NAMES = ('browser_profiles.py', 'desktop_icon.py', 'export_save_as.py', 'fingerprints.py', 'flow_background_session.py', 'flow_gflow_cli.py', 'gemini_chat.py', 'google_login.py', 'local_tts.py', 'monitoring.py', 'server.py', 'storage_jobs.py', 'timeline_export.py', 'voice_previews.py', 'voice_previews_worker.py', 'voice_runtime.py', 'voice_runtime_worker.py', 'voice_worker.py', 'web_images.py', 'profile_cache.py', 'simple_flow.py', 'flow_credit.py', 'script_library.py', 'script_composer.py', 'flow_video_options.py', 'flow_settings.py', 'flow_cli_bundle.py', 'flow_omni_runtime.py', 'video_import.py', 'library_api.py', 'storage_lifecycle.py', 'product_script.py')
 
@@ -72,13 +72,13 @@ def main():
     assert '<script id="storyboard-guide-v111">'+guide+'</script>' in (ROOT/'photos.html').read_text()
     ui = (ROOT / 'scripts/ui/script_composer.js').read_text()
     assert all('<script id="script-composer-v108">' + ui + '</script>' in (ROOT/name).read_text() for name in ('index.html','studio.html')), 'Embedded UI differs from reviewed source'
-    prior = ROOT / 'downloads/v46-omni-prompt-layers/patch-build.json'
+    prior = ROOT / 'downloads/v46-omni-prompt-layers-127/patch-build.json'
     if prior.is_file():
         pinned = json.loads(prior.read_text())
         assert pinned['version'] == VERSION, 'Unexpected release metadata'
         expected_sources = {item['path']: item['sha256'] for item in pinned['files']}
         assert all(expected_sources.get(name) == sha(path.read_bytes()) for name,path in sources.items()), \
-            'Source changed since v46.126; use a NEW version, do not overwrite the published EXE'
+            'Source changed since v46.127; use a NEW version, do not overwrite the published EXE'
     manifest = {'version': VERSION, 'supported_payloads': [BASELINE],
                 'minimum_patch': '2026.11.04.4662',
                 'files': [{'path': name, 'bytes': path.stat().st_size, 'sha256': sha(path.read_bytes())}
@@ -119,7 +119,7 @@ def main():
         assert json.loads(archive.read('patch-manifest.json')) == manifest
         for name, path in sources.items():
             assert archive.read('files/' + name) == path.read_bytes()
-    output = ROOT / 'downloads/v46-omni-prompt-layers'
+    output = ROOT / 'downloads/v46-omni-prompt-layers-127'
     output.mkdir(exist_ok=True)
     exe = output / NAME
     exe.write_bytes(data)
