@@ -1,4 +1,4 @@
-# SceneForge v46.120 · Omni and layered sample prompts
+# SceneForge v46.126 · Omni and layered sample prompts
 
 ## Completed code
 
@@ -26,6 +26,8 @@ Motion Studio is the agreed name for the separate source-video editing branch. I
 
 ## Package
 
-SceneForge-Update-20261114-v46.120-Omni-Prompt-Layers.exe
+SceneForge-Update-20261114-v46.126-Omni-Prompt-Layers.exe
 
-SHA-256: 6ec34b4d3d0c04cae096a6501d6c42d838c41767b33f16c596542435172311e4
+SHA-256: ac8a516ee64400258a2fa8dace5d9d0f95c64edb6c81e54c6e6e9a487f902e4a
+
+Publication integration: fetched and merged origin/gh-pages 4e30ee2 (v46.125), preserving its download pages and adding every file in its manifest to the cumulative payload. Newer untouched files are checksum-compared with .125 during build. The unpublished local .120 package was superseded by .126 to avoid version collisions.

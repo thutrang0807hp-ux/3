@@ -1,4 +1,4 @@
-"""Build the v46.120 cumulative application update on v46.62 or newer.
+"""Build the v46.126 cumulative application update on v46.62 or newer.
 
 Reuses the verified unsigned generic launcher; only replaces its embedded ZIP.
 No source rewriting, external code, credentials, profiles or models in payload.
@@ -14,10 +14,10 @@ import zipfile
 import dnfile
 
 ROOT = Path(__file__).resolve().parents[3]
-VERSION = '2026.11.14.46120'
-NAME = 'SceneForge-Update-20261114-v46.120-Omni-Prompt-Layers.exe'
+VERSION = '2026.11.14.46126'
+NAME = 'SceneForge-Update-20261114-v46.126-Omni-Prompt-Layers.exe'
 BASELINE = '8178af48a4db6180eb0fb3ef042b04ea21617c7380ca2e106d8e967990eb0c35'
-NAMES = ('browser_profiles.py', 'desktop_icon.py', 'export_save_as.py', 'fingerprints.py', 'flow_background_session.py', 'flow_gflow_cli.py', 'gemini_chat.py', 'google_login.py', 'local_tts.py', 'monitoring.py', 'server.py', 'storage_jobs.py', 'timeline_export.py', 'voice_previews.py', 'voice_previews_worker.py', 'voice_runtime.py', 'voice_runtime_worker.py', 'voice_worker.py', 'web_images.py','profile_cache.py','simple_flow.py','flow_credit.py','script_library.py','script_composer.py','flow_video_options.py','flow_settings.py','flow_cli_bundle.py','flow_omni_runtime.py')
+NAMES = ('browser_profiles.py', 'desktop_icon.py', 'export_save_as.py', 'fingerprints.py', 'flow_background_session.py', 'flow_gflow_cli.py', 'gemini_chat.py', 'google_login.py', 'local_tts.py', 'monitoring.py', 'server.py', 'storage_jobs.py', 'timeline_export.py', 'voice_previews.py', 'voice_previews_worker.py', 'voice_runtime.py', 'voice_runtime_worker.py', 'voice_worker.py', 'web_images.py', 'profile_cache.py', 'simple_flow.py', 'flow_credit.py', 'script_library.py', 'script_composer.py', 'flow_video_options.py', 'flow_settings.py', 'flow_cli_bundle.py', 'flow_omni_runtime.py', 'video_import.py', 'library_api.py', 'storage_lifecycle.py', 'product_script.py')
 
 
 def align(value,boundary):
@@ -48,7 +48,13 @@ def main():
                 old = coverage.get(item['path'])
                 if old is None or old[0] < number: coverage[item['path']] = (number,item['sha256'])
     assert set(coverage) <= set(sources), 'Cumulative payload must cover every intermediate updated file'
-    assert all(name in ('app/local_engine/flow_gflow_cli.py','app/local_engine/flow_video_options.py','app/local_engine/flow_settings.py','app/local_engine/flow_cli_bundle.py','app/local_engine/flow_omni_runtime.py','app/vendor/gflow_cli-0.98.0-py3-none-any.whl','app/local_engine/script_library.py','app/local_engine/script_composer.py','app/local_engine/flow_credit.py','app/local_engine/profile_cache.py','app/local_engine/simple_flow.py','app/local_engine/browser_profiles.py','app/local_engine/google_login.py','app/local_engine/flow_background_session.py','app/local_engine/server.py','SceneForge.exe','app/dist/web-demo/index.html','app/dist/web-demo/studio.html','app/dist/web-demo/workflow.html','app/dist/web-demo/photos.html','app/dist/web-demo/native/index.html') or sha(path.read_bytes()) == coverage[name][1] for name,path in sources.items()), 'Current sources differ from released latest content'
+    assert all(name in ('app/local_engine/flow_gflow_cli.py','app/local_engine/library_api.py','app/local_engine/storage_lifecycle.py','app/local_engine/video_import.py','app/local_engine/product_script.py','app/local_engine/flow_video_options.py','app/local_engine/flow_settings.py','app/local_engine/flow_cli_bundle.py','app/local_engine/flow_omni_runtime.py','app/vendor/gflow_cli-0.98.0-py3-none-any.whl','app/local_engine/script_library.py','app/local_engine/script_composer.py','app/local_engine/flow_credit.py','app/local_engine/profile_cache.py','app/local_engine/simple_flow.py','app/local_engine/browser_profiles.py','app/local_engine/google_login.py','app/local_engine/flow_background_session.py','app/local_engine/server.py','SceneForge.exe','app/dist/web-demo/index.html','app/dist/web-demo/studio.html','app/dist/web-demo/workflow.html','app/dist/web-demo/photos.html','app/dist/web-demo/native/index.html') or sha(path.read_bytes()) == coverage[name][1] for name,path in sources.items()), 'Current sources differ from released latest content'
+    latest_release=json.loads((ROOT/'downloads/v46-product-script/patch-build.json').read_text())
+    reviewed_updates={'app/dist/web-demo/workflow.html','app/dist/web-demo/photos.html','app/local_engine/simple_flow.py','app/local_engine/flow_gflow_cli.py','app/local_engine/flow_settings.py','app/local_engine/flow_video_options.py','app/local_engine/flow_cli_bundle.py'}
+    for item in latest_release['files']:
+        assert item['path'] in sources, 'Missing newer release file: '+item['path']
+        if item['path'] not in reviewed_updates:
+            assert sha(sources[item['path']].read_bytes())==item['sha256'], 'Newer release content lost: '+item['path']
     for name,identifier,pages in [('veo_lifecycle.js','veo-lifecycle-v113',['workflow.html','photos.html']),('photo_veo.js','photo-veo-v113',['photos.html'])]:
         module=(ROOT/'scripts/ui'/name).read_text()
         assert all('<script id="'+identifier+'">'+module+'</script>' in (ROOT/page).read_text() for page in pages)
@@ -72,7 +78,7 @@ def main():
         assert pinned['version'] == VERSION, 'Unexpected release metadata'
         expected_sources = {item['path']: item['sha256'] for item in pinned['files']}
         assert all(expected_sources.get(name) == sha(path.read_bytes()) for name,path in sources.items()), \
-            'Source changed since v46.120; use a NEW version, do not overwrite the published EXE'
+            'Source changed since v46.126; use a NEW version, do not overwrite the published EXE'
     manifest = {'version': VERSION, 'supported_payloads': [BASELINE],
                 'minimum_patch': '2026.11.04.4662',
                 'files': [{'path': name, 'bytes': path.stat().st_size, 'sha256': sha(path.read_bytes())}

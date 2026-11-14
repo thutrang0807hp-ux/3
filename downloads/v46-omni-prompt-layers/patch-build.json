@@ -1,8 +1,8 @@
 {
-  "version": "2026.11.14.46120",
-  "file": "SceneForge-Update-20261114-v46.120-Omni-Prompt-Layers.exe",
-  "bytes": 7406592,
-  "sha256": "6ec34b4d3d0c04cae096a6501d6c42d838c41767b33f16c596542435172311e4",
+  "version": "2026.11.14.46126",
+  "file": "SceneForge-Update-20261114-v46.126-Omni-Prompt-Layers.exe",
+  "bytes": 7441920,
+  "sha256": "ac8a516ee64400258a2fa8dace5d9d0f95c64edb6c81e54c6e6e9a487f902e4a",
   "files": [
     {
       "path": "app/local_engine/browser_profiles.py",
@@ -116,8 +116,8 @@
     },
     {
       "path": "app/local_engine/script_library.py",
-      "bytes": 7343,
-      "sha256": "e4fcac3f55c44d624b91b3391d9c7d73d526116589e25f5739fe518d58165c79"
+      "bytes": 7590,
+      "sha256": "e89e74d569d4566ba42aee8379b83eeaec1a201cd42e397a92f3ceb17f6245a4"
     },
     {
       "path": "app/local_engine/script_composer.py",
@@ -145,19 +145,39 @@
       "sha256": "b510557eab1c40179dddfc968aa7a9571460bf6a74fd41273f286684a8a55737"
     },
     {
+      "path": "app/local_engine/video_import.py",
+      "bytes": 17953,
+      "sha256": "8ecd123da3fb3201c455f3355e54565718a1e2680f3f5030928e926a0320558c"
+    },
+    {
+      "path": "app/local_engine/library_api.py",
+      "bytes": 13230,
+      "sha256": "40e0d058fa9dd57c852a9ae298262a2d86a2aa5429e2ad2a53de959469d0a21c"
+    },
+    {
+      "path": "app/local_engine/storage_lifecycle.py",
+      "bytes": 40349,
+      "sha256": "bcf5a099e494532c3ad732898aada880f39beca8c9c36dab4016829c2d381421"
+    },
+    {
+      "path": "app/local_engine/product_script.py",
+      "bytes": 7483,
+      "sha256": "20a87467956a2b25108887c23d1910937268e39d5fbc20aa216bb9670ac70a36"
+    },
+    {
       "path": "app/dist/web-demo/index.html",
-      "bytes": 1109881,
-      "sha256": "70dc9ca423c2cdbf00dbc0330b9d2e21a09efca0acf45141038eeeefb21db649"
+      "bytes": 1119798,
+      "sha256": "83d115471708aa2588376d910a267e4f98103372b9541aeba11a339f1a988b89"
     },
     {
       "path": "app/dist/web-demo/studio.html",
-      "bytes": 1074121,
-      "sha256": "37372dbd3763bc70b0048ccebf151c4c6d819c932ae7092d9a0b73ed29e826db"
+      "bytes": 1084038,
+      "sha256": "269bf03ae1f970338754680b96bb94e093f74bd26af4d10fe44b5def5611987e"
     },
     {
       "path": "app/dist/web-demo/workflow.html",
-      "bytes": 973844,
-      "sha256": "ea7b43c3e04bcf1bb7dd6140bc77b412d0ef86aca8a15cdf666ff8682beecbb3"
+      "bytes": 985840,
+      "sha256": "18912ff50e4926c545f51cc49be2acfb61831d064aa43b010dd392857f9689cd"
     },
     {
       "path": "app/dist/web-demo/photos.html",
@@ -195,7 +215,7 @@
     96
   ],
   "all_intermediate_file_updates_covered": true,
-  "file_count": 36,
+  "file_count": 40,
   "model_and_account_data_not_in_payload": true,
   "installed_version_shown": true,
   "downgrade_blocked": true,
