@@ -1,0 +1,20 @@
+{
+  "version": "2026.11.14.46129",
+  "file": "SceneForge-Setup-Online-20261114-v46.129.exe",
+  "bytes": 90813440,
+  "sha256": "b1937ddbc47f52a2b7f9acaf5cf6a67ed9955951ddaf267c6d890d3bcf81f5b1",
+  "code_files": 114,
+  "all_recorded_update_files_verified": true,
+  "base_installer_verified": true,
+  "base_zip_crc_verified": true,
+  "embedded_zip_verified": true,
+  "python_compile_verified": true,
+  "launcher_code_unchanged": true,
+  "windows_execution_tested": false,
+  "online_account_tested": false,
+  "requires_network": true,
+  "base_download_bytes": 553209693,
+  "base_expanded_bytes": 1183701914,
+  "overlay_expanded_bytes": 94299540,
+  "code_sha256": "294f781be55b133451f0a754a4179d9e0468fd31698cd5e8a929e50edea4b05f"
+}

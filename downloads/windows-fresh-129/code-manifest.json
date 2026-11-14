@@ -1,0 +1,578 @@
+{
+  "version": "2026.11.14.46129",
+  "base_installer_sha256": "858fae3ee43bc08811e28339f4a84d0cd33ec645c206b1f62ff586d3f76eb6da",
+  "base_payload_sha256": "8178af48a4db6180eb0fb3ef042b04ea21617c7380ca2e106d8e967990eb0c35",
+  "files": [
+    {
+      "path": "Microsoft.Web.WebView2.Core.dll",
+      "bytes": 649832,
+      "sha256": "e6c517412c245c0f0d65fc494d4f7bf883eba3cfd7023c3f66cc1fe774ec0a22"
+    },
+    {
+      "path": "Microsoft.Web.WebView2.WinForms.dll",
+      "bytes": 39000,
+      "sha256": "362ede7adc427ff631cd313418d6d331c01eb1f7874a5ca54911130739792145"
+    },
+    {
+      "path": "SceneForge.exe",
+      "bytes": 134144,
+      "sha256": "b3c9698465644daec0bde880e4ac606937196e95d2e150c30f4ebc3dfce6eba3"
+    },
+    {
+      "path": "WEBVIEW2-LICENSE.txt",
+      "bytes": 1487,
+      "sha256": "0af8f1b807512aae39c2ac1aa4d0cae65cabecb6fd554b8439a5162a0d6eca55"
+    },
+    {
+      "path": "WebView2Loader.dll",
+      "bytes": 159848,
+      "sha256": "2f965e10aed3b356a408978a0e6d74eb86e3e722dd008fa9ad39f68884479e85"
+    },
+    {
+      "path": "app/dist/web-demo/batch-design-demo.html",
+      "bytes": 1094215,
+      "sha256": "da84c0da4e8ce5f6a73d76629a20f1d2a7bdc96226d313b80fdaec363790c091"
+    },
+    {
+      "path": "app/dist/web-demo/icons/SceneForge.ico",
+      "bytes": 106001,
+      "sha256": "97729bee7bcd19813196b9409898ac119d95044a3551d83e80e0222d22dd20ea"
+    },
+    {
+      "path": "app/dist/web-demo/index.html",
+      "bytes": 1123130,
+      "sha256": "7ab0723e5bc6bdd605ae8daebb4c3731288c92d7ea4f05d89ab087b6e119a23b"
+    },
+    {
+      "path": "app/dist/web-demo/native/index.html",
+      "bytes": 559441,
+      "sha256": "aac0da8cb702acdad317c83652112ab75edcc53c17340efe274472803b71f325"
+    },
+    {
+      "path": "app/dist/web-demo/photos.html",
+      "bytes": 645963,
+      "sha256": "5473191882162cafafbf7b6d261ea8bf3fad694e91d4eda3beb5ca96a0682748"
+    },
+    {
+      "path": "app/dist/web-demo/storage-demo.html",
+      "bytes": 1093725,
+      "sha256": "bea56e47c4db77f1fe2957d1ffce6bd322311249bb2a7352f9e7f7588c5e31d8"
+    },
+    {
+      "path": "app/dist/web-demo/studio.html",
+      "bytes": 1087370,
+      "sha256": "b9cb2674d8d192bb0d3fd4fabd77482dd5da6eec507f99e27e455cea777ba5a2"
+    },
+    {
+      "path": "app/dist/web-demo/workflow.html",
+      "bytes": 1017380,
+      "sha256": "4748c6f74d886da7b0c8555ff424f3abe24c2d50badc276297bb2e3ecce27244"
+    },
+    {
+      "path": "app/local_engine/__init__.py",
+      "bytes": 168,
+      "sha256": "9478e5a2b0bee7d90e287d5702646493e09b102135d6cdb1255190cfbf73b23a"
+    },
+    {
+      "path": "app/local_engine/__main__.py",
+      "bytes": 1749,
+      "sha256": "114a0bc260a5846feeae29b0a7c8abfc65d319a0dfeda6433f65dd645163d49b"
+    },
+    {
+      "path": "app/local_engine/account_pool.py",
+      "bytes": 4079,
+      "sha256": "4be57b946a0297276961baa0c00b8dda1f6aaa96144469756a920ed8e0606f4d"
+    },
+    {
+      "path": "app/local_engine/add_to_prompt.py",
+      "bytes": 3754,
+      "sha256": "761a0224f6e687bffdb664901abfe64bd8940f6ceec90573b7f13c5c49a2bc32"
+    },
+    {
+      "path": "app/local_engine/browser_bridge.py",
+      "bytes": 19932,
+      "sha256": "cc4603c8fefc695d05ff728499b1532e458403c4378c70083606f55c8229230f"
+    },
+    {
+      "path": "app/local_engine/browser_profiles.py",
+      "bytes": 9156,
+      "sha256": "1f7234fa1dbcb72f44340422e93c2d1f4b4512661636367a118c5a94cc0c47f8"
+    },
+    {
+      "path": "app/local_engine/cpu_worker.py",
+      "bytes": 9828,
+      "sha256": "ec243221917f7671059d8af4359b42fe6f6d90ce4bccd35aa31a0f0da8417d0e"
+    },
+    {
+      "path": "app/local_engine/desktop_icon.py",
+      "bytes": 5142,
+      "sha256": "986149c839b1ab0b01428b88db03f6a69656bd5919b299f88900e8b3bbf069ab"
+    },
+    {
+      "path": "app/local_engine/export_save_as.py",
+      "bytes": 6751,
+      "sha256": "ce1c6d84577380b8ebd0935882af4d679eaaabdd5bb662fb365562a8de1dc248"
+    },
+    {
+      "path": "app/local_engine/fingerprints.py",
+      "bytes": 6544,
+      "sha256": "86356f8c39c46728d2d801a83154c0d57286bce3231f67b3721867963b526bc3"
+    },
+    {
+      "path": "app/local_engine/flow_account_engine.py",
+      "bytes": 14994,
+      "sha256": "1d9a456f577da5432f3752d68732c5f1d46d6f0bcd6bd8f54de09e8859055d90"
+    },
+    {
+      "path": "app/local_engine/flow_account_session.py",
+      "bytes": 2371,
+      "sha256": "388dc4356943e0af842dbea3a78728f1694b505a8e5bb87ba3e6e598d10116f2"
+    },
+    {
+      "path": "app/local_engine/flow_accounts.py",
+      "bytes": 8505,
+      "sha256": "5923b04814225ea449303d2a50992622212514024d95fcebf3cf5819c7f749e8"
+    },
+    {
+      "path": "app/local_engine/flow_background_session.py",
+      "bytes": 7769,
+      "sha256": "830956e006258aeed3d5116953101e71a7b9d4e223d3b4d6fc6e44cb00b82020"
+    },
+    {
+      "path": "app/local_engine/flow_batch_session.py",
+      "bytes": 7067,
+      "sha256": "328c4b14bf82a3748deccad8cfb20a8050709666c714f0e3e2d9d8bb3ddba3d7"
+    },
+    {
+      "path": "app/local_engine/flow_browser_context.py",
+      "bytes": 6165,
+      "sha256": "ba0efc2edc2e1cceb01aefb7350183d56c9a3e38c328e431b4efdc22ca483adb"
+    },
+    {
+      "path": "app/local_engine/flow_browser_probe.py",
+      "bytes": 1797,
+      "sha256": "d81b229cae5d9c43ecd130498b81903419ab38a67462727d4fcd27b50bb266ac"
+    },
+    {
+      "path": "app/local_engine/flow_browser_relay.py",
+      "bytes": 6155,
+      "sha256": "a1d01eefe6af5df55a6d83fa4a3a13290d97354536614449527004190fdbff39"
+    },
+    {
+      "path": "app/local_engine/flow_cli_bundle.py",
+      "bytes": 4499,
+      "sha256": "de1d8cb658fc7bee0d79c7eff1a07653d46f26636e041937059edd572e786e5a"
+    },
+    {
+      "path": "app/local_engine/flow_cli_progress.py",
+      "bytes": 7035,
+      "sha256": "10f9c0ad9b90b7ab5adfae5d29f99d90f7791aedc212a41f8cc77f119e4fd16c"
+    },
+    {
+      "path": "app/local_engine/flow_composer_upload.py",
+      "bytes": 8390,
+      "sha256": "f0ff5d24617c9c7fabe01f93eb6c4897f3ffdaeabd1120ed9762b6820183e3fe"
+    },
+    {
+      "path": "app/local_engine/flow_connection.py",
+      "bytes": 7287,
+      "sha256": "9dd557c661309620b54ae2ba5a7e27c95e83bf23170575200a99b73abb3833a1"
+    },
+    {
+      "path": "app/local_engine/flow_credit.py",
+      "bytes": 4524,
+      "sha256": "833fa85ca1e8b7a6c4808b992feb41643a173f2ea9beef293b74158a7913be27"
+    },
+    {
+      "path": "app/local_engine/flow_extension_driver.py",
+      "bytes": 7984,
+      "sha256": "6f7b450af106f583dd605f8f1dd3638439f924a4c84e71475e151b80b514762d"
+    },
+    {
+      "path": "app/local_engine/flow_gflow_adapter.py",
+      "bytes": 10884,
+      "sha256": "5076c888ed29b7835867632175e773fe592550804f96fe8976c4e7dce204e7ca"
+    },
+    {
+      "path": "app/local_engine/flow_gflow_cli.py",
+      "bytes": 27081,
+      "sha256": "bce511ea426259c53920824b51965cf5acb9db19fc412279a3565f5ef7093521"
+    },
+    {
+      "path": "app/local_engine/flow_gflow_runtime.py",
+      "bytes": 3283,
+      "sha256": "13999627771150caf6a3e1f72f0e044cef1a42560dd0240301ad90c822006897"
+    },
+    {
+      "path": "app/local_engine/flow_gflow_worker.py",
+      "bytes": 5557,
+      "sha256": "a9dfb1c5e7dd94e162239a95ac88e3cfff72d9be559292d59debcdfc41c10e86"
+    },
+    {
+      "path": "app/local_engine/flow_import_trace.py",
+      "bytes": 4172,
+      "sha256": "f57185b425f6dfc1a9f4577e13f1488bf4cdf466be88a5c6460ac670e3bff8e9"
+    },
+    {
+      "path": "app/local_engine/flow_managed_driver.py",
+      "bytes": 7750,
+      "sha256": "0c38726488e03e6eeaedbc06cd1135eff10a881af86fa888549695c42a04f39f"
+    },
+    {
+      "path": "app/local_engine/flow_media_structure.py",
+      "bytes": 5135,
+      "sha256": "55ab8cb4d75892f5ddd260018a91383bf9c2ab3a181545d5502c6ae674ce2ffe"
+    },
+    {
+      "path": "app/local_engine/flow_native_pipeline.py",
+      "bytes": 16378,
+      "sha256": "2480527012fc861837cf6f8b4c88e7fb1ecd7f791a3b6611181aa3fbb46e84cb"
+    },
+    {
+      "path": "app/local_engine/flow_native_reference.py",
+      "bytes": 12609,
+      "sha256": "0433fb3b945891f0e9794e5bf9528dcae9ca7eec5ae6fa9f30c86a0ad537d513"
+    },
+    {
+      "path": "app/local_engine/flow_native_transport.py",
+      "bytes": 10733,
+      "sha256": "fb5740b143730f124232577b97ef965c175fae2578c97bc50f866272f7614ed6"
+    },
+    {
+      "path": "app/local_engine/flow_network_probe.py",
+      "bytes": 20228,
+      "sha256": "923f80ca34d0333b29e00a9a72e4f223cd7859ea7da44ba847c126d09b0b72a8"
+    },
+    {
+      "path": "app/local_engine/flow_network_protocol.py",
+      "bytes": 12225,
+      "sha256": "d06c14b826c5bfb424cccad8c6428613db40dc5ace7f17af3aa13590322fc28e"
+    },
+    {
+      "path": "app/local_engine/flow_omni_runtime.py",
+      "bytes": 3887,
+      "sha256": "b510557eab1c40179dddfc968aa7a9571460bf6a74fd41273f286684a8a55737"
+    },
+    {
+      "path": "app/local_engine/flow_pair_generation.py",
+      "bytes": 4689,
+      "sha256": "88195ce8d19908d9a564afcbbcf7a18bca258ee956ac3eadbbb25f8c20e5bb97"
+    },
+    {
+      "path": "app/local_engine/flow_pair_trial.py",
+      "bytes": 25901,
+      "sha256": "d8d3ade3feefbcd02c82532d3e1e07707512c215cbb1a332b085ac58bec560fd"
+    },
+    {
+      "path": "app/local_engine/flow_prepare.py",
+      "bytes": 39221,
+      "sha256": "d31e06f38437d9964f8f6b3233ab3d8fb00b2c5fa65af95c5c91a67257f87846"
+    },
+    {
+      "path": "app/local_engine/flow_projects.py",
+      "bytes": 2870,
+      "sha256": "0cb5822aa8cef4352572cc7ab6b03b194cdaf0dcf8321b41ecbe50e29e4d19ee"
+    },
+    {
+      "path": "app/local_engine/flow_provider.py",
+      "bytes": 34911,
+      "sha256": "5a348b6f8ea94fd22696b170262f78f1a9aa02de4668e55c83181125364b7f7a"
+    },
+    {
+      "path": "app/local_engine/flow_saved_video_review.py",
+      "bytes": 2120,
+      "sha256": "c14e4948ca63f9c9cb78d7d40cf7d0e36a1cbec094173c1384afc51e3f1f7b51"
+    },
+    {
+      "path": "app/local_engine/flow_scene_job.py",
+      "bytes": 11257,
+      "sha256": "20fa9ff3297f5a7c3b4fed8235b377faa9a1894716ecdd5404487e17ea979176"
+    },
+    {
+      "path": "app/local_engine/flow_scene_rpc.py",
+      "bytes": 4023,
+      "sha256": "064feaf8d6f782419d4cae85eab826f1535b3cde0d4dfcddc3fa39dc6aedb4a3"
+    },
+    {
+      "path": "app/local_engine/flow_settings.py",
+      "bytes": 16649,
+      "sha256": "6ad873da8490a3bcb23e25d1aeb1faa168d23f490e7a1451b90dae909eaaa262"
+    },
+    {
+      "path": "app/local_engine/flow_task_journal.py",
+      "bytes": 14288,
+      "sha256": "940a57ffc244ff6a650d88c97831320644668c6b08d3ea5f732212ee04cf9dc4"
+    },
+    {
+      "path": "app/local_engine/flow_task_protocol.py",
+      "bytes": 10844,
+      "sha256": "717b7de472c0260cc7eb607d495ff91079859e5e83a35c304f2335fa1fc592e6"
+    },
+    {
+      "path": "app/local_engine/flow_task_tracker.py",
+      "bytes": 13867,
+      "sha256": "c5548d937ac333989272a66eed68643492f5c4ef61672624c2c077711a35447a"
+    },
+    {
+      "path": "app/local_engine/flow_tracking_diagnostics.py",
+      "bytes": 9069,
+      "sha256": "54e253164fd903c0568e836c392db8480814c2db13e5e00307f1b951024b35a9"
+    },
+    {
+      "path": "app/local_engine/flow_ui_driver.py",
+      "bytes": 7939,
+      "sha256": "5ff5c071134a28d603a343f2d75ca10aea268428fec4117e70642bd16f996987"
+    },
+    {
+      "path": "app/local_engine/flow_ui_session.py",
+      "bytes": 4038,
+      "sha256": "47be6a88daef9772683ec51a6bc8796ca12320ba516ceb7c8323bcbcc1d218ba"
+    },
+    {
+      "path": "app/local_engine/flow_video_detail_probe.py",
+      "bytes": 10516,
+      "sha256": "0408179464e6c3e1a471f849547112de7194316640c2bf8b7c68644a49150b19"
+    },
+    {
+      "path": "app/local_engine/flow_video_history.py",
+      "bytes": 7310,
+      "sha256": "19ff3d47bc5f569b960ab1788108c17c89458df7dd0794b8ae73be562ccbf0ff"
+    },
+    {
+      "path": "app/local_engine/flow_video_options.py",
+      "bytes": 1853,
+      "sha256": "a367c1a37e39d6dbd1eb5c3ae468f5ff57f854fd2025e4a81d8a88657c816511"
+    },
+    {
+      "path": "app/local_engine/flow_web_login.py",
+      "bytes": 14934,
+      "sha256": "72849644d6c26d5d26611421afe29f8811016b18bfc6eb39bcc2389e6b231cf1"
+    },
+    {
+      "path": "app/local_engine/frame_quality.py",
+      "bytes": 3905,
+      "sha256": "8dc37a76415ae64bfb588e97e245c234bc8183e93b014442079221a140251e58"
+    },
+    {
+      "path": "app/local_engine/gemini_chat.py",
+      "bytes": 27561,
+      "sha256": "72a9c35974987e5fe6d59c29c9bb776be5be6800d0b4a54652f77c0f121729c8"
+    },
+    {
+      "path": "app/local_engine/gemini_chat_worker.py",
+      "bytes": 6598,
+      "sha256": "bf52f191503d9e67618d07bf92ea6623624d11fec105bc19eea656d812105f44"
+    },
+    {
+      "path": "app/local_engine/gemini_conversations.py",
+      "bytes": 659,
+      "sha256": "0e788932414dbebf5f7c8314f00ba8f4923da4d13e6857258b04467829075a1d"
+    },
+    {
+      "path": "app/local_engine/google_login.py",
+      "bytes": 10609,
+      "sha256": "76eb6e58f3beb8146f886b72b42d15ea4ec7a38fd5cd1c99bc9b0b5218b29c34"
+    },
+    {
+      "path": "app/local_engine/image_transport.py",
+      "bytes": 2484,
+      "sha256": "eb51624e2f93d5c4c935596de5c773a64c1e26e31b794e215cb48f56c0c66096"
+    },
+    {
+      "path": "app/local_engine/library_api.py",
+      "bytes": 13230,
+      "sha256": "40e0d058fa9dd57c852a9ae298262a2d86a2aa5429e2ad2a53de959469d0a21c"
+    },
+    {
+      "path": "app/local_engine/local_tts.py",
+      "bytes": 4900,
+      "sha256": "8c56853a7e91f83c6937bd1e6f366243f2749b9dcc6ae6da6a8d52d354ab4b75"
+    },
+    {
+      "path": "app/local_engine/monitoring.py",
+      "bytes": 9313,
+      "sha256": "cd1f1878820504e0127d90be6ea5b3f6541ec49d95fb4f940e3e52bfae2dd1e1"
+    },
+    {
+      "path": "app/local_engine/motion_studio.py",
+      "bytes": 11012,
+      "sha256": "ae61c2e68a327ac17d2ff272e01a2da93eb04dc923dc36d64b534d699f4b87b1"
+    },
+    {
+      "path": "app/local_engine/product_script.py",
+      "bytes": 7483,
+      "sha256": "20a87467956a2b25108887c23d1910937268e39d5fbc20aa216bb9670ac70a36"
+    },
+    {
+      "path": "app/local_engine/profile_cache.py",
+      "bytes": 7373,
+      "sha256": "6581ae8eba0c39216272252a6da38db08dc7c6f938fcc305b0f5f12e23112095"
+    },
+    {
+      "path": "app/local_engine/proxy_frames.py",
+      "bytes": 2844,
+      "sha256": "fe78925f2267a9bd1dd81d922de28d831efc0d829c45f9b69ea349c73131430e"
+    },
+    {
+      "path": "app/local_engine/quiet_process.py",
+      "bytes": 627,
+      "sha256": "a3b2a49eb4c854797f0343a67d4b1859ed43180673f4b4343042bf4cd7597c0c"
+    },
+    {
+      "path": "app/local_engine/script_composer.py",
+      "bytes": 6416,
+      "sha256": "0714cb5484b0565c725cc2b13132b2926f03c6365d36dbcd16f635cc1a924524"
+    },
+    {
+      "path": "app/local_engine/script_library.py",
+      "bytes": 9809,
+      "sha256": "a220817eaf847672b34ea1aece4c231639ceee708087ab40ffe8809ab22560ce"
+    },
+    {
+      "path": "app/local_engine/server.py",
+      "bytes": 41306,
+      "sha256": "90e9f9b85af040a886d72e54a907130934ff816599408beed6f234efb6fc606d"
+    },
+    {
+      "path": "app/local_engine/simple_flow.py",
+      "bytes": 61859,
+      "sha256": "72d493638c2ecbb85b9df695a2592d7fdc4d20da51dc668dff1d3d3216bcfa78"
+    },
+    {
+      "path": "app/local_engine/simple_flow_dom.py",
+      "bytes": 12741,
+      "sha256": "c1846674087a9ebbdce72cc83e8b2160d13019f15c47849437ee13c32ee47d7c"
+    },
+    {
+      "path": "app/local_engine/simple_flow_upload.py",
+      "bytes": 10968,
+      "sha256": "342e1bde247a0ca3612efe7c363cb0d741c84a1b014a71c35a402d1e6aba5869"
+    },
+    {
+      "path": "app/local_engine/storage_jobs.py",
+      "bytes": 16118,
+      "sha256": "69abc0c0def6bc36141eb77d158b2ad2c7bf810f610f30d4454bee9c485b23fb"
+    },
+    {
+      "path": "app/local_engine/storage_lifecycle.py",
+      "bytes": 40349,
+      "sha256": "bcf5a099e494532c3ad732898aada880f39beca8c9c36dab4016829c2d381421"
+    },
+    {
+      "path": "app/local_engine/timeline_export.py",
+      "bytes": 20642,
+      "sha256": "d6d2e70d78a5eae54ecd9aec33eb03e7cb43f2e0b6a1c1efda8c914aa9552f34"
+    },
+    {
+      "path": "app/local_engine/video_import.py",
+      "bytes": 17953,
+      "sha256": "8ecd123da3fb3201c455f3355e54565718a1e2680f3f5030928e926a0320558c"
+    },
+    {
+      "path": "app/local_engine/voice_previews.py",
+      "bytes": 4573,
+      "sha256": "16c4919ca3394a1a16513daff209cb9aece6df3063ea4c97694e870b84756e24"
+    },
+    {
+      "path": "app/local_engine/voice_previews_worker.py",
+      "bytes": 1382,
+      "sha256": "1677d210b52f43e7c0972992e25daf47c9fccdab45300d569d707bd8f6a36afc"
+    },
+    {
+      "path": "app/local_engine/voice_runtime.py",
+      "bytes": 2666,
+      "sha256": "fe09aec5da85a45720273bad1d81b21a1680bc5df9f8eed6968dea1ba9b44984"
+    },
+    {
+      "path": "app/local_engine/voice_runtime_worker.py",
+      "bytes": 1492,
+      "sha256": "bc8a76331ac8a24e77ea12d48ad01b393b86160b4fbe14125cba0a7a86ce016e"
+    },
+    {
+      "path": "app/local_engine/voice_worker.py",
+      "bytes": 6128,
+      "sha256": "d419e1baf5c8d4490d5b4208729069c91dcdbf7e904615f9b15d23b043f6b8f8"
+    },
+    {
+      "path": "app/local_engine/web_images.py",
+      "bytes": 26121,
+      "sha256": "e24b69de5c96b1989c4cb8ede74df9058212867b1a52adb017528d1d1485b332"
+    },
+    {
+      "path": "app/paths.py",
+      "bytes": 1524,
+      "sha256": "3d3576ffe7f4c2cf46e58a774e2a249a10503b00e210ab0122b9364338006675"
+    },
+    {
+      "path": "app/scripts/browser-extension-package.zip",
+      "bytes": 22242,
+      "sha256": "a9c3d8cb95741afe803af3e8e22619492dd21d4548e8b72872e189cce5c24fe2"
+    },
+    {
+      "path": "app/scripts/browser-extension/README.txt",
+      "bytes": 3760,
+      "sha256": "3e15fe7749aa28640fdf44aed8fc3a8a70f1a698322f84946c384957b5943d2c"
+    },
+    {
+      "path": "app/scripts/browser-extension/dom-flow.js",
+      "bytes": 18876,
+      "sha256": "fd9f0ac3baf507f30bd7e4fa7e2323f9ab87d2360ee44a80e12bfdabb8412763"
+    },
+    {
+      "path": "app/scripts/browser-extension/flow-probe.js",
+      "bytes": 3198,
+      "sha256": "a86577621305f5aae018f5789c8926b0e5304e57fc77ed3162410974cca1a935"
+    },
+    {
+      "path": "app/scripts/browser-extension/manifest.json",
+      "bytes": 1071,
+      "sha256": "cf34a4dc095032b6ae9ab8c6f3bab496344ccce85f9e192f11461290524b7515"
+    },
+    {
+      "path": "app/scripts/browser-extension/native-flow.js",
+      "bytes": 4400,
+      "sha256": "1f3412f081c112d8673612eb9c5ad65ebdc51cd740f332844d3cb823380d5467"
+    },
+    {
+      "path": "app/scripts/browser-extension/popup.css",
+      "bytes": 1058,
+      "sha256": "6d11168550b43bd97f40dcb82abae599e67939fa956ad5f96c0b93ef3f9afa15"
+    },
+    {
+      "path": "app/scripts/browser-extension/popup.html",
+      "bytes": 2183,
+      "sha256": "f515c709b595cb6624b5812a507ada3808d605ac4b3dc3fcac68b683407adc4e"
+    },
+    {
+      "path": "app/scripts/browser-extension/popup.js",
+      "bytes": 8035,
+      "sha256": "fdc9189f4ff521a2cead8c50d34b3cfe7eb9ae72567a863f611bbb533814da26"
+    },
+    {
+      "path": "app/scripts/browser-extension/ui-report.js",
+      "bytes": 4559,
+      "sha256": "21b12029a591340223952ead660128e4479c74c3f2509d205f3976bd9562c39b"
+    },
+    {
+      "path": "app/scripts/browser-extension/worker.js",
+      "bytes": 4923,
+      "sha256": "bd19881e6cc471407ff4fe9be2bf7d8cd6752023d72a0772f1e807ddd1ea7e13"
+    },
+    {
+      "path": "app/vendor/gflow-original.zip",
+      "bytes": 83848392,
+      "sha256": "03ae9541fefa55e4f917f87db794cd2b26f61d5d215a754b333b5dfc3d686292"
+    },
+    {
+      "path": "app/vendor/gflow_cli-0.98.0-py3-none-any.whl",
+      "bytes": 1734617,
+      "sha256": "f35eedf1e167e5cf5e2837ad2a7d3455f1bc1c205b22ea98a350f3dbaebb77d3"
+    },
+    {
+      "path": "app/windows_bootstrap.py",
+      "bytes": 2179,
+      "sha256": "8ba7e850da1f7e302a0db4236d3395041b4403adb9501f852c3ffb1916e5fb72"
+    }
+  ],
+  "code_sha256": "294f781be55b133451f0a754a4179d9e0468fd31698cd5e8a929e50edea4b05f"
+}
