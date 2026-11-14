@@ -1,6 +1,6 @@
-# Motion Studio · planned separate branch
+# Motion Studio · separate branch
 
-Name agreed with user: **Motion Studio**. Status: design, not enabled or released as a working generator.
+Name agreed with user: **Motion Studio**. Status: v46.129 implements local preparation, manual Flow handoff, version import, review and shared merge/export. Automatic Flow editing remains disabled.
 
 Keep sample-video recreation and photo-to-video intact. Reuse scene analysis, shared Settings accounts, durable receipts, version import, merge/export and media storage rather than duplicating those implementations.
 

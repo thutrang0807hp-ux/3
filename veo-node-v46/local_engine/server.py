@@ -560,6 +560,8 @@ BROWSER_BRIDGE=install_browser_bridge(app,GEMINI_CHAT,FLOW_ACCOUNTS)
 
 from .simple_flow import install_simple_flow
 SIMPLE_FLOW=install_simple_flow(app,DATA,VAULT,REQUESTS,FLOW_PROVIDER)
+from .motion_studio import install_motion_studio
+MOTION_STUDIO=install_motion_studio(app,DATA)
 from .flow_credit import install_flow_credit
 install_flow_credit(app,FLOW_ACCOUNTS,SIMPLE_FLOW,DATA)
 
