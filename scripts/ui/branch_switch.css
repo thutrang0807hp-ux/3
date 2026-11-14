@@ -1,0 +1,29 @@
+/* Reserve header geometry across all three workflows. */
+@media(min-width:701px){
+ .workspaceSingleRow .roomBar>label{flex:0 0 212px;min-width:212px;max-width:212px}
+ .workspaceSingleRow #roomSwitcher{width:174px;min-width:174px;max-width:174px}
+ .workspaceSingleRow .roomBar>nav:not(#workflowModes):not(#workspaceSteps){flex:0 0 304px;min-width:304px}
+ .workspaceSingleRow #workflowModes .workflowModeChoices{width:272px;flex-shrink:0}
+ .workspaceSingleRow #workflowModes .workflowModeChoices button{flex:1;white-space:nowrap}
+ .workspaceSingleRow #sfFlowSettingsDock>summary{max-width:180px;overflow:hidden}
+ .workspaceSingleRow #sfFlowSettingsDock>summary small{overflow:hidden;text-overflow:ellipsis}
+}
+@media(min-width:701px) and (max-width:1650px){
+ .workspaceSingleRow .roomBar>label{flex-basis:160px;min-width:160px;max-width:160px}
+ .workspaceSingleRow #roomSwitcher{width:128px;min-width:128px;max-width:128px}
+ .workspaceSingleRow .roomBar>nav:not(#workflowModes):not(#workspaceSteps){flex-basis:240px;min-width:240px}
+ .workspaceSingleRow #sfFlowSettingsDock>summary{max-width:115px}
+ .workspaceSingleRow #workflowModes .workflowModeChoices{width:260px}
+}
+@media(min-width:701px) and (max-width:1300px){
+ .workspaceSingleRow .roomBar>label{flex-basis:112px;min-width:112px;max-width:112px}
+ .workspaceSingleRow #roomSwitcher{width:85px;min-width:85px;max-width:85px}
+ .workspaceSingleRow .roomBar>nav:not(#workflowModes):not(#workspaceSteps){flex-basis:188px;min-width:188px}
+ .workspaceSingleRow #sfFlowSettingsDock>summary{max-width:65px}
+ .workspaceSingleRow #workflowModes .workflowModeChoices{width:240px}
+}
+#roomFrames{position:relative}
+#roomFrames>iframe[data-branch-departure]{position:absolute;inset:0;width:100%;height:100%!important;z-index:2;pointer-events:none}
+body.branchSwitching #roomLoading{inset:8px 14px auto auto!important;z-index:4;width:auto;height:auto;min-height:0;padding:7px 12px;background:#18212aee;border:1px solid #384752;border-radius:8px;font-size:11px;pointer-events:none}
+body.branchSwitching #roomLoading:before{content:'';width:6px;height:6px;background:#d4f53c;border-radius:50%;display:inline-block;margin-right:7px}
+body.branchSwitching #workspaceSteps,body.branchSwitching #workspaceHeaderControls{pointer-events:none}

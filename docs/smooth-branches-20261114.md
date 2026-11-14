@@ -1,0 +1,13 @@
+# Branch switching · v46.130
+
+Fixes the shared shell in index/studio for sample video, photos and Motion Studio. A departure now flushes once through `openRoom`; mode selection no longer flushes the same frame a second time. Motion's open wrapper also no longer repeats the save/render already performed by the underlying room bridge.
+
+During an analysis-to-analysis switch the saved outgoing iframe remains visible and inert while the new frame initializes underneath. Media is paused. After the new frame finishes initialization and a paint turn, the old frame is removed. Only one analysis frame remains afterward; there is no permanent hidden workspace cache or snapshot image stored on disk. A small loading indicator replaces the full overlay during this handoff. Failed target initialization restores the prior room/frame; failed saving does not remove the current frame. Final workflow-state messages from the departing frame are still accepted for that room.
+
+Camera coordinates and zoom are remembered per room in sessionStorage as three numbers, captured before departure and restored after initialization. Initial fit no longer overwrites the saved view on return. Explicit fit and zoom controls continue to work. This is session camera state, separate from project content; no extra media storage is introduced.
+
+The room selector, view controls and branch selector reserve consistent widths across modes, including the reference-only Flow settings dock. The photo branch uses that settings space to open its existing video settings dialog. Photo workspace opening renders and saves before its background capability request finishes, so a slow status read need not block the canvas. Generation controls still depend on actual capabilities/provider checks.
+
+Validation: actual Chromium shell fixture switches across all three branches; delayed target initialization retains the old inert canvas; one flush; per-room camera and script preservation; matching header positions; photo status deliberately held pending while canvas opens; existing photo settings dialog opens through the new header button; controls fit at 1366px; injected load failure rolls back; injected save failure preserves the active frame; one frame after handoff. Existing photo authoring regression and embedded script syntax checks passed. No Windows frame-time measurement or live provider generation was performed; this removes identified causes of visual jumps and redundant work, not a universal performance guarantee.
+
+Cumulative .130 update uses the existing .62+ baseline, including .129 installations made by the fresh-PC setup. Does not add runtime, model weights or account/profile data. The fresh-PC installer remains .129; apply .130 afterward for this fix.
