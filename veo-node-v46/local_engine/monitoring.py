@@ -98,8 +98,9 @@ def storage_breakdown(library,data):
   models=size([Path(data)/'models',engine_root(Path(data))/'runtime/offline'],'models')
   profile_bytes=size([Path(data)/'browser-profiles'],'profiles')
   room_usage=project_usage(library,asset_sizes,mimes)
+  measured_revision=library.snapshot()['revision']
   cache_plan=library.cache_plan();limits=library.jobs_bridge.limits()if getattr(library,'jobs_bridge',None)else{}
- return {'at':time.time(),'root':str(library.root),'output_root':str(output),'models_root':str(Path(data)/'models'),'voice_models_root':str(engine_root(Path(data))/'runtime/offline'),
+ return {'revision':measured_revision,'at':time.time(),'root':str(library.root),'output_root':str(output),'models_root':str(Path(data)/'models'),'voice_models_root':str(engine_root(Path(data))/'runtime/offline'),
   'counts':counts,'room_usage':room_usage,'categories':{'projects':project,'exports':exported,'models':models,'cache':cache,'working':working,'profiles':profile_bytes},'total_bytes':project+exported+models+cache+working+profile_bytes,'complete':complete,'errors':errors,
   'free_bytes':min(shutil.disk_usage(library.root).free,shutil.disk_usage(data).free),'safe_cache_bytes':cache_plan['bytes'],'limits':limits,
   'note':'Đo các vùng được app quản lý, không phải toàn bộ ổ hay dung lượng gói cài. Gồm kho, sao lưu, bản xuất, model và tệp làm việc media/ghép/phân tích. File đã lưu tùy ý bên ngoài không được quét. Không đi theo symlink; cache chỉ xóa qua kế hoạch đã kiểm tra.'}
