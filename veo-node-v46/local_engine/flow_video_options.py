@@ -17,3 +17,11 @@ def model_id(settings):
 
 def request_settings(payload):
     return normalize_settings(payload.get('settings') or payload.get('generation_settings'))
+
+
+def catalog():
+    """Declared single-clip routes; availability is still checked by Flow on send."""
+    return [dict(id=model_id(dict(DEFAULTS,model=model,ratio=ratio,mode='frames')),
+                 description=('Omni 1.2 Flash' if model=='omni-1.2-flash' else 'Veo 3.1 '+model.title())+' · 8s · '+ratio,
+                 accepts_images=True,video_type='i2v',max_images=1)
+            for model in ('omni-1.2-flash','lite','fast','quality') for ratio in ('9:16','16:9')]

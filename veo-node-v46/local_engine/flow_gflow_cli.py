@@ -131,6 +131,7 @@ def command(repo, reference, prompt, project, output, profile='default', setting
         # Inspect installed command definitions without importing the external SDK.
         # A legacy CLI must never silently fall back to its default model.
         candidates=(repo/'runtime/Lib/site-packages/gflow_cli/cli_video.py',
+                    repo/'Lib/site-packages/gflow_cli/cli_video.py',
                     repo/'src/gflow_cli/cli_video.py',repo/'gflow_cli/cli_video.py')
         supported=False
         for path in candidates:
@@ -383,7 +384,7 @@ async def finish_video(service, rid, payload, path, identity):
     service.ledger.set_metadata(rid, {'native_inputs': inputs, 'provider_task': {**identity, 'association_confirmed': True, 'source': 'gflow_cli', 'state': 'complete'}})
     service.phase(rid, 'complete', 'Đã nhận video về đúng cảnh.')
     service.ledger.finish(rid, 'done', saved)
-    try: service.vault.set_secret('gflow-cli-verified', True)
+    try: service.vault.set_secret('gflow-cli-verified', True);service.vault.set_secret('gflow-cli-098-verified', True)
     except Exception: pass
     service.state = 'ready';service.message = 'Đã nhận video từ CLI gốc.'
 

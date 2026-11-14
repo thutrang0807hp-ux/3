@@ -2160,7 +2160,7 @@ window.SFSimpleFlow={open,close(){}};
 (()=>{
  const L=SFVeoLifecycle,V=1;
  let remote=null,owner='',sending=false,reading=false,timer=null,batch=null,error='',filter='all';
- const cfg=()=>{if(!draft.photoVeo){const old=String(draft.providers?.flowModel||''),m=old.match(/^veo-3\.1-(lite|fast|quality)-i2v-8s-(portrait|landscape)$/);draft.photoVeo={version:V,settings:{kind:'video',mode:'frames',ratio:m?.[2]==='landscape'?'16:9':'9:16',model:m?.[1]||'lite',outputs:1}};}return draft.photoVeo;};
+ const cfg=()=>{if(!draft.photoVeo){const old=String(draft.providers?.flowModel||''),m=old.match(/^veo-3\.1-(lite|fast|quality)-i2v-8s-(portrait|landscape)$/);draft.photoVeo={version:V,settings:{kind:'video',mode:'frames',ratio:m?.[2]==='landscape'?'16:9':'9:16',model:m?.[1]||'omni-1.2-flash',outputs:1}};}return draft.photoVeo;};
  const settings=()=>cfg().settings;
  const ownJobs=()=> (draft.flowJobs||[]).filter(j=>j.photoVeoVersion===V);
  const rows=()=>draft.beats.flatMap((b,index)=>photoParts(b).map(p=>({b,p,index,key:b.id+':'+p.id})));

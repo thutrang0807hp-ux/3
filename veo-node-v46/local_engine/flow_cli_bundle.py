@@ -11,7 +11,10 @@ def bundled_runtime(data):
     archive=Path(__file__).resolve().parents[1]/'vendor/gflow-original.zip'
     if not archive.is_file():
         raise RuntimeError('Bản cập nhật thiếu runtime CLI đi kèm. Cài lại gói cập nhật đầy đủ; không cần GFlow trong Downloads.')
-    return ensure_runtime(data,archive=archive).parent
+    runtime=ensure_runtime(data,archive=archive).parent
+    from .flow_omni_runtime import ensure_sdk
+    wheel=Path(__file__).resolve().parents[1]/'vendor/gflow_cli-0.98.0-py3-none-any.whl'
+    return ensure_sdk(runtime,wheel)
 
 
 def profile_identity(data,account,binding):

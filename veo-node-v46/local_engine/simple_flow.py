@@ -33,7 +33,9 @@ class SimpleFlow:
   self.vault.set_secret('simple-flow-binding',{'browser':self.channel,'project':self.project,'email':self.email,'token':self.token})
  def enabled(self):return self.account_bridge is not None or (self.vault.secret('flow-transport-v2')or{}).get('mode','simple')=='simple'
  def status(self):
-  verified_key='gflow-cli-verified'if getattr(self,'cli_driver_enabled',False)else'native-flow-pipeline-verified'if getattr(self,'native_pipeline_enabled',False)else'simple-flow-verified'
+  from .flow_video_options import catalog
+  models=catalog()if getattr(self,'cli_driver_enabled',False)else[{'id':MODEL,'description':'Lite · 8s · 9:16','accepts_images':True,'video_type':'i2v','max_images':1}]
+  verified_key='gflow-cli-098-verified'if getattr(self,'cli_driver_enabled',False)else'native-flow-pipeline-verified'if getattr(self,'native_pipeline_enabled',False)else'simple-flow-verified'
   if self.account_bridge:
    selection=self.account_bridge.selection()
    message=self.message if self.busy()or self.state in ('failed','unknown')else ('Đã chọn '+str(selection.get('account_name'))+' từ tab Tài khoản. Phiên được mở nền khi tạo clip.'if selection['available']else'Đăng nhập web và chọn một tài khoản Flow tại Cài đặt → Tài khoản.')
@@ -41,13 +43,13 @@ class SimpleFlow:
     'configured':True,'account_binding':selection['available'],'transport':'web_ui','connection_method':'account_web','shared_accounts':True,'background':bool(self.account_bridge.background),
     'native_pipeline':bool(getattr(self,'native_pipeline_enabled',False)),
     'generation_engine':'gflow-cli-direct'if getattr(self,'cli_driver_enabled',False)else'legacy',
-    'models':[MODEL],'model_details':[{'id':MODEL,'description':'Lite · 8s · 9:16 · tài khoản web đã chọn','accepts_images':True,'video_type':'i2v','max_images':1}],
+    'models':[m['id']for m in models],'model_details':models,
     'per_account':1,'automatic_retry':False,'selection':selection,'project_url':self.project,'restorable':False,
     'generation_verified':bool(self.vault.secret(verified_key))}
   return {'state':self.state,'message':self.message,'interaction':self.pending,'active_request':self.active,'unresolved':self.unresolved(),'saved_video_reviews':self.saved_video_reviews(),
    'browser':self.channel,'project_url':self.project or (self.binding()or{}).get('project'),'restorable':bool(self.binding()),
    'configured':True,'account_binding':self.connected,'transport':'web_ui','connection_method':'simple_flow',
-   'models':[MODEL],'model_details':[{'id':MODEL,'description':'Lite · 8s · 9:16 · xác nhận trên Flow','accepts_images':True,'video_type':'i2v','max_images':1}],
+   'models':[m['id']for m in models],'model_details':models,
    'per_account':1,'automatic_retry':False,'generation_verified':bool(self.vault.secret(verified_key)),
    'selection':{'mode':'selected','account_id':self.account_id(),'account_name':self.email or (self.binding()or{}).get('email') or 'Flow · phiên đã xác nhận','available':bool(self.connected and self.page and not self.page.is_closed()),'token':self.token}}
  def unresolved(self):
@@ -524,7 +526,7 @@ class SimpleFlow:
    with path.open('rb')as stream:
     for chunk in iter(lambda:stream.read(1024*1024),b''):hasher.update(chunk)
    digest=hasher.hexdigest()
-   result={'file':path.name,'mime_type':'video/webm'if path.suffix=='.webm'else'video/mp4','sha256':digest,'bytes':size,'account_id':payload['account_id'],'room_id':payload['room_id'],'scene_id':payload['scene_id'],'part':payload['part'],'model':MODEL,'kind':'video','origin':'flow','cost':None}
+   result={'file':path.name,'mime_type':'video/webm'if path.suffix=='.webm'else'video/mp4','sha256':digest,'bytes':size,'account_id':payload['account_id'],'room_id':payload['room_id'],'scene_id':payload['scene_id'],'part':payload['part'],'model':payload.get('model',MODEL),'kind':'video','origin':'flow','cost':None}
    provider_task=self.ledger.metadata(rid).get('provider_task')or{}
    if provider_task.get('association_confirmed'):
     result['provider_identity']={key:provider_task[key]for key in ('media_id','project_id','workflow_id')}
