@@ -22,7 +22,26 @@ try:
   page.evaluate('async()=>{await SceneForgeApp.switchWorkflow("motion");}')
   page.wait_for_function('currentRoom?.workflowVariant==="motion"',timeout=10000)
   assert page.evaluate('currentRoom.id')==result['id']
+  child=page.frame_locator('#workflowFrame')
+  assert child.locator('.branchbar [data-branch="motion"]').count()==1
+  assert child.locator('.branchbar [data-branch="motion"]').get_attribute('aria-pressed')=='true'
+  assert child.locator('.branchbar [data-branch="reference"]').get_attribute('aria-pressed')=='false'
   page.screenshot(path='/tmp/motion-studio-shell.png')
+  standalone=browser.new_page()
+  standalone.goto(f'http://127.0.0.1:{server.server_port}/workflow.html')
+  standalone.wait_for_function('window.SFMotionStudio&&window.SceneForgeWorkflow')
+  standalone.locator('[data-mode-open="motion"]').click()
+  standalone.wait_for_function('SFMotionStudio.isMotion()')
+  motion_id=standalone.evaluate('project.id')
+  assert standalone.locator('.branchbar [data-branch="motion"]').get_attribute('aria-pressed')=='true'
+  standalone.locator('.branchbar [data-branch="reference"]').click()
+  standalone.wait_for_function('!SFMotionStudio.isMotion()')
+  assert standalone.evaluate('project.id')!=motion_id
+  standalone.locator('.branchbar [data-branch="motion"]').click()
+  standalone.wait_for_function('SFMotionStudio.isMotion()')
+  assert standalone.evaluate('project.id')==motion_id
+  standalone.screenshot(path='/tmp/motion-studio-three-branches.png')
+  standalone.close()
   assert not errors,errors
   print('PASS Motion shell persistence and separate branch navigation',result)
   browser.close()

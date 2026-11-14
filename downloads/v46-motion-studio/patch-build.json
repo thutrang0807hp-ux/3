@@ -2,7 +2,7 @@
   "version": "2026.11.14.46129",
   "file": "SceneForge-Update-20261114-v46.129-Motion-Studio.exe",
   "bytes": 7460352,
-  "sha256": "90139cb1a01c69c3a8ce0f64b8d65a2a214c953c2c9ba07665fbb5b99359bdb0",
+  "sha256": "3ac2dc3450e0779a9b598113a06993f94d0bf722cae9b577bbcc68dba8ddb822",
   "files": [
     {
       "path": "app/local_engine/browser_profiles.py",
@@ -181,8 +181,8 @@
     },
     {
       "path": "app/dist/web-demo/workflow.html",
-      "bytes": 1016005,
-      "sha256": "e356d574c478abcad728d61d594d9d15fbb2e02d04bc13795a9236708359c8b5"
+      "bytes": 1017380,
+      "sha256": "4748c6f74d886da7b0c8555ff424f3abe24c2d50badc276297bb2e3ecce27244"
     },
     {
       "path": "app/dist/web-demo/photos.html",

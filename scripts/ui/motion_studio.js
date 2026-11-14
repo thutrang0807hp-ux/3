@@ -1,5 +1,7 @@
 /* Separate editing workflow. Local preparation is real; cloud editing is explicitly manual. */
 (()=>{
+ if(parent===window){document.body.classList.add('standaloneWorkflow');const style=document.createElement('style');style.textContent='body.compactWorkspaceFrame.compactWorkspaceFrame .branchbar{display:flex!important}body.compactWorkspaceFrame.compactWorkspaceFrame #viewport{top:44px!important;height:calc(100% - 44px)!important}body.compactWorkspaceFrame.compactWorkspaceFrame #details{top:44px!important}';document.head.append(style);}
+
  let working=false,error='',roomOwner=null;
  const isMotion=()=>project?.workflowVariant==='motion';
  const state=()=>project.motionStudio??={version:1,scope:['person'],kit:[],kitJobs:[],rows:{},source:null,approvedInput:null};
