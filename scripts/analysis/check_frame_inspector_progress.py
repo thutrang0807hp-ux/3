@@ -21,7 +21,13 @@ async def main():
    await page.locator('[data-mn=prepare-image-prompt]').click();await page.wait_for_function('typeof releaseWriter==="function"')
    await expect(panel).to_contain_text('ĐANG HOẠT ĐỘNG',timeout=4000)
    assert await panel.locator('progress').get_attribute('value')is None
-   count=await page.evaluate('posts.length');await panel.locator('[data-mn=frame-inspector-refresh]').click()
+   count=await page.evaluate('posts.length')
+   await page.locator('#modal > header [data-action=close-modal]').click()
+   await expect(page.locator('#node-frames [data-mn=open]').first).to_be_enabled()
+   await page.locator('#node-frames [data-mn=open]').first.click()
+   await expect(panel).to_contain_text('ĐANG HOẠT ĐỘNG')
+   assert await page.evaluate('posts.length')==count
+   await panel.locator('[data-mn=frame-inspector-refresh]').click()
    await expect(panel).to_contain_text('Động cơ báo đang xử lý');assert await page.evaluate('posts.length')==count
    await panel.locator('[data-mn=pause-frames]').click();await page.wait_for_function('!SFPromptPipeline.isRunning()')
    await expect(panel).not_to_contain_text('ĐANG HOẠT ĐỘNG')
@@ -30,6 +36,15 @@ async def main():
    await expect(page.locator('#mnVietnamesePrompt')).to_have_value('Khung mới đã cập nhật')
    await page.evaluate('releaseWriter(writerReply)');await page.wait_for_timeout(100)
    assert await page.evaluate('posts.filter(x=>x.kind==="image").length')==0
+   await page.evaluate('''()=>{writerMode='wait';const original=window.setTimeout;window.setTimeout=(fn,ms,...args)=>original(fn,ms===90000?40:ms,...args);}''')
+   await page.locator('[data-mn=prepare-image-prompt]').click()
+   await page.wait_for_function('!SFPromptPipeline.isRunning()')
+   await expect(panel).to_contain_text('chưa rõ kết quả')
+   count=await page.evaluate('posts.length')
+   await page.locator('#modal > header [data-action=close-modal]').click()
+   await page.locator('#node-frames [data-mn=open]').first.click()
+   await expect(panel).to_contain_text('chưa rõ kết quả')
+   assert await page.evaluate('posts.length')==count
    assert not errors,errors;await browser.close()
   print('PASS inspector indeterminate progress, live status, read-only refresh while waiting, stop, completed prompt and no unintended media dispatch')
  finally:server.shutdown()
