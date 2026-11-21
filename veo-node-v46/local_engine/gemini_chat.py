@@ -109,6 +109,14 @@ class GeminiChat(MuseProvider):
             return {'id': aid, 'awaiting_login': True}
         return await self.import_session(name.strip(), supplied)
 
+    async def login_status(self, aid):
+        login = self.logins.get(aid)
+        if not login:
+            raise HTTPException(409, 'Lượt đăng nhập không còn; mở lại Đăng nhập trên web.')
+        context = login['context']
+        process = getattr(context, 'process', None)
+        return {'ready_to_capture': bool(getattr(context, 'deferred_capture', False) and process is not None and process.poll() is not None)}
+
     async def confirm(self, body: dict):
         login = self.logins.get(body.get('id'))
         if not login:
@@ -431,6 +439,7 @@ def install_gemini_chat(app, vault, data, ledger):
         return service.image_slots.configure(body, bool(service.tasks))
     app.post('/local-api/gemini-chat/login')(service.login)
     app.post('/local-api/gemini-chat/confirm')(service.confirm)
+    app.get('/local-api/gemini-chat/login/{aid}/status')(service.login_status)
     @app.post('/local-api/gemini-chat/login/{aid}/cancel')
     async def cancel_login(aid: str):
         return await service.cancel_login(aid)
