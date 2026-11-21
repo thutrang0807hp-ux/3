@@ -164,6 +164,16 @@ async def open_google_login(url, data, *, profile=None, keep_profile=False, exec
     root.mkdir(parents=True, exist_ok=True, mode=0o700)
     profile = Path(profile)if profile is not None else Path(tempfile.mkdtemp(prefix='google-', dir=root))
     profile.mkdir(parents=True,exist_ok=True,mode=0o700)
+    if manual_signin and (profile/'DevToolsActivePort').is_file():
+        # Do not accidentally forward a native login into an older controlled window.
+        try:
+            port=int((profile/'DevToolsActivePort').read_text().splitlines()[0])
+            if not 0<port<65536:raise ValueError()
+            reader,writer=await asyncio.wait_for(asyncio.open_connection('127.0.0.1',port),.5)
+        except (OSError,ValueError,IndexError,asyncio.TimeoutError):pass
+        else:
+            writer.close()
+            raise HTTPException(409,'Profile còn cửa sổ điều khiển từ lượt trước. Đóng cửa sổ đăng nhập Gemini do SceneForge mở rồi mở lại; không cần đóng Chrome cá nhân.')
     (profile/'DevToolsActivePort').unlink(missing_ok=True)
     if manual_signin:
         # No CDP, Playwright, device scripts or cookie injection during credentials.

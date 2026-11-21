@@ -43,4 +43,10 @@ async def main():
    read=await mod.open_google_login('https://gemini.google.com/',root,profile=profile,keep_profile=True,executable='/chrome',capture_only=True)
    assert launch.call_args.args[0][-1]=='about:blank'and read.connection is None
   print('PASS capture launch uses blank page and original browser/profile')
+  with patch.object(mod.asyncio,'open_connection',AsyncMock(return_value=(Mock(),Mock()))),patch.object(mod.subprocess,'Popen')as launch:
+   try:await mod.open_google_login('https://gemini.google.com/',root,profile=profile,keep_profile=True,executable='/chrome',manual_signin=True)
+   except HTTPException as e:assert e.status_code==409 and 'lượt trước'in e.detail
+   else:raise AssertionError('Reused a previously controlled browser')
+   launch.assert_not_called()
+  print('PASS active old controlled profile rejected before starting manual login')
 asyncio.run(main())
