@@ -282,8 +282,12 @@ class GeminiChat(MuseProvider):
             else:
                 n = BatchImages.decode_image(ref)
             size += n
-        if size > 24 * 1024**2 or len(self.tasks) >= 30 or not selection['available']:
-            raise HTTPException(409, 'Kiểm tra tài khoản, giới hạn 24 MB hoặc hàng chờ tối đa 30 việc.')
+        if size > 24 * 1024**2:
+            raise HTTPException(413, 'Tổng tệp tham khảo vượt 24 MB. Chưa gửi yêu cầu tới Gemini; giảm dung lượng trước khi viết lại.')
+        if len(self.tasks) >= 30:
+            raise HTTPException(409, 'Hàng chờ Gemini đã đủ 30 việc. Chưa gửi yêu cầu này; chờ việc đang chạy hoàn tất.')
+        if not selection['available']:
+            raise HTTPException(409, 'Chưa có tài khoản Gemini Chat đã kiểm chứng và được chọn để chạy. Chưa gửi yêu cầu viết lại. Vào Cài đặt → Tài khoản → Gemini Chat, nhận/kiểm tra phiên rồi chọn Dùng.')
         role = body.get('role', 'writing')
         if role not in ('writing', 'analysis', 'translation', 'image'):
             raise HTTPException(400, 'Vai trò AI không hợp lệ.')
