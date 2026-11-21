@@ -1,0 +1,42 @@
+"""Real frame node: stop a stuck POST, restart all including unknown, ignore late reply."""
+import threading,http.server,functools
+from pathlib import Path
+from playwright.sync_api import sync_playwright
+ROOT=Path(__file__).resolve().parents[2]
+server=http.server.ThreadingHTTPServer(('127.0.0.1',0),functools.partial(http.server.SimpleHTTPRequestHandler,directory=str(ROOT)));threading.Thread(target=server.serve_forever,daemon=True).start()
+try:
+ with sync_playwright()as pw:
+  browser=pw.chromium.launch(executable_path='/usr/bin/chromium',args=['--no-sandbox']);page=browser.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
+  page.goto(f'http://127.0.0.1:{server.server_port}/workflow.html?mode=reference');page.wait_for_function('window.SFPromptPipeline&&window.SFMediaNodes')
+  out=page.evaluate('''async()=>{
+   const check=(v,m)=>{if(!v)throw Error(m)},delay=ms=>new Promise(r=>setTimeout(r,ms));
+   storeProject=async()=>{};SFProviderReceipts.persistIntent=async()=>{};
+   const canvas=document.createElement('canvas');canvas.width=canvas.height=16;canvas.getContext('2d').fillRect(0,0,16,16);const source=canvas.toDataURL();
+   project=blankProject();project.id='restart-frames';project.scenes=[sceneRecord(0,4,0,[source]),sceneRecord(4,8,1,[source])];project.script=[];project.scenes.forEach(s=>{s.refsUsed=[];s.frames=[{id:'keep-'+s.id,image:source,version:1}];});
+   let stuck=true,release,posted=[],failNext=false;const replies=new Map();
+   const text={promptFrame:{vi:'Khung mới',en:'Fresh frame composition'},used_refs:['R1'],warnings:[]};
+   workflowLocalRequest=async(path,body)=>{
+    if(path==='gemini-chat/status')return {installed:true,selection:{available:true,token:'same'}};
+    if(path==='gemini-chat/jobs'){
+     posted.push(structuredClone(body));if(failNext){failNext=false;throw Error('Lỗi thử nghiệm ở một cảnh');}if(stuck)return new Promise(r=>release=r);
+     const reply={state:'done',result:body.kind==='text'?{text:JSON.stringify(text)}:{images:[]}};replies.set(body.request_id,reply);return reply;
+    }
+    if(path.startsWith('gemini-chat/jobs/'))return replies.get(path.split('/').at(-1))||{state:'unknown'};
+    return {};
+   };
+   directRecover=async()=>{for(const job of project.cloudJobs||[])if(job.state==='done')job.state='imported';};
+   const first=SFPromptPipeline.runImages(project.scenes).catch(e=>e.message);
+   while(!release)await delay(10);render();check(document.querySelector('[data-mn=pause-frames]'),'stop button missing');check(document.querySelector('[data-mn=rerun-node]').textContent.includes('2'),'all-scene count wrong');
+   document.querySelector('[data-mn=pause-frames]').click();const stopped=await Promise.race([first,delay(500).then(()=>{throw Error('stop hung on network')})]);check(!SFPromptPipeline.isRunning(),'still running after stop');check(stopped.includes('dừng'),'stop reason missing');
+   const old=Object.values(SFPromptPipeline.records().records)[0];check(old.job.state==='unknown','stopped intent missing');
+   // A separate old media request must also stop blocking the same scene.
+   project.cloudJobs=[{id:'old-unknown',kind:'image',provider:'gemini-chat',sceneId:project.scenes[1].id,state:'unknown'}];stuck=false;
+   await SFPromptPipeline.restartImagesAll();const fresh=posted.slice(1);check(fresh.filter(x=>x.kind==='text').length===2,'did not rewrite both scene prompts');check(fresh.filter(x=>x.kind==='image').length===2,'did not create both frames');
+   check(project.cloudJobs[0].state==='abandoned'&&project.cloudJobs[0].previousState==='unknown','old media receipt lost');check(SFPromptPipeline.records().history.some(x=>x.job?.id===old.job.id),'old writer receipt lost');check(project.scenes.every(s=>s.frames[0].id==='keep-'+s.id),'old frame versions deleted');
+   const stable=JSON.stringify(SFPromptPipeline.records().records);release({state:'done',result:{text:JSON.stringify({promptFrame:{vi:'CŨ',en:'LATE OLD'},used_refs:['R1'],warnings:[]})}});await delay(40);check(stable===JSON.stringify(SFPromptPipeline.records().records),'late old response changed current records');
+   // A second click starts another full run, with fresh request IDs.
+   await SFPromptPipeline.restartImagesAll();check(posted.filter(x=>x.kind==='image').length===4,'next rerun did not create all frames');check(new Set(posted.map(x=>x.request_id)).size===posted.length,'request ID reused');
+   failNext=true;const partial=await SFPromptPipeline.restartImagesAll();check(partial.failures.length===1&&partial.completed===1,'one failed scene blocked remaining scene');check(SFPromptPipeline.records().run.state==='attention','partial run marked successful');
+   return {stoppedWhilePostHung:true,allFramesIncludingUnknown:true,lateReplyIgnored:true,historyAndVersionsPreserved:true,repeatClickWorks:true};
+  }''');assert not errors,errors;print('PASS',out);browser.close()
+finally:server.shutdown()
