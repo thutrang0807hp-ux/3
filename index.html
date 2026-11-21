@@ -796,13 +796,56 @@ window.SceneForgeStorage=(()=>{
   // Decode every referenced file BEFORE changing any working database.
   const media=new Map(),decoded=[];for(const row of snapshot.records)decoded.push({...row,value:await decode(row.value,media)});
   localStorage.setItem('sceneforge-library-hydrating',String(snapshot.revision));suppress++;try{for(const[d,stores]of Object.entries(schemas)){const db=await open(d);try{await new Promise((ok,no)=>{const tx=db.transaction(stores,'readwrite');for(const s of stores)tx.objectStore(s).clear();for(const row of decoded.filter(r=>r.db===d)){const s=tx.objectStore(row.store);s.keyPath?s.put(row.value):s.put(row.value,row.key);}tx.oncomplete=ok;tx.onerror=()=>no(tx.error);tx.onabort=()=>no(tx.error);});}finally{db.close();}}}finally{suppress--;}
-  records.clear();for(const row of snapshot.records)records.set(identity(row.db,row.store,row.key),row);dirty.clear();fullScan=false;revision=snapshot.revision;localStorage.removeItem('sceneforge-library-hydrating');localStorage.removeItem('sceneforge-library-intent');localStorage.removeItem('sceneforge-library-dirty');localStorage.setItem('sceneforge-library-revision',String(revision));return decoded;
+  records.clear();for(const row of snapshot.records)records.set(identity(row.db,row.store,row.key),row);dirty.clear();fullScan=false;revision=snapshot.revision;localStorage.removeItem('sceneforge-library-hydrating');localStorage.removeItem('sceneforge-library-intent');localStorage.removeItem('sceneforge-library-dirty');localStorage.setItem('sceneforge-library-revision',String(revision));await rememberBase(snapshot);return decoded;
  }
  const canonical=v=>JSON.stringify(v,(k,x)=>x&&typeof x==='object'&&!Array.isArray(x)?Object.fromEntries(Object.entries(x).sort(([a],[b])=>a.localeCompare(b))):x);
  async function rowsDigest(rows){return contentHash(new Blob([canonical([...rows].sort((a,b)=>identity(a.db,a.store,a.key).localeCompare(identity(b.db,b.store,b.key))))]));}
  async function compareLocal(){comparing=true;try{const rows=[];for(const r of await readAll())rows.push({...r,value:await encode(r.value)});return rowsDigest(rows);}finally{comparing=false;}}
- async function markMutation(id,kind='cleanup',rows=null){const digest=rows?await rowsDigest(rows):await compareLocal();localStorage.setItem('sceneforge-library-intent',JSON.stringify({id,kind,digest,library_id:libraryId,base_revision:revision}));return id;}
- async function checkpoint(){if(editing)return;if(!managed||!active)return;if(busy)return busy;if(!fullScan&&!dirty.size)return {revision,library_id:libraryId,unchanged:true};clearTimeout(timer);timer=null;busy=(async()=>{let sent=false;try{phase='Chuẩn bị thay đổi và kiểm tra media';const rows=JSON.parse(JSON.stringify(await prepare())),generation=epoch,id=crypto.randomUUID();phase='Tính mã kiểm tra metadata';await markMutation(id,'checkpoint',rows);sent=true;phase='Chờ máy ghi SQLite / sao lưu / bản xuất';const snapshot=await api('snapshot',{revision,records:rows,mutation_id:id});phase='Đối chiếu kết quả đã lưu';const returned=new Map(snapshot.records.map(r=>[identity(r.db,r.store,r.key),canonical(r.value)]));if(snapshot.records.length!==rows.length||rows.some(r=>returned.get(identity(r.db,r.store,r.key))!==canonical(r.value)))throw Error('Số bản ghi chưa khớp sau khi lưu.');revision=snapshot.revision;if(generation===epoch){dirty.clear();localStorage.removeItem('sceneforge-library-dirty');}fullScan=false;lastSaved=Date.now();error=(snapshot.warnings||[]).join(' ');localStorage.setItem('sceneforge-library-revision',String(revision));localStorage.removeItem('sceneforge-library-intent');announce();return snapshot;}catch(e){error=e.message;if(e.status===409||sent&&(!e.status||e.status>=500))active=false;announce();throw e;}finally{busy=null;phase='';if(active&&!error&&dirty.size&&!editing&&!timer)timer=setTimeout(()=>{timer=null;checkpoint().catch(()=>{});},1800);announce();}})();announce();return busy;}
+ async function localRows(){comparing=true;try{const rows=[];for(const r of await readAll())rows.push({...r,value:await encode(r.value)});return rows;}finally{comparing=false;}}
+ async function syncBase(snapshot,write=false){
+  const db=await new Promise((ok,no)=>{const request=indexedDB.open('sceneforge-sync-baseline',1);request.onupgradeneeded=()=>request.result.createObjectStore('snapshots');request.onsuccess=()=>ok(request.result);request.onerror=()=>no(request.error);});
+  try{return await new Promise((ok,no)=>{const tx=db.transaction('snapshots',write?'readwrite':'readonly'),store=tx.objectStore('snapshots');let result=null;const request=write?store.put(snapshot,snapshot.library_id):store.get(snapshot.library_id);request.onsuccess=()=>{result=request.result};tx.oncomplete=()=>ok(result);tx.onerror=()=>no(tx.error);tx.onabort=()=>no(tx.error);});}finally{db.close();}
+ }
+ async function rememberBase(snapshot){try{await syncBase({library_id:snapshot.library_id,revision:snapshot.revision,records:snapshot.records},true);}catch{/* A cache failure must not invalidate a verified durable save. */}}
+ function mergeRecords(base,local,remote){
+  const conflicts=[],map=rows=>new Map(rows.map(row=>[identity(row.db,row.store,row.key),row]));
+  const b=map(base),l=map(local),r=map(remote),out=[];
+  const same=(x,y)=>canonical(x)===canonical(y),object=x=>x&&typeof x==='object'&&!Array.isArray(x)&&!x.$sf;
+  function value(old,left,right,path){if(same(left,right))return left;if(same(left,old))return right;if(same(right,old))return left;
+   if(object(old)&&object(left)&&object(right)){const merged=Object.create(null),get=(object,key)=>Object.hasOwn(object,key)?object[key]:undefined;for(const key of new Set([...Object.keys(old),...Object.keys(left),...Object.keys(right)])){const v=value(get(old,key),get(left,key),get(right,key),path+'/'+key);if(v!==undefined)merged[key]=v;}return merged;}
+   conflicts.push(path);return left;
+  }
+  for(const id of new Set([...b.keys(),...l.keys(),...r.keys()])){const old=b.get(id),left=l.get(id),right=r.get(id);const merged=value(old?.value,left?.value,right?.value,id);if(merged!==undefined)out.push({...left||right||old,value:merged});}
+  return {records:out,conflicts};
+ }
+ async function reconcileStoredBase(remote,known){
+  let base;try{base=await syncBase(remote);}catch{return false;}
+  if(!base||base.library_id!==remote.library_id||base.revision!==known)return false;
+  const generation=epoch,local=await localRows(),merged=mergeRecords(base.records,local,remote.records);
+  if(merged.conflicts.length){error='Có '+merged.conflicts.length+' nội dung bị sửa khác nhau ở cả hai bản. App đã giữ cả hai; cần chọn bản cho các nội dung này.';return false;}
+  if(epoch!==generation)throw Error('Dữ liệu đang thay đổi trong lúc đối soát; chưa thay bản đang sửa.');
+  // Backup the browser working copy before committing a merged snapshot.
+  await api('browser-bundle',{records:local});
+  if(epoch!==generation)throw Error('Dữ liệu đang thay đổi trong lúc đối soát; chưa ghi đè.');
+  let snapshot=remote;
+  if(await rowsDigest(merged.records)!==await rowsDigest(remote.records)){
+   const id=crypto.randomUUID();await markMutation(id,'checkpoint',merged.records,'merge');
+   snapshot=await api('snapshot',{revision:remote.revision,records:merged.records,mutation_id:id});
+   if(await rowsDigest(snapshot.records)!==await rowsDigest(merged.records))throw Error('Kết quả gộp chưa khớp bản đã gửi; chưa thay bản trình duyệt.');
+  }
+  if(epoch!==generation)throw Error('Có sửa đổi mới khi đang gộp kho; giữ nguyên bản làm việc để đối soát tiếp.');
+  await hydrate(snapshot);await rememberBase(snapshot);return true;
+ }
+ async function markMutation(id,kind='cleanup',rows=null,purpose='working-copy'){const digest=rows?await rowsDigest(rows):await compareLocal();localStorage.setItem('sceneforge-library-intent',JSON.stringify({id,kind,digest,purpose,library_id:libraryId,base_revision:revision}));return id;}
+ async function checkpoint(){if(editing)return;if(!managed||!active)return;if(busy)return busy;if(!fullScan&&!dirty.size)return {revision,library_id:libraryId,unchanged:true};clearTimeout(timer);timer=null;busy=(async()=>{let sent=false,attempted=null;try{phase='Chuẩn bị thay đổi và kiểm tra media';const rows=JSON.parse(JSON.stringify(await prepare())),generation=epoch,id=crypto.randomUUID();phase='Tính mã kiểm tra metadata';await markMutation(id,'checkpoint',rows);attempted={rows,generation,id};sent=true;phase='Chờ máy ghi SQLite / sao lưu / bản xuất';const snapshot=await api('snapshot',{revision,records:rows,mutation_id:id});phase='Đối chiếu kết quả đã lưu';const returned=new Map(snapshot.records.map(r=>[identity(r.db,r.store,r.key),canonical(r.value)]));if(snapshot.records.length!==rows.length||rows.some(r=>returned.get(identity(r.db,r.store,r.key))!==canonical(r.value)))throw Error('Số bản ghi chưa khớp sau khi lưu.');revision=snapshot.revision;if(generation===epoch){dirty.clear();localStorage.removeItem('sceneforge-library-dirty');}fullScan=false;lastSaved=Date.now();error=(snapshot.warnings||[]).join(' ');localStorage.setItem('sceneforge-library-revision',String(revision));localStorage.removeItem('sceneforge-library-intent');await rememberBase(snapshot);announce();return snapshot;}catch(e){
+ if(sent&&attempted&&(e.status===409||!e.status||e.status>=500)){
+  try{const remote=await api('snapshot');if(remote.library_id===libraryId&&await rowsDigest(remote.records)===await rowsDigest(attempted.rows)){
+   records.clear();for(const row of remote.records)records.set(identity(row.db,row.store,row.key),row);revision=remote.revision;
+   if(epoch===attempted.generation){dirty.clear();fullScan=false;localStorage.removeItem('sceneforge-library-dirty');}else fullScan=true;
+   active=true;error='';lastSaved=Date.now();localStorage.setItem('sceneforge-library-revision',String(revision));localStorage.removeItem('sceneforge-library-intent');await rememberBase(remote);announce();return remote;
+  }}catch{/* No verified match: preserve both copies and the pending intent. */}
+ }
+ error=e.message;if(e.status===409||sent&&(!e.status||e.status>=500))active=false;announce();throw e;}finally{busy=null;phase='';if(active&&!error&&dirty.size&&!editing&&!timer)timer=setTimeout(()=>{timer=null;checkpoint().catch(()=>{});},1800);announce();}})();announce();return busy;}
  async function ready(){if(!enabled)return;let status;try{status=await api('status');}catch{return;}if(!Number.isInteger(status?.revision)||typeof status.root!=='string'||!Array.isArray(status.backups))return;diskRoot=status.root;managed=true;revision=status.revision;observeWindow(window);active=false;
   if(navigator.locks){let acquired;const granted=new Promise(ok=>acquired=ok);navigator.locks.request('sceneforge-library-writer',{ifAvailable:true},lock=>{acquired(!!lock);if(lock)return new Promise(resolve=>lease=resolve);}).catch(()=>acquired(false));if(!await granted){error='Thư viện đang mở ở cửa sổ khác. Đóng cửa sổ đó trước để tránh ghi đè.';throw Error(error);}}
   try{const remote=await api('snapshot'),hasLocal=await hasLocalRecords(),known=Number(localStorage.getItem('sceneforge-library-revision')||-1);
@@ -810,13 +853,15 @@ window.SceneForgeStorage=(()=>{
    if(hasLocal&&known!==remote.revision&&!localStorage.getItem('sceneforge-library-hydrating')){
     let intent;try{intent=JSON.parse(localStorage.getItem('sceneforge-library-intent')||'null');}catch{}
     const localDigest=await compareLocal(),remoteDigest=await rowsDigest(remote.records),receipt=intent?.library_id===libraryId&&(remote.mutations||[]).find(m=>m.id===intent.id&&m.kind===intent.kind&&m.result_revision===remote.revision);
-    if(localDigest===remoteDigest){for(const row of remote.records)records.set(identity(row.db,row.store,row.key),row);revision=remote.revision;fullScan=false;dirty.clear();localStorage.removeItem('sceneforge-library-dirty');localStorage.removeItem('sceneforge-library-intent');localStorage.setItem('sceneforge-library-revision',String(revision));reconciled=true;}
+    if(localDigest===remoteDigest){for(const row of remote.records)records.set(identity(row.db,row.store,row.key),row);revision=remote.revision;fullScan=false;dirty.clear();localStorage.removeItem('sceneforge-library-dirty');localStorage.removeItem('sceneforge-library-intent');localStorage.setItem('sceneforge-library-revision',String(revision));await rememberBase(remote);reconciled=true;}
     else if(receipt&&localDigest===intent.digest){await hydrate(remote);reconciled=true;}
-    else if(remote.records.length||intent){error='Kho máy và trình duyệt có chỉnh sửa khác nhau. Đã giữ nguyên cả hai; xuất bản trình duyệt hoặc chọn nạp kho máy trong Cài đặt → Thư mục lưu.';throw Error(error);}
+    else if(receipt&&intent.kind==='checkpoint'&&intent.purpose!=='merge'&&remoteDigest===intent.digest){for(const row of remote.records)records.set(identity(row.db,row.store,row.key),row);revision=remote.revision;fullScan=true;await rememberBase(remote);reconciled=true;}
+    else if(await reconcileStoredBase(remote,known)){reconciled=true;}
+    else if(remote.records.length||intent){error=error||'Kho máy và trình duyệt có chỉnh sửa khác nhau, chưa có mốc đồng bộ để gộp an toàn. Đã giữ nguyên cả hai; cần đối soát trước khi gửi AI.';throw Error(error);}
    }
    if(!reconciled&&remote.records.length&&(!hasLocal||known===remote.revision||localStorage.getItem('sceneforge-library-hydrating'))){if(!hasLocal||localStorage.getItem('sceneforge-library-hydrating'))await hydrate(remote);else{for(const row of remote.records)records.set(identity(row.db,row.store,row.key),row);fullScan=localStorage.getItem('sceneforge-library-dirty')==='1';}}
 
-   active=true;if(remote.records.length&&fullScan)await checkpoint();if(!remote.records.length){const rows=await prepare();if(rows.length){await api('browser-bundle',{records:rows});await checkpoint();}}
+   if(!reconciled)await rememberBase(remote);active=true;error='';if(remote.records.length&&fullScan)await checkpoint();if(!remote.records.length){const rows=await prepare();if(rows.length){await api('browser-bundle',{records:rows});await checkpoint();}}
    setInterval(()=>{if(active&&dirty.size&&!busy)checkpoint().catch(()=>{});},10000);
   }catch(e){error=e.message;active=false;e.storageRecoverable=true;announce();throw e;}
  }
@@ -843,6 +888,26 @@ window.SceneForgeStorage=(()=>{
  if(enabled)observeWindow(window);
  function pause(){active=false;clearTimeout(timer);}
  async function edit(fn){if(editing)throw Error('Đang cập nhật thư viện.');if(managed&&!active)throw Error('Thư viện chưa sẵn sàng để thu gọn.');if(busy)await busy;editing=true;clearTimeout(timer);try{return await fn();}finally{editing=false;if(active&&dirty.size)timer=setTimeout(()=>checkpoint().catch(()=>{}),1800);}}
+ async function recoverWorkingCopy(){
+  if(!managed||editing||busy)throw Error('Đợi kho ổn định trước khi đồng bộ bản đang sửa.');
+  if(navigator.locks&&!lease)throw Error('Kho đang được cửa sổ khác giữ quyền ghi; chưa thay dữ liệu.');
+  editing=true;clearTimeout(timer);timer=null;active=false;
+  try{
+   const generation=epoch,rows=await localRows(),remote=await api('snapshot');
+   if(remote.library_id!==libraryId)throw Error('Kho đã đổi định danh; chưa thay dữ liệu.');
+   phase='Giữ bản đang sửa và sao lưu kho máy';announce();
+   await api('browser-bundle',{records:rows});const backup=await api('backup',{});
+   if(!backup?.name)throw Error('Chưa xác nhận được bản sao lưu kho máy; chưa ghi đè.');
+   if(epoch!==generation)throw Error('Có sửa đổi mới khi sao lưu; giữ nguyên dữ liệu để thử lại.');
+   const id=crypto.randomUUID();await markMutation(id,'checkpoint',rows);
+   const snapshot=await api('snapshot',{revision:remote.revision,records:rows,mutation_id:id});
+   if(snapshot.library_id!==libraryId||await rowsDigest(snapshot.records)!==await rowsDigest(rows))throw Error('Kho chưa xác nhận đúng bản đang sửa; chưa mở quyền gửi AI.');
+   if(epoch!==generation)throw Error('Có sửa đổi mới khi đồng bộ; giữ nguyên bản làm việc để đối soát tiếp.');
+   records.clear();for(const row of snapshot.records)records.set(identity(row.db,row.store,row.key),row);revision=snapshot.revision;dirty.clear();fullScan=false;active=true;error='';lastSaved=Date.now();
+   localStorage.setItem('sceneforge-library-revision',String(revision));localStorage.removeItem('sceneforge-library-intent');localStorage.removeItem('sceneforge-library-dirty');await rememberBase(snapshot);
+   return {ready:true,backup:backup.name};
+  }catch(e){error=e.message;active=false;throw e;}finally{editing=false;phase='';announce();}
+ }
  async function inspectStatus(){
   let remote=null,connectionError='';
   let timer;try{remote=await Promise.race([api('status'),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('Máy chưa phản hồi sau 10 giây.')),10000);})]);}catch(e){connectionError=e.message;}finally{clearTimeout(timer);}
@@ -851,7 +916,7 @@ window.SceneForgeStorage=(()=>{
   const reason=connectionError?'Không kết nối được kho máy: '+connectionError:error||(!active?'Kho đang tạm dừng ghi; chưa có lý do chi tiết được lưu.':editing?'Kho đang cập nhật dữ liệu.':changed?'Phiên bản kho trên máy đã thay đổi; cần đối soát trước khi gửi AI.':'');
   return {ready:writable,connected:!!remote,active,reason,phase,localRevision:revision,remoteRevision:remote?.revision??null,checkedAt:Date.now(),message:writable?'Kho đang kết nối và cho phép lưu. Có thể bấm Tạo lại toàn bộ để thử tiếp.':reason||'Kho chưa sẵn sàng để lưu lượt AI.'};
  }
- return {ready,inspectStatus,edit,markMutation,adoptCommittedSnapshot,clearMediaCache:()=>{blobCache.clear();urlCache.clear();workflowMedia.clear();immutableHashes=new WeakMap();},observeWindow,rawRecords:readAll,checkpoint,flush,api,decode,hydrate,hashBlob,pinBlob,browserBundle,useDisk,pause,get managed(){return managed;},get state(){return {enabled,managed,revision,root:diskRoot,active,error,lastSaved,busy:!!busy,mutating:editing,dirty:dirty.size,phase};}};
+ return {ready,inspectStatus,recoverWorkingCopy,edit,markMutation,adoptCommittedSnapshot,clearMediaCache:()=>{blobCache.clear();urlCache.clear();workflowMedia.clear();immutableHashes=new WeakMap();},observeWindow,rawRecords:readAll,checkpoint,flush,api,decode,hydrate,hashBlob,pinBlob,browserBundle,useDisk,pause,get managed(){return managed;},get state(){return {enabled,managed,revision,root:diskRoot,active,error,lastSaved,busy:!!busy,mutating:editing,dirty:dirty.size,phase};}};
 })();
 
 let appBootReady=false;

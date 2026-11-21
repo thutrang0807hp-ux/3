@@ -3,7 +3,7 @@ import threading,http.server,functools
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 ROOT=Path(__file__).resolve().parents[2]
-shell=(ROOT/'index.html').read_text();a=shell.index(' async function inspectStatus(){');b=shell.index(' return {ready,inspectStatus,edit,',a);method=shell[a:b]
+shell=(ROOT/'index.html').read_text();a=shell.index(' async function inspectStatus(){');b=shell.index(' return {ready,inspectStatus,',a);method=shell[a:b]
 server=http.server.ThreadingHTTPServer(('127.0.0.1',0),functools.partial(http.server.SimpleHTTPRequestHandler,directory=str(ROOT)));threading.Thread(target=server.serve_forever,daemon=True).start()
 try:
  with sync_playwright()as pw:
@@ -20,6 +20,7 @@ try:
    const panel=document.querySelector('.mnStorageIssue');check(panel?.textContent.includes(error),'root reason not shown on node');document.querySelector('[data-mn=storage-recheck]').click();await new Promise(r=>setTimeout(r,30));
    check(document.querySelector('.mnStorageIssue').textContent.includes('Kết nối máy: có'),'button did not display connection status');check(document.querySelector('.mnStorageIssue').textContent.includes('đang tạm dừng'),'blocked state missing');check(calls.every(x=>x==='status'),'inspector wrote or hydrated data');
    let blocked=false;try{await SFProviderReceipts.persistIntent({state:'prepared'},async()=>{},window.SceneForgeStorage)}catch(e){blocked=e.message.includes(error)}check(blocked,'pre-dispatch error lost root reason');
+   let kept=0;window.SceneForgeStorage.recoverWorkingCopy=async()=>{kept++;active=true;error='';window.SceneForgeStorage.state={active:true,error:''};return {ready:true};};render();window.confirm=()=>false;document.querySelector('[data-mn=storage-keep-working]').click();await new Promise(r=>setTimeout(r,20));check(kept===0,'cancelled choice wrote storage');window.confirm=()=>true;document.querySelector('[data-mn=storage-keep-working]').click();await new Promise(r=>setTimeout(r,30));check(kept===1,'working-copy choice did not run');
    active=true;error='';window.SceneForgeStorage.state={active:true,error:''};const ready=await inspect();check(ready.ready,'ready store reported blocked');
    return {reasonVisibleOnNode:true,readOnlyButton:true,noStoreMutation:true,connectionFailureExplained:true,preDispatchReasonPreserved:true};
   }''',method);assert not errors,errors;print('PASS',out);browser.close()
