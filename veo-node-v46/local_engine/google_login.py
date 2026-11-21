@@ -226,8 +226,7 @@ def flow_profile_path(data,profile_key=None):
         raise HTTPException(400,'Profile Flow không hợp lệ.')
     return Path(data)/'browser-profiles'/'flow-accounts'/profile_key
 
-async def open_flow_web_login(data,auto_connect=False,profile_key=None):
-    """Installed browser with an app-owned profile; optional standard loopback CDP. No generation."""
+def flow_browser_identity(data,profile_key=None):
     executable=installed_browser()
     profile=flow_profile_path(data,profile_key)
     profile.mkdir(parents=True,exist_ok=True,mode=0o700)
@@ -237,6 +236,17 @@ async def open_flow_web_login(data,auto_connect=False,profile_key=None):
         if not Path(executable).is_file():raise HTTPException(409,'Cài lại trình duyệt đã dùng cho profile Flow trước khi mở lại.')
     else:
         temp=identity.with_suffix('.tmp');temp.write_text(json.dumps({'executable':executable,'window':[1280,800]}));os.replace(temp,identity)
+    return executable,profile
+
+
+async def open_flow_manual_login(data,profile_key=None):
+    executable,profile=flow_browser_identity(data,profile_key)
+    return await open_google_login('https://flow.google.com/',data,profile=profile,keep_profile=True,executable=executable,manual_signin=True)
+
+
+async def open_flow_web_login(data,auto_connect=False,profile_key=None):
+    """Installed browser with an app-owned profile; optional loopback CDP."""
+    executable,profile=flow_browser_identity(data,profile_key)
     from .fingerprints import read_config
     fp=read_config(profile)
     if fp['enabled']:

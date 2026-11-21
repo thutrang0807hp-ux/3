@@ -2423,11 +2423,11 @@ paintAccounts=function(){accountPaintBeforeDispatch();const ctx=accountDashboard
 function watchFlowWebLogin(node){
  const poll=async()=>{if(!node?.isConnected)return;try{const result=await engineRequest('flow/web-login');if(!node.isConnected)return;node.textContent=result.message;if(result.state==='done'){await accountScreen('flow');toast(result.message);return;}if(result.state==='failed')return;}catch(error){if(node.isConnected)node.textContent=error.message;return;}setTimeout(poll,1500);};setTimeout(poll,1500);
 }
-async function openFlowWebLogin(button,newProfile=false){
+async function openFlowWebLogin(button,newProfile=false,accountId=null){
  if(button)button.disabled=true;
  try{
-  const result=await engineRequest('flow/web-login',{new_profile:newProfile});
-  modal('Đăng nhập Flow trên web','<p id="flowWebStatus" role="status">'+esc(result.message)+'</p><p>Đăng nhập trong Chrome/Edge vừa mở. App sẽ nhận tài khoản và lưu profile cho lần sau; không cần tiện ích hoặc mã kết nối. Sau đăng nhập, mở dự án Flow muốn dùng và giữ cửa sổ này mở. Tạo clip trong SceneForge. Nếu Google yêu cầu xác minh hoặc từ chối đăng nhập, app dừng để bạn xử lý trực tiếp trên web.</p>','<button id="flowWebClose">Đóng</button>');
+  const result=accountId?await engineRequest('accounts/open-profile',{id:accountId}):await engineRequest('flow/web-login',{new_profile:newProfile});
+  modal('Đăng nhập Flow trên web','<p id="flowWebStatus" role="status">'+esc(result.message)+'</p><p>Đăng nhập trên cửa sổ Chrome/Edge thường vừa mở. Khi vào được Flow, đóng cửa sổ đăng nhập đó để ghi phiên. App sẽ tự mở lại cùng profile để kiểm tra và nhận tài khoản. Chỉ giữ cửa sổ kiểm tra sau đó nếu app yêu cầu; không nhập tài khoản vào cửa sổ kiểm tra đang bị Google từ chối. Không cần xóa cookie hoặc tài khoản.</p>','<button id="flowWebClose">Đóng</button>');
   $('#flowWebClose').onclick=()=>accountScreen('flow');
   watchFlowWebLogin($('#flowWebStatus'));
  }catch(error){toast(error.message);}finally{if(button)button.disabled=false;}
@@ -3265,7 +3265,7 @@ const storageManagerBindBefore=g5BindSettings;g5BindSettings=function(){storageM
 const smBindTrashBefore=g5BindSettings;g5BindSettings=function(){smBindTrashBefore();if($('#smOpenTrash'))$('#smOpenTrash').onclick=()=>hubOpen('trash');};
 </script><script id="account-web-login-js">// One visible web-login path. Session validation/storage remain provider-owned.
 async function openAccountWebLogin(service,options={}){
- if(service==='flow'){if(options.account_id){try{const r=await engineRequest('accounts/open-profile',{id:options.account_id});toast(r.message);}catch(e){toast(e.message);}return;}return openFlowWebLogin();}
+ if(service==='flow')return openFlowWebLogin(null,false,options.account_id||null);
  if(!['gemini_chat','muse','grok','chatgpt','meta'].includes(service))return;
  const existing=options.account_id?accountRows().find(a=>a.id===options.account_id):null;const label=existing?.name||accountName(service);let pending=null,closed=false,saving=false,opening=false;
  modal('Đăng nhập '+label,'<section id="accountWebDialog"><p>'+ (service==='gemini_chat'?'Đăng nhập Gemini trên cửa sổ Chrome/Edge vừa mở. Sau khi vào được Gemini, <b>đóng cửa sổ đó</b> để trình duyệt ghi phiên, rồi bấm <b>Lưu phiên</b> ở đây.':'Đăng nhập trên cửa sổ web vừa mở, rồi bấm <b>Lưu phiên</b>.')+' Lần sau dùng tài khoản đã lưu trong bảng này.</p><label class="field">Tên để nhận biết<input id="accountWebName" maxlength="80" value="'+esc(label)+'"></label><p id="accountWebStatus" role="status">Đang mở trang đăng nhập…</p><small>Không cần mã kết nối của SceneForge. Nếu dịch vụ yêu cầu OTP hoặc xác minh, xử lý ngay trên trang web.</small><details style="margin-top:18px"><summary>Cách kết nối khác</summary><button id="accountWebAdvanced">'+(service==='gemini_chat'?'Dùng tiện ích & mã kết nối':service==='muse'?'Dùng email / OTP trong app':'Hướng dẫn trình duyệt')+'</button></details></section>','<button id="accountWebOpen">Mở cửa sổ đăng nhập</button><button id="accountWebSave" class="primary" disabled>Lưu phiên</button><button id="accountWebBack">Về tài khoản</button>');
