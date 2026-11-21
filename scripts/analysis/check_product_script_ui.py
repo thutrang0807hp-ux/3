@@ -17,8 +17,8 @@ async def main():
     window.sent=[];window.requestMode='normal';window.resolveDelayed=null;
     workflowLocalRequest=async(path,body)=>{
      if(path==='ai/script-library/status')return {store_id:'store',ai_source:'gemini_chat'};
-     if(path!=='ai/script-library')return {};
-     sent.push(structuredClone(body));if(requestMode==='unknown'&&!body.recovery)throw Error('Mất kết nối thử');
+     if(path==='ai/script-library/request-status')return {state:window.remoteState||'unknown',message:'Trạng thái từ động cơ'};if(path!=='ai/script-library')return {};
+     sent.push(structuredClone(body));if(requestMode==='not-sent'){const error=Error('Chưa có tài khoản Gemini đã kiểm chứng. Chưa gửi yêu cầu viết lại.');error.status=409;error.detail={submitted:false,store_id:'store',request_id:body.request_id};throw error;}if(requestMode==='unknown'&&!body.recovery)throw Error('Mất kết nối thử');
      if(requestMode==='delayed')await new Promise(resolve=>resolveDelayed=resolve);
      return {needs_info:false,questions:[],lines:body.reference_lines.map((l,i)=>({id:l.id,new_text:i?'Giá 150 nghìn, xem thêm nhé.':'Áo cotton màu xanh của bạn.',fact_ids:[i?'offer':'facts']})),notes:['Nghe lại nhịp nói']};
     };
@@ -54,6 +54,23 @@ async def main():
    n=await page.evaluate('sent.length');await page.evaluate('SFProductScript.request()');assert await page.evaluate('sent.length')==n
    await page.evaluate('SFProductScript.request(true)');await page.wait_for_function('SFProductScript.state().request.state==="received"')
    pairs=await page.evaluate('sent.slice(-2)');assert pairs[-1]['recovery']is True and pairs[-2]['request_id']==pairs[-1]['request_id']and pairs[-2]['product']==pairs[-1]['product']
+   # Stuck old request is inspected without dispatch; active job blocks restart.
+   await page.evaluate("requestMode='unknown';SFProductScript.request()")
+   await page.wait_for_function('SFProductScript.state().request.state==="unknown"')
+   await page.evaluate("remoteState='running';SFProductScript.request()")
+   await expect(page.locator('#modalContent')).to_contain_text('Động cơ đang xử lý')
+   count=await page.evaluate('sent.length');await page.locator('[data-product-script=restart]').click()
+   assert await page.evaluate('sent.length')==count
+   await page.evaluate("remoteState='missing';requestMode='normal';SFProductScript.brief().facts='Thông tin hiện tại'")
+   page.once('dialog',lambda dialog:dialog.accept())
+   await page.locator('[data-product-script=restart]').click();await page.wait_for_function('SFProductScript.state().request.state==="received"')
+   assert await page.evaluate('sent.at(-1).product.facts')=='Thông tin hiện tại'
+   # Authoritative negative receipt means no AI submission, not unknown recovery.
+   await page.evaluate("requestMode='not-sent';SFProductScript.request()")
+   await page.wait_for_function('SFProductScript.state().request.state==="rejected"')
+   await expect(page.locator('#modalContent')).to_contain_text('Chưa gửi AI · chưa viết lại')
+   await expect(page.locator('[data-product-script=recover]')).to_have_count(0)
+   await expect(page.locator('[data-product-script=write]').last).to_be_visible()
    # Moving to another selected product cannot silently keep the previous facts.
    await page.evaluate("SFProductScript.setProduct({id:'p2',name:'Bình nước',refs:{product:{description:'Dung tích 500 ml'}}});SFProductScript.form()")
    await expect(page.locator('#modalContent')).to_contain_text('sản phẩm khác')

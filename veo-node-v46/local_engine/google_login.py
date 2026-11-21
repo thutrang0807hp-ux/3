@@ -105,7 +105,84 @@ class InteractiveLogin:
         await self.close()
 
 
-async def open_google_login(url, data, *, profile=None, keep_profile=False, executable=None, device_profile=None):
+class ManualGoogleLogin:
+    """Native sign-in first; attach only to an about:blank capture after user closes it."""
+    deferred_capture = True
+    def __init__(self, url, data, profile, process, executable):
+        self.url,self.data,self.profile,self.process,self.executable=url,data,profile,process,executable
+        self.browser=self.context=self
+        self.keep_profile=True;self.profile_release=None;self.closed=False
+        self.capture=None;self.capture_lock=asyncio.Lock()
+    async def cookies(self):
+        async with self.capture_lock:
+            if self.closed:raise HTTPException(409,'Lượt đăng nhập đã đóng. Mở lại Đăng nhập trên web.')
+            if self.capture is None:
+                if self.process.poll() is None:
+                    raise HTTPException(409,'Đăng nhập Gemini xong, đóng cửa sổ Chrome/Edge vừa mở để ghi phiên, rồi bấm Lưu phiên. App chưa kết nối điều khiển cửa sổ đăng nhập.')
+                self.capture=await open_google_login(self.url,self.data,profile=self.profile,keep_profile=True,executable=self.executable,capture_only=True)
+            return await self.capture.cookies()
+    async def finish_signin(self):
+        """User-requested graceful handoff; never force-kill or touch other profiles."""
+        async with self.capture_lock:
+            if self.closed:raise HTTPException(409,'Lượt đăng nhập đã đóng.')
+            if self.process.poll() is not None:return
+            if os.name=='nt':
+                def request_close():
+                    import ctypes
+                    from ctypes import wintypes
+                    user=ctypes.windll.user32
+                    callback_type=ctypes.WINFUNCTYPE(wintypes.BOOL,wintypes.HWND,wintypes.LPARAM)
+                    user.GetWindowThreadProcessId.argtypes=[wintypes.HWND,ctypes.POINTER(wintypes.DWORD)]
+                    user.PostMessageW.argtypes=[wintypes.HWND,wintypes.UINT,wintypes.WPARAM,wintypes.LPARAM]
+                    user.EnumWindows.argtypes=[callback_type,wintypes.LPARAM]
+                    def visit(hwnd,param):
+                        owner=wintypes.DWORD();user.GetWindowThreadProcessId(hwnd,ctypes.byref(owner))
+                        if owner.value==self.process.pid:user.PostMessageW(hwnd,0x0010,0,0)
+                        return True
+                    callback=callback_type(visit);user.EnumWindows(callback,0)
+                await asyncio.to_thread(request_close)
+            else:
+                raise HTTPException(409,'Đóng cửa sổ đăng nhập do app mở rồi bấm Nhận tài khoản lại.')
+            try:await asyncio.to_thread(self.process.wait,timeout=12)
+            except subprocess.TimeoutExpired:
+                raise HTTPException(409,'Chrome chưa thoát để ghi phiên. Kiểm tra cửa sổ đăng nhập do app mở có hộp thoại đang chờ; app không ép tắt hoặc xóa dữ liệu.')from None
+
+    async def close(self):
+        async with self.capture_lock:
+            if self.closed:return
+            self.closed=True
+            try:
+                if self.capture:await self.capture.close()
+                elif self.process.poll() is None:
+                    if os.name=='nt':
+                        def close_windows():
+                            import ctypes
+                            from ctypes import wintypes
+                            callback_type=ctypes.WINFUNCTYPE(wintypes.BOOL,wintypes.HWND,wintypes.LPARAM)
+                            user=ctypes.windll.user32
+                            user.GetWindowThreadProcessId.argtypes=[wintypes.HWND,ctypes.POINTER(wintypes.DWORD)]
+                            user.PostMessageW.argtypes=[wintypes.HWND,wintypes.UINT,wintypes.WPARAM,wintypes.LPARAM]
+                            user.EnumWindows.argtypes=[callback_type,wintypes.LPARAM]
+                            def callback(hwnd,param):
+                                pid=wintypes.DWORD();user.GetWindowThreadProcessId(hwnd,ctypes.byref(pid))
+                                if pid.value==self.process.pid:user.PostMessageW(hwnd,0x0010,0,0)
+                                return True
+                            callback_ref=callback_type(callback);user.EnumWindows(callback_ref,0)
+                        await asyncio.to_thread(close_windows)
+                    else:self.process.terminate()
+                    try:await asyncio.to_thread(self.process.wait,timeout=5)
+                    except subprocess.TimeoutExpired:
+                        if os.name=='nt':await asyncio.to_thread(subprocess.run,['taskkill','/PID',str(self.process.pid),'/T','/F'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,creationflags=0x08000000)
+                        else:self.process.kill()
+                        try:await asyncio.to_thread(self.process.wait,timeout=5)
+                        except subprocess.TimeoutExpired:pass
+            finally:
+                if not self.keep_profile:await asyncio.to_thread(shutil.rmtree,self.profile,True)
+                if self.profile_release:self.profile_release();self.profile_release=None
+    async def stop(self):await self.close()
+
+
+async def open_google_login(url, data, *, profile=None, keep_profile=False, executable=None, device_profile=None, manual_signin=False, capture_only=False):
     if url not in ('https://gemini.google.com/', 'https://labs.google/fx/tools/flow','https://muse.ai/','https://flow.google.com/'):
         raise ValueError('Unsupported Google login destination')
     executable = executable or installed_browser()
@@ -113,10 +190,30 @@ async def open_google_login(url, data, *, profile=None, keep_profile=False, exec
     root.mkdir(parents=True, exist_ok=True, mode=0o700)
     profile = Path(profile)if profile is not None else Path(tempfile.mkdtemp(prefix='google-', dir=root))
     profile.mkdir(parents=True,exist_ok=True,mode=0o700)
+    if manual_signin and (profile/'DevToolsActivePort').is_file():
+        # Do not accidentally forward a native login into an older controlled window.
+        try:
+            port=int((profile/'DevToolsActivePort').read_text().splitlines()[0])
+            if not 0<port<65536:raise ValueError()
+            reader,writer=await asyncio.wait_for(asyncio.open_connection('127.0.0.1',port),.5)
+        except (OSError,ValueError,IndexError,asyncio.TimeoutError):pass
+        else:
+            writer.close()
+            raise HTTPException(409,'Profile còn cửa sổ điều khiển từ lượt trước. Đóng cửa sổ đăng nhập Gemini do SceneForge mở rồi mở lại; không cần đóng Chrome cá nhân.')
     (profile/'DevToolsActivePort').unlink(missing_ok=True)
+    if manual_signin:
+        # No CDP, Playwright, device scripts or cookie injection during credentials.
+        args=[executable,'--user-data-dir='+str(profile),'--window-size=1280,800','--disk-cache-size=33554432','--media-cache-size=16777216','--no-first-run','--no-default-browser-check','--disable-background-mode','--new-window',url]
+        try:
+            from .profile_cache import GATE
+            async with GATE:
+                process=subprocess.Popen(args,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,**({'creationflags':0x08000000}if os.name=='nt'else{}))
+        except OSError:raise HTTPException(503,'Chưa mở được Chrome/Edge đã cài. Kiểm tra trình duyệt trên máy.')from None
+        login=ManualGoogleLogin(url,data,profile,process,executable);login.keep_profile=keep_profile
+        return login
     # Dedicated writable profile is required by Chrome 136+ for local CDP.
     args = [executable, '--user-data-dir='+str(profile), '--remote-debugging-address=127.0.0.1',
-            '--remote-debugging-port=0', '--window-size=1280,800', '--disk-cache-size=33554432', '--media-cache-size=16777216', '--no-first-run', '--no-default-browser-check', '--new-window', 'about:blank'if device_profile else url]
+            '--remote-debugging-port=0', '--window-size=1280,800', '--disk-cache-size=33554432', '--media-cache-size=16777216', '--no-first-run', '--no-default-browser-check', '--new-window', 'about:blank'if device_profile or capture_only else url]
     try:
         from .profile_cache import GATE
         async with GATE:
@@ -155,8 +252,7 @@ def flow_profile_path(data,profile_key=None):
         raise HTTPException(400,'Profile Flow không hợp lệ.')
     return Path(data)/'browser-profiles'/'flow-accounts'/profile_key
 
-async def open_flow_web_login(data,auto_connect=False,profile_key=None):
-    """Installed browser with an app-owned profile; optional standard loopback CDP. No generation."""
+def flow_browser_identity(data,profile_key=None):
     executable=installed_browser()
     profile=flow_profile_path(data,profile_key)
     profile.mkdir(parents=True,exist_ok=True,mode=0o700)
@@ -166,6 +262,17 @@ async def open_flow_web_login(data,auto_connect=False,profile_key=None):
         if not Path(executable).is_file():raise HTTPException(409,'Cài lại trình duyệt đã dùng cho profile Flow trước khi mở lại.')
     else:
         temp=identity.with_suffix('.tmp');temp.write_text(json.dumps({'executable':executable,'window':[1280,800]}));os.replace(temp,identity)
+    return executable,profile
+
+
+async def open_flow_manual_login(data,profile_key=None):
+    executable,profile=flow_browser_identity(data,profile_key)
+    return await open_google_login('https://flow.google.com/',data,profile=profile,keep_profile=True,executable=executable,manual_signin=True)
+
+
+async def open_flow_web_login(data,auto_connect=False,profile_key=None):
+    """Installed browser with an app-owned profile; optional loopback CDP."""
+    executable,profile=flow_browser_identity(data,profile_key)
     from .fingerprints import read_config
     fp=read_config(profile)
     if fp['enabled']:

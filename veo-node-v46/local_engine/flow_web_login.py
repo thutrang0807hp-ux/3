@@ -1,8 +1,8 @@
-"""Automatic import from the app-owned persistent login window; no generation."""
+"""Manual Flow sign-in, then verified profile import; no generation."""
 import asyncio,json,time
 from pathlib import Path
 from fastapi import HTTPException
-from .google_login import open_flow_web_login,flow_profile_path
+from .google_login import open_flow_web_login,open_flow_manual_login,flow_profile_path
 from .flow_connection import public_error
 
 def google_signin_rejected(url):
@@ -45,24 +45,31 @@ class FlowWebLogin:
     startup_timeout=30
     def __init__(self,data,accounts):
         self.data=Path(data);self.accounts=accounts;self.task=None;self.profile_key=None;self.start_lock=asyncio.Lock()
+        self.manual_login=None;self.request_account_id=None
         self.state={'state':'idle','message':'Chưa mở đăng nhập web.'}
-    def status(self):return dict(self.state)
+    def status(self):return {**self.state,'login_flow_version':'manual-flow-v133'}
     def managed_driver(self):
         ui=getattr(self.accounts,'web_ui',None)
         if getattr(ui,'managed_browser',False):return ui
         legacy=getattr(ui,'legacy',None)
         return legacy if getattr(legacy,'managed_browser',False)else None
-    async def start(self,new_profile=False):
+    async def start(self,new_profile=False,account_id=None):
         # Serialize startup across the readiness probe and browser launch.
         async with self.start_lock:
-            return await self._start(new_profile)
-    async def _start(self,new_profile=False):
+            return await self._start(new_profile,account_id)
+    async def _start(self,new_profile=False,account_id=None):
         if self.task and not self.task.done():
+            if account_id and account_id!=self.request_account_id:raise HTTPException(409,'Đang có lượt đăng nhập khác; chưa đổi sang profile tài khoản vừa chọn.')
             if new_profile:raise HTTPException(409,'Đang chờ đăng nhập ở cửa sổ hiện tại. Hoàn tất trước khi thêm profile khác.')
             return {'opened':True,**self.status()}
-        if self.managed_driver():
+        self.request_account_id=account_id
+        if account_id and not self.managed_driver():
+            saved=(self.accounts.vault.secret('flow-managed-profiles')or{}).get(account_id)
+            if not saved:raise HTTPException(409,'Chưa có profile cho tài khoản Flow này.')
+            self.profile_key=saved.get('profile_key')
+        elif self.managed_driver():
             import secrets
-            vault=self.accounts.vault;aid=self.accounts.pool.status().get('account_id')
+            vault=self.accounts.vault;aid=account_id or self.accounts.pool.status().get('account_id')
             saved=(vault.secret('flow-managed-profiles')or{}).get(aid)
             last=vault.secret('flow-web-last-profile')or{}
             if new_profile:self.profile_key=secrets.token_hex(12)
@@ -75,16 +82,36 @@ class FlowWebLogin:
         probe=await probe_flow_browser(self.data,self.profile_key)
         reuse=probe['ready']
         if not reuse:
-            if self.profile_key is None:await open_flow_web_login(self.data,auto_connect=True)
-            else:await open_flow_web_login(self.data,auto_connect=True,profile_key=self.profile_key)
-        self.state={'state':'waiting','message':'Đăng nhập Flow trong cửa sổ vừa mở. App sẽ tự kiểm tra và nhận tài khoản; giữ cửa sổ mở.'}
-        self.task=asyncio.create_task(self.watch())
+            self.manual_login=await open_flow_manual_login(self.data,self.profile_key)
+            self.state={'state':'waiting','phase':'manual_signin','message':'Đăng nhập Flow trên Chrome/Edge vừa mở. Vào được Flow thì ĐÓNG cửa sổ đó để ghi phiên; app sẽ tự mở lại và kiểm tra tài khoản. Chưa điều khiển lúc nhập tài khoản.'}
+            self.task=asyncio.create_task(self.watch_manual())
+        else:
+            self.state={'state':'waiting','phase':'checking_existing','message':'Đang kiểm tra cửa sổ Flow hiện có; cổng Chrome mở chưa có nghĩa đã đăng nhập thành công.'}
+            self.task=asyncio.create_task(self.watch())
         return {'opened':True,**self.status()}
+    async def watch_manual(self):
+        login=self.manual_login
+        try:
+            while login.process.poll() is None:
+                # Do not time out/close a window while the user completes Google verification.
+                await asyncio.sleep(.25)
+            await login.close();self.manual_login=None
+            await open_flow_web_login(self.data,auto_connect=True,profile_key=self.profile_key)
+            self.state={'state':'waiting','phase':'checking_saved_session','message':'Đã đóng cửa sổ đăng nhập. Đang mở lại cùng profile để kiểm tra phiên Flow đã ghi; chưa tạo nội dung.'}
+            await self.watch()
+        except asyncio.CancelledError:raise
+        except Exception as exc:
+            self.state={'state':'failed','code':'FLOW_MANUAL_LOGIN_CAPTURE_FAILED','message':str(exc.detail)if isinstance(exc,HTTPException)else'Chưa mở lại được profile Flow sau đăng nhập. Dữ liệu tài khoản vẫn giữ.'}
+        finally:
+            if self.manual_login is login:
+                await login.close();self.manual_login=None
     async def close(self):
         if self.task and not self.task.done():
             self.task.cancel()
             try:await self.task
             except asyncio.CancelledError:pass
+        if self.manual_login:
+            await self.manual_login.close();self.manual_login=None
     async def import_account(self,cookies,context,email=''):
         self.state={'state':'checking','message':'Đã thấy phiên Flow. Đang kiểm tra kết nối tài khoản; chưa tạo video.'}
         managed=self.managed_driver()
@@ -134,6 +161,12 @@ class FlowWebLogin:
         if email and hasattr(self.accounts,'vault'):
             self.accounts.vault.set_secret('flow-ui-profile',{'account_id':aid,'email':email.strip().casefold()})
         self.state={'state':'done','account_id':aid,'message':'Đã nhận tài khoản Flow. Bản thử sẽ thao tác trực tiếp trên cửa sổ web này khi bạn bấm tạo clip. Giữ cửa sổ mở, chọn Lite 8 giây và Frames to Video trên web. Chưa gửi tạo video.'}
+    def mark_unverified(self):
+        # Only the explicitly opened account is affected; never switch identity.
+        vault=getattr(self.accounts,'vault',None)
+        if not self.request_account_id or not vault or not hasattr(vault,'rows'):return
+        row=next((r for r in vault.rows('accounts')if r.get('id')==self.request_account_id and r.get('service')=='flow'),None)
+        if row:vault.put('accounts',{**row,'session_verified':False,'state':'unverified'})
     async def watch(self):
         pw=None
         try:
@@ -160,12 +193,11 @@ class FlowWebLogin:
                         from urllib.parse import urlsplit,parse_qs
                         u=urlsplit(page.url)
                         if google_signin_rejected(page.url):
+                            self.mark_unverified()
                             self.state={'state':'failed','code':'GOOGLE_BROWSER_SIGNIN_REJECTED','message':'Google đã từ chối đăng nhập trong cửa sổ này. Chưa nhận tài khoản; app đã dừng, không tự thử lại. Đây không phải đăng nhập thành công.'};return
                         if u.hostname=='accounts.google.com':
-                            try:
-                                if await page.get_by_text('This browser or app may not be secure.',exact=True).is_visible():
-                                    self.state={'state':'failed','code':'GOOGLE_BROWSER_SIGNIN_REJECTED','message':'Google không chấp nhận cửa sổ đăng nhập này. App đã dừng; không tự đổi nhận diện trình duyệt hoặc thử lại.'};return
-                            except Exception:pass
+                            self.mark_unverified()
+                            self.state={'state':'failed','code':'FLOW_BROWSER_LOGIN_REQUIRED','message':'Cửa sổ kiểm tra đang yêu cầu đăng nhập Google; chưa coi là phiên Flow hợp lệ. Đóng cửa sổ đăng nhập do app mở rồi bấm Đăng nhập Flow trên web để đăng nhập bằng cửa sổ thường. Không cần xóa cookie hoặc tài khoản.'};return
                         if u.scheme!='https' or u.hostname!='flow.google.com':continue
                         try:
                             email=await page.evaluate(r"""() => {

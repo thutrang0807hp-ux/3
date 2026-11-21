@@ -232,11 +232,7 @@ async def open_saved_profile(body:dict):
  if SIMPLE_FLOW.busy():raise HTTPException(409,'Đợi lượt Flow hiện tại xong trước khi mở lại profile.')
  binding=(VAULT.secret('flow-managed-profiles')or{}).get(a['id'])
  if not binding:raise HTTPException(409,'Tài khoản Flow này chưa có profile web được lưu. Đăng nhập web một lần để tạo profile.')
- from .google_login import open_flow_web_login
- from .flow_browser_probe import probe_flow_browser
- key=binding.get('profile_key');probe=await probe_flow_browser(DATA,key)
- if probe['ready']:return {'opened':True,'message':'Profile Flow của tài khoản đã mở. Dùng lại cửa sổ hiện tại.'}
- return await open_flow_web_login(DATA,auto_connect=True,profile_key=key)
+ return await FLOW_WEB_LOGIN.start(account_id=a['id'])
 @app.post('/local-api/accounts/use')
 async def use_account(body:dict):
  a=account(body.get('id'))

@@ -651,7 +651,7 @@ async function persistIntent(job,save,store){
  if(job.state!=='prepared')throw Error('Chỉ ghi ý định trước khi gửi lượt mới.');
  try{await save();if(!store?.managed)return;
   for(let attempt=0;attempt<6;attempt++){
-   if(!store.state.active)throw Error('Kho máy chưa sẵn sàng; chưa gửi AI.');
+   if(!store.state.active)throw Error('Kho máy chưa sẵn sàng; chưa gửi AI.'+(store.state.error?' Lý do: '+store.state.error:store.state.phase?' Đang ở bước: '+store.state.phase:' Kho đang tạm dừng ghi, chưa có lý do chi tiết.'));
    try{await store.checkpoint();if(!store.state.active)throw Error('Kho máy chưa xác nhận lưu.');if(!store.state.dirty)return;}
    catch(error){if(!error.message.includes('Dữ liệu đang thay đổi')||attempt===5)throw error;}
    if(attempt<5)await new Promise(resolve=>setTimeout(resolve,80));
@@ -796,13 +796,56 @@ window.SceneForgeStorage=(()=>{
   // Decode every referenced file BEFORE changing any working database.
   const media=new Map(),decoded=[];for(const row of snapshot.records)decoded.push({...row,value:await decode(row.value,media)});
   localStorage.setItem('sceneforge-library-hydrating',String(snapshot.revision));suppress++;try{for(const[d,stores]of Object.entries(schemas)){const db=await open(d);try{await new Promise((ok,no)=>{const tx=db.transaction(stores,'readwrite');for(const s of stores)tx.objectStore(s).clear();for(const row of decoded.filter(r=>r.db===d)){const s=tx.objectStore(row.store);s.keyPath?s.put(row.value):s.put(row.value,row.key);}tx.oncomplete=ok;tx.onerror=()=>no(tx.error);tx.onabort=()=>no(tx.error);});}finally{db.close();}}}finally{suppress--;}
-  records.clear();for(const row of snapshot.records)records.set(identity(row.db,row.store,row.key),row);dirty.clear();fullScan=false;revision=snapshot.revision;localStorage.removeItem('sceneforge-library-hydrating');localStorage.removeItem('sceneforge-library-intent');localStorage.removeItem('sceneforge-library-dirty');localStorage.setItem('sceneforge-library-revision',String(revision));return decoded;
+  records.clear();for(const row of snapshot.records)records.set(identity(row.db,row.store,row.key),row);dirty.clear();fullScan=false;revision=snapshot.revision;localStorage.removeItem('sceneforge-library-hydrating');localStorage.removeItem('sceneforge-library-intent');localStorage.removeItem('sceneforge-library-dirty');localStorage.setItem('sceneforge-library-revision',String(revision));await rememberBase(snapshot);return decoded;
  }
  const canonical=v=>JSON.stringify(v,(k,x)=>x&&typeof x==='object'&&!Array.isArray(x)?Object.fromEntries(Object.entries(x).sort(([a],[b])=>a.localeCompare(b))):x);
  async function rowsDigest(rows){return contentHash(new Blob([canonical([...rows].sort((a,b)=>identity(a.db,a.store,a.key).localeCompare(identity(b.db,b.store,b.key))))]));}
  async function compareLocal(){comparing=true;try{const rows=[];for(const r of await readAll())rows.push({...r,value:await encode(r.value)});return rowsDigest(rows);}finally{comparing=false;}}
- async function markMutation(id,kind='cleanup',rows=null){const digest=rows?await rowsDigest(rows):await compareLocal();localStorage.setItem('sceneforge-library-intent',JSON.stringify({id,kind,digest,library_id:libraryId,base_revision:revision}));return id;}
- async function checkpoint(){if(editing)return;if(!managed||!active)return;if(busy)return busy;if(!fullScan&&!dirty.size)return {revision,library_id:libraryId,unchanged:true};clearTimeout(timer);timer=null;busy=(async()=>{let sent=false;try{phase='Chuẩn bị thay đổi và kiểm tra media';const rows=JSON.parse(JSON.stringify(await prepare())),generation=epoch,id=crypto.randomUUID();phase='Tính mã kiểm tra metadata';await markMutation(id,'checkpoint',rows);sent=true;phase='Chờ máy ghi SQLite / sao lưu / bản xuất';const snapshot=await api('snapshot',{revision,records:rows,mutation_id:id});phase='Đối chiếu kết quả đã lưu';const returned=new Map(snapshot.records.map(r=>[identity(r.db,r.store,r.key),canonical(r.value)]));if(snapshot.records.length!==rows.length||rows.some(r=>returned.get(identity(r.db,r.store,r.key))!==canonical(r.value)))throw Error('Số bản ghi chưa khớp sau khi lưu.');revision=snapshot.revision;if(generation===epoch){dirty.clear();localStorage.removeItem('sceneforge-library-dirty');}fullScan=false;lastSaved=Date.now();error=(snapshot.warnings||[]).join(' ');localStorage.setItem('sceneforge-library-revision',String(revision));localStorage.removeItem('sceneforge-library-intent');announce();return snapshot;}catch(e){error=e.message;if(e.status===409||sent&&(!e.status||e.status>=500))active=false;announce();throw e;}finally{busy=null;phase='';if(active&&!error&&dirty.size&&!editing&&!timer)timer=setTimeout(()=>{timer=null;checkpoint().catch(()=>{});},1800);announce();}})();announce();return busy;}
+ async function localRows(){comparing=true;try{const rows=[];for(const r of await readAll())rows.push({...r,value:await encode(r.value)});return rows;}finally{comparing=false;}}
+ async function syncBase(snapshot,write=false){
+  const db=await new Promise((ok,no)=>{const request=indexedDB.open('sceneforge-sync-baseline',1);request.onupgradeneeded=()=>request.result.createObjectStore('snapshots');request.onsuccess=()=>ok(request.result);request.onerror=()=>no(request.error);});
+  try{return await new Promise((ok,no)=>{const tx=db.transaction('snapshots',write?'readwrite':'readonly'),store=tx.objectStore('snapshots');let result=null;const request=write?store.put(snapshot,snapshot.library_id):store.get(snapshot.library_id);request.onsuccess=()=>{result=request.result};tx.oncomplete=()=>ok(result);tx.onerror=()=>no(tx.error);tx.onabort=()=>no(tx.error);});}finally{db.close();}
+ }
+ async function rememberBase(snapshot){try{await syncBase({library_id:snapshot.library_id,revision:snapshot.revision,records:snapshot.records},true);}catch{/* A cache failure must not invalidate a verified durable save. */}}
+ function mergeRecords(base,local,remote){
+  const conflicts=[],map=rows=>new Map(rows.map(row=>[identity(row.db,row.store,row.key),row]));
+  const b=map(base),l=map(local),r=map(remote),out=[];
+  const same=(x,y)=>canonical(x)===canonical(y),object=x=>x&&typeof x==='object'&&!Array.isArray(x)&&!x.$sf;
+  function value(old,left,right,path){if(same(left,right))return left;if(same(left,old))return right;if(same(right,old))return left;
+   if(object(old)&&object(left)&&object(right)){const merged=Object.create(null),get=(object,key)=>Object.hasOwn(object,key)?object[key]:undefined;for(const key of new Set([...Object.keys(old),...Object.keys(left),...Object.keys(right)])){const v=value(get(old,key),get(left,key),get(right,key),path+'/'+key);if(v!==undefined)merged[key]=v;}return merged;}
+   conflicts.push(path);return left;
+  }
+  for(const id of new Set([...b.keys(),...l.keys(),...r.keys()])){const old=b.get(id),left=l.get(id),right=r.get(id);const merged=value(old?.value,left?.value,right?.value,id);if(merged!==undefined)out.push({...left||right||old,value:merged});}
+  return {records:out,conflicts};
+ }
+ async function reconcileStoredBase(remote,known){
+  let base;try{base=await syncBase(remote);}catch{return false;}
+  if(!base||base.library_id!==remote.library_id||base.revision!==known)return false;
+  const generation=epoch,local=await localRows(),merged=mergeRecords(base.records,local,remote.records);
+  if(merged.conflicts.length){error='Có '+merged.conflicts.length+' nội dung bị sửa khác nhau ở cả hai bản. App đã giữ cả hai; cần chọn bản cho các nội dung này.';return false;}
+  if(epoch!==generation)throw Error('Dữ liệu đang thay đổi trong lúc đối soát; chưa thay bản đang sửa.');
+  // Backup the browser working copy before committing a merged snapshot.
+  await api('browser-bundle',{records:local});
+  if(epoch!==generation)throw Error('Dữ liệu đang thay đổi trong lúc đối soát; chưa ghi đè.');
+  let snapshot=remote;
+  if(await rowsDigest(merged.records)!==await rowsDigest(remote.records)){
+   const id=crypto.randomUUID();await markMutation(id,'checkpoint',merged.records,'merge');
+   snapshot=await api('snapshot',{revision:remote.revision,records:merged.records,mutation_id:id});
+   if(await rowsDigest(snapshot.records)!==await rowsDigest(merged.records))throw Error('Kết quả gộp chưa khớp bản đã gửi; chưa thay bản trình duyệt.');
+  }
+  if(epoch!==generation)throw Error('Có sửa đổi mới khi đang gộp kho; giữ nguyên bản làm việc để đối soát tiếp.');
+  await hydrate(snapshot);await rememberBase(snapshot);return true;
+ }
+ async function markMutation(id,kind='cleanup',rows=null,purpose='working-copy'){const digest=rows?await rowsDigest(rows):await compareLocal();localStorage.setItem('sceneforge-library-intent',JSON.stringify({id,kind,digest,purpose,library_id:libraryId,base_revision:revision}));return id;}
+ async function checkpoint(){if(editing)return;if(!managed||!active)return;if(busy)return busy;if(!fullScan&&!dirty.size)return {revision,library_id:libraryId,unchanged:true};clearTimeout(timer);timer=null;busy=(async()=>{let sent=false,attempted=null;try{phase='Chuẩn bị thay đổi và kiểm tra media';const rows=JSON.parse(JSON.stringify(await prepare())),generation=epoch,id=crypto.randomUUID();phase='Tính mã kiểm tra metadata';await markMutation(id,'checkpoint',rows);attempted={rows,generation,id};sent=true;phase='Chờ máy ghi SQLite / sao lưu / bản xuất';const snapshot=await api('snapshot',{revision,records:rows,mutation_id:id});phase='Đối chiếu kết quả đã lưu';const returned=new Map(snapshot.records.map(r=>[identity(r.db,r.store,r.key),canonical(r.value)]));if(snapshot.records.length!==rows.length||rows.some(r=>returned.get(identity(r.db,r.store,r.key))!==canonical(r.value)))throw Error('Số bản ghi chưa khớp sau khi lưu.');revision=snapshot.revision;if(generation===epoch){dirty.clear();localStorage.removeItem('sceneforge-library-dirty');}fullScan=false;lastSaved=Date.now();error=(snapshot.warnings||[]).join(' ');localStorage.setItem('sceneforge-library-revision',String(revision));localStorage.removeItem('sceneforge-library-intent');await rememberBase(snapshot);announce();return snapshot;}catch(e){
+ if(sent&&attempted&&(e.status===409||!e.status||e.status>=500)){
+  try{const remote=await api('snapshot');if(remote.library_id===libraryId&&await rowsDigest(remote.records)===await rowsDigest(attempted.rows)){
+   records.clear();for(const row of remote.records)records.set(identity(row.db,row.store,row.key),row);revision=remote.revision;
+   if(epoch===attempted.generation){dirty.clear();fullScan=false;localStorage.removeItem('sceneforge-library-dirty');}else fullScan=true;
+   active=true;error='';lastSaved=Date.now();localStorage.setItem('sceneforge-library-revision',String(revision));localStorage.removeItem('sceneforge-library-intent');await rememberBase(remote);announce();return remote;
+  }}catch{/* No verified match: preserve both copies and the pending intent. */}
+ }
+ error=e.message;if(e.status===409||sent&&(!e.status||e.status>=500))active=false;announce();throw e;}finally{busy=null;phase='';if(active&&!error&&dirty.size&&!editing&&!timer)timer=setTimeout(()=>{timer=null;checkpoint().catch(()=>{});},1800);announce();}})();announce();return busy;}
  async function ready(){if(!enabled)return;let status;try{status=await api('status');}catch{return;}if(!Number.isInteger(status?.revision)||typeof status.root!=='string'||!Array.isArray(status.backups))return;diskRoot=status.root;managed=true;revision=status.revision;observeWindow(window);active=false;
   if(navigator.locks){let acquired;const granted=new Promise(ok=>acquired=ok);navigator.locks.request('sceneforge-library-writer',{ifAvailable:true},lock=>{acquired(!!lock);if(lock)return new Promise(resolve=>lease=resolve);}).catch(()=>acquired(false));if(!await granted){error='Thư viện đang mở ở cửa sổ khác. Đóng cửa sổ đó trước để tránh ghi đè.';throw Error(error);}}
   try{const remote=await api('snapshot'),hasLocal=await hasLocalRecords(),known=Number(localStorage.getItem('sceneforge-library-revision')||-1);
@@ -810,13 +853,15 @@ window.SceneForgeStorage=(()=>{
    if(hasLocal&&known!==remote.revision&&!localStorage.getItem('sceneforge-library-hydrating')){
     let intent;try{intent=JSON.parse(localStorage.getItem('sceneforge-library-intent')||'null');}catch{}
     const localDigest=await compareLocal(),remoteDigest=await rowsDigest(remote.records),receipt=intent?.library_id===libraryId&&(remote.mutations||[]).find(m=>m.id===intent.id&&m.kind===intent.kind&&m.result_revision===remote.revision);
-    if(localDigest===remoteDigest){for(const row of remote.records)records.set(identity(row.db,row.store,row.key),row);revision=remote.revision;fullScan=false;dirty.clear();localStorage.removeItem('sceneforge-library-dirty');localStorage.removeItem('sceneforge-library-intent');localStorage.setItem('sceneforge-library-revision',String(revision));reconciled=true;}
+    if(localDigest===remoteDigest){for(const row of remote.records)records.set(identity(row.db,row.store,row.key),row);revision=remote.revision;fullScan=false;dirty.clear();localStorage.removeItem('sceneforge-library-dirty');localStorage.removeItem('sceneforge-library-intent');localStorage.setItem('sceneforge-library-revision',String(revision));await rememberBase(remote);reconciled=true;}
     else if(receipt&&localDigest===intent.digest){await hydrate(remote);reconciled=true;}
-    else if(remote.records.length||intent){error='Kho máy và trình duyệt có chỉnh sửa khác nhau. Đã giữ nguyên cả hai; xuất bản trình duyệt hoặc chọn nạp kho máy trong Cài đặt → Thư mục lưu.';throw Error(error);}
+    else if(receipt&&intent.kind==='checkpoint'&&intent.purpose!=='merge'&&remoteDigest===intent.digest){for(const row of remote.records)records.set(identity(row.db,row.store,row.key),row);revision=remote.revision;fullScan=true;await rememberBase(remote);reconciled=true;}
+    else if(await reconcileStoredBase(remote,known)){reconciled=true;}
+    else if(remote.records.length||intent){error=error||'Kho máy và trình duyệt có chỉnh sửa khác nhau, chưa có mốc đồng bộ để gộp an toàn. Đã giữ nguyên cả hai; cần đối soát trước khi gửi AI.';throw Error(error);}
    }
    if(!reconciled&&remote.records.length&&(!hasLocal||known===remote.revision||localStorage.getItem('sceneforge-library-hydrating'))){if(!hasLocal||localStorage.getItem('sceneforge-library-hydrating'))await hydrate(remote);else{for(const row of remote.records)records.set(identity(row.db,row.store,row.key),row);fullScan=localStorage.getItem('sceneforge-library-dirty')==='1';}}
 
-   active=true;if(remote.records.length&&fullScan)await checkpoint();if(!remote.records.length){const rows=await prepare();if(rows.length){await api('browser-bundle',{records:rows});await checkpoint();}}
+   if(!reconciled)await rememberBase(remote);active=true;error='';if(remote.records.length&&fullScan)await checkpoint();if(!remote.records.length){const rows=await prepare();if(rows.length){await api('browser-bundle',{records:rows});await checkpoint();}}
    setInterval(()=>{if(active&&dirty.size&&!busy)checkpoint().catch(()=>{});},10000);
   }catch(e){error=e.message;active=false;e.storageRecoverable=true;announce();throw e;}
  }
@@ -843,7 +888,35 @@ window.SceneForgeStorage=(()=>{
  if(enabled)observeWindow(window);
  function pause(){active=false;clearTimeout(timer);}
  async function edit(fn){if(editing)throw Error('Đang cập nhật thư viện.');if(managed&&!active)throw Error('Thư viện chưa sẵn sàng để thu gọn.');if(busy)await busy;editing=true;clearTimeout(timer);try{return await fn();}finally{editing=false;if(active&&dirty.size)timer=setTimeout(()=>checkpoint().catch(()=>{}),1800);}}
- return {ready,edit,markMutation,adoptCommittedSnapshot,clearMediaCache:()=>{blobCache.clear();urlCache.clear();workflowMedia.clear();immutableHashes=new WeakMap();},observeWindow,rawRecords:readAll,checkpoint,flush,api,decode,hydrate,hashBlob,pinBlob,browserBundle,useDisk,pause,get managed(){return managed;},get state(){return {enabled,managed,revision,root:diskRoot,active,error,lastSaved,busy:!!busy,mutating:editing,dirty:dirty.size,phase};}};
+ async function recoverWorkingCopy(){
+  if(!managed||editing||busy)throw Error('Đợi kho ổn định trước khi đồng bộ bản đang sửa.');
+  if(navigator.locks&&!lease)throw Error('Kho đang được cửa sổ khác giữ quyền ghi; chưa thay dữ liệu.');
+  editing=true;clearTimeout(timer);timer=null;active=false;
+  try{
+   const generation=epoch,rows=await localRows(),remote=await api('snapshot');
+   if(remote.library_id!==libraryId)throw Error('Kho đã đổi định danh; chưa thay dữ liệu.');
+   phase='Giữ bản đang sửa và sao lưu kho máy';announce();
+   await api('browser-bundle',{records:rows});const backup=await api('backup',{});
+   if(!backup?.name)throw Error('Chưa xác nhận được bản sao lưu kho máy; chưa ghi đè.');
+   if(epoch!==generation)throw Error('Có sửa đổi mới khi sao lưu; giữ nguyên dữ liệu để thử lại.');
+   const id=crypto.randomUUID();await markMutation(id,'checkpoint',rows);
+   const snapshot=await api('snapshot',{revision:remote.revision,records:rows,mutation_id:id});
+   if(snapshot.library_id!==libraryId||await rowsDigest(snapshot.records)!==await rowsDigest(rows))throw Error('Kho chưa xác nhận đúng bản đang sửa; chưa mở quyền gửi AI.');
+   if(epoch!==generation)throw Error('Có sửa đổi mới khi đồng bộ; giữ nguyên bản làm việc để đối soát tiếp.');
+   records.clear();for(const row of snapshot.records)records.set(identity(row.db,row.store,row.key),row);revision=snapshot.revision;dirty.clear();fullScan=false;active=true;error='';lastSaved=Date.now();
+   localStorage.setItem('sceneforge-library-revision',String(revision));localStorage.removeItem('sceneforge-library-intent');localStorage.removeItem('sceneforge-library-dirty');await rememberBase(snapshot);
+   return {ready:true,backup:backup.name};
+  }catch(e){error=e.message;active=false;throw e;}finally{editing=false;phase='';announce();}
+ }
+ async function inspectStatus(){
+  let remote=null,connectionError='';
+  let timer;try{remote=await Promise.race([api('status'),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('Máy chưa phản hồi sau 10 giây.')),10000);})]);}catch(e){connectionError=e.message;}finally{clearTimeout(timer);}
+  const changed=Number.isInteger(remote?.revision)&&remote.revision!==revision;
+  const writable=!!remote&&active&&!editing&&!changed;
+  const reason=connectionError?'Không kết nối được kho máy: '+connectionError:error||(!active?'Kho đang tạm dừng ghi; chưa có lý do chi tiết được lưu.':editing?'Kho đang cập nhật dữ liệu.':changed?'Phiên bản kho trên máy đã thay đổi; cần đối soát trước khi gửi AI.':'');
+  return {ready:writable,connected:!!remote,active,reason,phase,localRevision:revision,remoteRevision:remote?.revision??null,checkedAt:Date.now(),message:writable?'Kho đang kết nối và cho phép lưu. Có thể bấm Tạo lại toàn bộ để thử tiếp.':reason||'Kho chưa sẵn sàng để lưu lượt AI.'};
+ }
+ return {ready,inspectStatus,recoverWorkingCopy,edit,markMutation,adoptCommittedSnapshot,clearMediaCache:()=>{blobCache.clear();urlCache.clear();workflowMedia.clear();immutableHashes=new WeakMap();},observeWindow,rawRecords:readAll,checkpoint,flush,api,decode,hydrate,hashBlob,pinBlob,browserBundle,useDisk,pause,get managed(){return managed;},get state(){return {enabled,managed,revision,root:diskRoot,active,error,lastSaved,busy:!!busy,mutating:editing,dirty:dirty.size,phase};}};
 })();
 
 let appBootReady=false;
@@ -2423,11 +2496,11 @@ paintAccounts=function(){accountPaintBeforeDispatch();const ctx=accountDashboard
 function watchFlowWebLogin(node){
  const poll=async()=>{if(!node?.isConnected)return;try{const result=await engineRequest('flow/web-login');if(!node.isConnected)return;node.textContent=result.message;if(result.state==='done'){await accountScreen('flow');toast(result.message);return;}if(result.state==='failed')return;}catch(error){if(node.isConnected)node.textContent=error.message;return;}setTimeout(poll,1500);};setTimeout(poll,1500);
 }
-async function openFlowWebLogin(button,newProfile=false){
+async function openFlowWebLogin(button,newProfile=false,accountId=null){
  if(button)button.disabled=true;
  try{
-  const result=await engineRequest('flow/web-login',{new_profile:newProfile});
-  modal('Đăng nhập Flow trên web','<p id="flowWebStatus" role="status">'+esc(result.message)+'</p><p>Đăng nhập trong Chrome/Edge vừa mở. App sẽ nhận tài khoản và lưu profile cho lần sau; không cần tiện ích hoặc mã kết nối. Sau đăng nhập, mở dự án Flow muốn dùng và giữ cửa sổ này mở. Tạo clip trong SceneForge. Nếu Google yêu cầu xác minh hoặc từ chối đăng nhập, app dừng để bạn xử lý trực tiếp trên web.</p>','<button id="flowWebClose">Đóng</button>');
+  const result=accountId?await engineRequest('accounts/open-profile',{id:accountId}):await engineRequest('flow/web-login',{new_profile:newProfile});
+  modal('Đăng nhập Flow trên web','<p id="flowWebStatus" role="status">'+esc(result.message)+'</p><p>Đăng nhập trên cửa sổ Chrome/Edge thường vừa mở. Khi vào được Flow, đóng cửa sổ đăng nhập đó để ghi phiên. App sẽ tự mở lại cùng profile để kiểm tra và nhận tài khoản. Chỉ giữ cửa sổ kiểm tra sau đó nếu app yêu cầu; không nhập tài khoản vào cửa sổ kiểm tra đang bị Google từ chối. Không cần xóa cookie hoặc tài khoản.</p>','<button id="flowWebClose">Đóng</button>');
   $('#flowWebClose').onclick=()=>accountScreen('flow');
   watchFlowWebLogin($('#flowWebStatus'));
  }catch(error){toast(error.message);}finally{if(button)button.disabled=false;}
@@ -3265,27 +3338,42 @@ const storageManagerBindBefore=g5BindSettings;g5BindSettings=function(){storageM
 const smBindTrashBefore=g5BindSettings;g5BindSettings=function(){smBindTrashBefore();if($('#smOpenTrash'))$('#smOpenTrash').onclick=()=>hubOpen('trash');};
 </script><script id="account-web-login-js">// One visible web-login path. Session validation/storage remain provider-owned.
 async function openAccountWebLogin(service,options={}){
- if(service==='flow'){if(options.account_id){try{const r=await engineRequest('accounts/open-profile',{id:options.account_id});toast(r.message);}catch(e){toast(e.message);}return;}return openFlowWebLogin();}
+ if(service==='flow')return openFlowWebLogin(null,false,options.account_id||null);
  if(!['gemini_chat','muse','grok','chatgpt','meta'].includes(service))return;
- const existing=options.account_id?accountRows().find(a=>a.id===options.account_id):null;const label=existing?.name||accountName(service);let pending=null,closed=false,saving=false,opening=false;
- modal('Đăng nhập '+label,'<section id="accountWebDialog"><p>Đăng nhập trên cửa sổ web vừa mở, rồi bấm <b>Lưu phiên</b>. Lần sau dùng tài khoản đã lưu trong bảng này.</p><label class="field">Tên để nhận biết<input id="accountWebName" maxlength="80" value="'+esc(label)+'"></label><p id="accountWebStatus" role="status">Đang mở trang đăng nhập…</p><small>Không cần mã kết nối của SceneForge. Nếu dịch vụ yêu cầu OTP hoặc xác minh, xử lý ngay trên trang web.</small><details style="margin-top:18px"><summary>Cách kết nối khác</summary><button id="accountWebAdvanced">'+(service==='gemini_chat'?'Dùng tiện ích & mã kết nối':service==='muse'?'Dùng email / OTP trong app':'Hướng dẫn trình duyệt')+'</button></details></section>','<button id="accountWebOpen">Mở cửa sổ đăng nhập</button><button id="accountWebSave" class="primary" disabled>Lưu phiên</button><button id="accountWebBack">Về tài khoản</button>');
+ const existing=options.account_id?accountRows().find(a=>a.id===options.account_id):null;const label=existing?.name||accountName(service);let pending=null,closed=false,saving=false,opening=false,autoTimer=null;
+ modal('Đăng nhập '+label,'<section id="accountWebDialog"><p>'+ (service==='gemini_chat'?'Đăng nhập Gemini trên cửa sổ Chrome/Edge vừa mở. Sau khi vào được Gemini, <b>đóng cửa sổ đó</b> hoặc bấm <b>Đã đăng nhập · Nhận tài khoản</b> bên dưới; app tự đóng cửa sổ đó để ghi và kiểm tra phiên.':'Đăng nhập trên cửa sổ web vừa mở, rồi bấm <b>Lưu phiên</b>.')+' Lần sau dùng tài khoản đã lưu trong bảng này.</p><label class="field">Tên để nhận biết<input id="accountWebName" maxlength="80" value="'+esc(label)+'"></label><p id="accountWebStatus" role="status">Đang mở trang đăng nhập…</p><small>Không cần mã kết nối của SceneForge. Nếu dịch vụ yêu cầu OTP hoặc xác minh, xử lý ngay trên trang web.</small><details style="margin-top:18px"><summary>Cách kết nối khác</summary><button id="accountWebAdvanced">'+(service==='gemini_chat'?'Dùng tiện ích & mã kết nối':service==='muse'?'Dùng email / OTP trong app':'Hướng dẫn trình duyệt')+'</button></details></section>','<button id="accountWebOpen">Mở cửa sổ đăng nhập</button><button id="accountWebSave" class="primary" disabled>Lưu phiên</button><button id="accountWebBack">Về tài khoản</button>');
  const own=$('#accountWebDialog'),dialog=$('#shellDialog'),open=$('#accountWebOpen'),save=$('#accountWebSave'),note=$('#accountWebStatus'),name=$('#accountWebName');
  const current=()=>!closed&&own.isConnected&&dialog.open;
  const cancel=async id=>{if(!id)return;try{if(service==='gemini_chat')await engineRequest('gemini-chat/login/'+encodeURIComponent(id)+'/cancel',{});else if(service==='muse')await engineRequest('accounts/cancel-login',{id});else await engineRequest('web-images/login/'+encodeURIComponent(id)+'/close',{});}catch{}};
- const clean=()=>{closed=true;observer.disconnect();dialog.removeEventListener('close',onClose);if(!saving&&pending){const id=pending;pending=null;cancel(id);}};
+ const clean=()=>{closed=true;clearTimeout(autoTimer);observer.disconnect();dialog.removeEventListener('close',onClose);if(service!=='gemini_chat'&&!saving&&pending){const id=pending;pending=null;cancel(id);}};
  const onClose=()=>{if(!dialog.open||!own.isConnected)clean();};const observer=new MutationObserver(()=>{if(!own.isConnected)clean();});observer.observe($('#dialogBody'),{childList:true,subtree:true});dialog.addEventListener('close',onClose);
  $('#accountWebBack').onclick=()=>{clean();accountScreen(service);};
  $('#accountWebAdvanced').onclick=()=>{clean();if(service==='gemini_chat')connectBrowserSession('gemini_chat',{separate:true});else if(service==='muse')accountMuseOTP();else{modal('Trình duyệt · '+label,'<p>Cài trình duyệt qua <b>local_engine/install-chat-browser.bat</b>, sau đó quay lại bấm Đăng nhập trên web.</p>','<button id="accountWebGuideBack">Về tài khoản</button>');$('#accountWebGuideBack').onclick=()=>accountScreen(service);}};
  open.onclick=async()=>{if(opening||pending)return;opening=true;open.disabled=true;save.disabled=true;note.textContent='Đang mở trang đăng nhập…';let id=null;
-  try{const r=service==='gemini_chat'?await engineRequest('gemini-chat/login',{name:name.value.trim()||label,...(options.account_id?{account_id:options.account_id}:{})}):service==='muse'?await engineRequest('accounts/connect',{service,...(options.account_id?{account_id:options.account_id}:{})}):await engineRequest('web-images/'+service+'/login',{name:name.value.trim()||label,...(options.account_id?{account_id:options.account_id}:{})});id=r.login_id||r.id;if(!id)throw Error('Chưa nhận được cửa sổ đăng nhập.');if(!current()){await cancel(id);return;}pending=id;save.disabled=false;open.textContent='Cửa sổ đã mở';note.textContent='Đăng nhập xong trên web → bấm Lưu phiên.';}catch(e){if(current()){note.textContent=e.message;open.disabled=false;open.textContent='Mở lại cửa sổ';}}finally{opening=false;}};
+  try{const r=service==='gemini_chat'?await engineRequest('gemini-chat/login',{name:name.value.trim()||label,...(options.account_id?{account_id:options.account_id}:{})}):service==='muse'?await engineRequest('accounts/connect',{service,...(options.account_id?{account_id:options.account_id}:{})}):await engineRequest('web-images/'+service+'/login',{name:name.value.trim()||label,...(options.account_id?{account_id:options.account_id}:{})});id=r.login_id||r.id;if(!id)throw Error('Chưa nhận được cửa sổ đăng nhập.');if(!current()){if(service!=='gemini_chat')await cancel(id);return;}pending=id;save.disabled=false;save.hidden=false;save.textContent=service==='gemini_chat'?'Đã đăng nhập · Nhận tài khoản':'Lưu phiên';open.textContent='Cửa sổ đã mở';note.textContent=service==='gemini_chat'?'Vào được Gemini rồi bấm Đã đăng nhập · Nhận tài khoản. App sẽ đóng đúng cửa sổ đăng nhập và kiểm tra phiên.':'Đăng nhập xong trên web → bấm Lưu phiên.';if(service==='gemini_chat')autoTimer=setTimeout(watchNativeClose,1000);}catch(e){if(current()){note.textContent=e.message;open.disabled=false;open.textContent='Mở lại cửa sổ';}}finally{opening=false;}};
+ async function watchNativeClose(){
+  if(!current()||!pending||saving)return;
+  try{const status=await engineRequest('gemini-chat/login/'+encodeURIComponent(pending)+'/status');if(!current())return;if(status.state==='done'){pending=null;clean();await accountScreen(service);toast(status.message);return;}if(status.state==='failed'){note.textContent=status.message;save.hidden=false;save.textContent='Thử nhận phiên lại';return;}note.textContent=status.message||'Đang chờ phiên Gemini…';autoTimer=setTimeout(watchNativeClose,1000);}
+  catch(e){if(current()){note.textContent=e.message;save.hidden=false;save.textContent='Thử nhận phiên lại';}}
+ }
  save.onclick=async()=>{if(!pending||saving)return;saving=true;save.disabled=true;const id=pending;note.textContent='Đang nhận và kiểm tra phiên…';
-  try{const r=service==='gemini_chat'?await engineRequest('gemini-chat/confirm',{id}):service==='muse'?await engineRequest('accounts/save-login',{id}):await engineRequest('web-images/login/'+encodeURIComponent(id)+'/save',{});pending=null;const aid=r.id||id;let message='Đã lưu phiên '+label+'.';
+  try{const r=service==='gemini_chat'?await engineRequest('gemini-chat/finish-login',{id}):service==='muse'?await engineRequest('accounts/save-login',{id}):await engineRequest('web-images/login/'+encodeURIComponent(id)+'/save',{});pending=null;const aid=r.id||id;let message='Đã lưu phiên '+label+'.';
    try{await engineRequest('accounts/update',{id:aid,name:name.value.trim()||label});}catch{message+=' Có thể đổi tên trong bảng tài khoản.';}
    if(service==='muse')try{await engineRequest('accounts/check',{id:aid});}catch{message+=' Phiên đã giữ; bấm Kiểm tra phiên khi động cơ sẵn sàng.';}
    if(current()){clean();await accountScreen(service);toast(message);}
-  }catch(e){if(current()){note.textContent=e.message+' Hoàn tất đăng nhập trong cửa sổ web rồi bấm Lưu phiên lại.';save.disabled=false;}}
-  finally{saving=false;if(closed&&pending){const id=pending;pending=null;await cancel(id);}}};
+  }catch(e){if(current()){save.hidden=false;save.textContent=service==='gemini_chat'?'Thử nhận phiên lại':'Lưu phiên';note.textContent=e.message+(service==='gemini_chat'?' Phiên chưa được xác nhận; có thể bấm Thử nhận phiên lại.':' Hoàn tất đăng nhập trong cửa sổ web rồi bấm Lưu phiên lại.');save.disabled=false;}}
+  finally{saving=false;if(service!=='gemini_chat'&&closed&&pending){const id=pending;pending=null;await cancel(id);}}};
  open.click();
+}
+const geminiLoginPaintBefore=paintAccounts;
+paintAccounts=function(){geminiLoginPaintBefore();if(activeAccountService!=='gemini_chat')return;const host=$('#settingsAccounts');if(!host||$('#geminiLoginProgress'))return;const panel=document.createElement('section');panel.id='geminiLoginProgress';panel.className='acctPanel';host.prepend(panel);geminiRefreshLoginPanel(panel);};
+async function geminiRefreshLoginPanel(panel){
+ if(!panel.isConnected||activeAccountService!=='gemini_chat')return;
+ try{const status=await engineRequest('gemini-chat/status');if(!panel.isConnected)return;const entries=status.web_login||[];panel.innerHTML=entries.map(x=>'<p role="status">'+esc(x.message)+(['waiting','failed'].includes(x.state)?'<button data-gemini-retry="'+esc(x.id)+'">Nhận tài khoản</button>':'')+'</p>').join('');panel.hidden=!entries.length;
+ panel.querySelectorAll('[data-gemini-retry]').forEach(button=>button.onclick=async()=>{button.disabled=true;try{await engineRequest('gemini-chat/finish-login',{id:button.dataset.geminiRetry});await accountScreen('gemini_chat');}catch(e){panel.textContent=e.message;setTimeout(()=>geminiRefreshLoginPanel(panel),1500);}});
+ if(entries.some(x=>x.state==='waiting'||x.state==='checking'))setTimeout(()=>geminiRefreshLoginPanel(panel),1500);
+ else if(entries.some(x=>x.state==='done')&&JSON.stringify(accountDashboard.status.accounts.filter(a=>a.service==='gemini_chat'))!==JSON.stringify(status.accounts)){accountDashboard.status.accounts=accountDashboard.status.accounts.filter(a=>a.service!=='gemini_chat').concat(status.accounts);paintAccounts();}
+ }catch(e){if(panel.isConnected){panel.hidden=false;panel.textContent='Chưa đọc được trạng thái đăng nhập Gemini: '+e.message;}}
 }
 const accountMuseOTP=connectMuseWeb;
 connectGeminiChat=()=>openAccountWebLogin('gemini_chat');

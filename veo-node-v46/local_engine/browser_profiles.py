@@ -65,11 +65,12 @@ class Profiles:
    from .google_login import open_google_login
    cfg=self.settings(entry)
    from .fingerprints import read_config
-   fp=read_config(self.path(entry['service'],entry['key']))
-   login=await open_google_login(url,self.data,profile=self.path(entry['service'],entry['key']),keep_profile=True,executable=cfg['executable'],device_profile=fp if fp['enabled']else None)
+   manual=entry['service']=='gemini_chat'
+   fp={'enabled':False}if manual else read_config(self.path(entry['service'],entry['key']))
+   login=await open_google_login(url,self.data,profile=self.path(entry['service'],entry['key']),keep_profile=True,executable=cfg['executable'],device_profile=fp if fp['enabled']else None,manual_signin=manual)
    login.profile_release=lease.release
    marker=self.path(entry['service'],entry['key'])/'sceneforge-seeded'
-   if cookies:
+   if cookies and not getattr(login,'deferred_capture',False):
     try:
      await login.cookies();context=login.connection.contexts[0];await context.add_cookies(cookies)
      page=context.pages[0]if context.pages else await context.new_page();await page.goto(url,wait_until='domcontentloaded',timeout=45000);marker.write_text('1')

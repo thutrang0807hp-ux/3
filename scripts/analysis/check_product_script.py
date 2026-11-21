@@ -1,5 +1,5 @@
 """Validated product/reference separation, immutable IDs and existing request recovery."""
-import asyncio,importlib,json,sys,tempfile,zipfile,types,copy
+import asyncio,importlib,json,sys,tempfile,zipfile,types,copy,hashlib
 from pathlib import Path
 from fastapi import FastAPI,HTTPException
 import httpx
@@ -43,14 +43,24 @@ async def main():
    assert 'Không lấy thương hiệu'in instruction
    ledger.finish(rid,'done',result);return result
   class Chat:
+   present=False
+   vault=types.SimpleNamespace(secret=lambda _:None)
+   ledger=types.SimpleNamespace(envelope=lambda rid:hashlib.sha256(json.dumps([source,instruction,[],'writing'],sort_keys=True,ensure_ascii=False).encode()).hexdigest())
+   def exists(self,rid):return self.present
+   def lookup(self,rid):return {'state':'running','message':'Đang xử lý'}
    async def execute_json(self,body,instruction,**kw):
     assert kw['read_only']is True;reads.append(body['request_id'])
     with ledger.connect()as db:r=db.execute('SELECT state,result FROM request WHERE id=?',(body['request_id'],)).fetchone()
     if not r or r[0]!='done':raise HTTPException(409,'Chưa có kết quả')
     return json.loads(r[1])
-  app=FastAPI();sl.install_script_library(app,types.SimpleNamespace(secret=lambda _: {'source':'gemini_chat'}),ledger,Chat(),ai)
+  chat=Chat();app=FastAPI();sl.install_script_library(app,types.SimpleNamespace(secret=lambda _: {'source':'gemini_chat'}),ledger,chat,ai)
   async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app),base_url='http://local')as client:
    payload={**source,'expected_store_id':ledger.store_id}
+   check=await client.post('/local-api/ai/script-library/request-status',json=payload);assert check.json()['state']=='missing'and not calls
+   chat.present=True
+   check=await client.post('/local-api/ai/script-library/request-status',json=payload);assert check.json()['state']=='running'and not calls
+   mismatch=copy.deepcopy(payload);mismatch['product']['facts']='khác'
+   check=await client.post('/local-api/ai/script-library/request-status',json=mismatch);assert check.status_code==409 and not calls
    response=await client.post('/local-api/ai/script-library',json=payload);assert response.status_code==200,response.text
    response=await client.post('/local-api/ai/script-library',json={**payload,'recovery':True});assert response.status_code==200,response.text
    assert len(calls)==1 and reads==[source['request_id']]
