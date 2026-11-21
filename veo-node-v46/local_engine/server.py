@@ -587,3 +587,6 @@ FLOW_ACCOUNTS.web_ui=FLOW_PROVIDER.web_ui
 # Apply branding only to the matching desktop host; browser/worker startup is unchanged.
 from .desktop_icon import install_desktop_icon
 DESKTOP_ICON_THREAD=install_desktop_icon(DATA,ROOT)
+
+from .frame_capture import install_frame_capture
+install_frame_capture(app,DATA)
