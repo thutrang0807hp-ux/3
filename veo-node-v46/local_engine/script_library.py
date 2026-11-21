@@ -81,6 +81,27 @@ def validate_result(body,raw):
 def install_script_library(app,vault,ledger,chat,gemini):
  @app.get('/local-api/ai/script-library/status')
  async def status():return {'store_id':ledger.store_id,'ai_source':(vault.secret('ai-routing')or{}).get('source','gemini_chat')}
+ @app.post('/local-api/ai/script-library/request-status')
+ async def request_status(body:dict):
+  expected=body.pop('expected_store_id',None)
+  if expected!=ledger.store_id:raise HTTPException(409,'Kho động cơ đã đổi; chưa đối soát lượt ở kho khác.')
+  instruction=validate_input(body)
+  source=body.get('ai_source');rid=body.get('request_id')
+  if not isinstance(rid,str)or not rid:raise HTTPException(400,'Thiếu mã lượt viết.')
+  cloud={k:v for k,v in body.items()if not(k=='body'and body['action']=='split')}
+  if source=='gemini_chat':
+   rid=rid if rid.startswith('gchat-')else'gchat-'+rid
+   if not chat.exists(rid):return {'state':'missing','message':'Không tìm thấy lượt này trong kho Gemini hiện tại; không có bằng chứng AI đang chạy. Chưa tự gửi lại.'}
+   digest=hashlib.sha256(json.dumps([cloud,instruction,[],'writing'],sort_keys=True,ensure_ascii=False).encode()).hexdigest()
+   if (chat.ledger.envelope(rid)or chat.vault.secret('gchat-envelope:'+rid))!=digest:raise HTTPException(409,'Mã lượt không khớp dữ liệu đã lưu; không nhận hoặc gửi lại.')
+   record=chat.lookup(rid)
+   return {'state':record.get('state','unknown'),'message':record.get('message',''),'code':record.get('code','')}
+  if source not in ('gemini','gemini_api'):raise HTTPException(400,'Nguồn AI của lượt chưa hỗ trợ đối soát.')
+  digest=hashlib.sha256(json.dumps({'body':cloud,'instruction':instruction,'media':None},sort_keys=True,ensure_ascii=False,separators=(',',':')).encode()).hexdigest()
+  with ledger.connect()as db:row=db.execute('SELECT fingerprint,state FROM request WHERE id=?',(rid,)).fetchone()
+  if not row:return {'state':'missing','message':'Không tìm thấy lượt trong kho hiện tại; chưa tự gửi lại.'}
+  if row[0]!=digest:raise HTTPException(409,'Mã lượt không khớp dữ liệu đã lưu.')
+  return {'state':row[1],'message':''}
  @app.post('/local-api/ai/script-library')
  async def run(body:dict):
   expected=body.pop('expected_store_id',None);recovery=body.pop('recovery',False)
