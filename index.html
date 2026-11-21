@@ -651,7 +651,7 @@ async function persistIntent(job,save,store){
  if(job.state!=='prepared')throw Error('Chỉ ghi ý định trước khi gửi lượt mới.');
  try{await save();if(!store?.managed)return;
   for(let attempt=0;attempt<6;attempt++){
-   if(!store.state.active)throw Error('Kho máy chưa sẵn sàng; chưa gửi AI.');
+   if(!store.state.active)throw Error('Kho máy chưa sẵn sàng; chưa gửi AI.'+(store.state.error?' Lý do: '+store.state.error:store.state.phase?' Đang ở bước: '+store.state.phase:' Kho đang tạm dừng ghi, chưa có lý do chi tiết.'));
    try{await store.checkpoint();if(!store.state.active)throw Error('Kho máy chưa xác nhận lưu.');if(!store.state.dirty)return;}
    catch(error){if(!error.message.includes('Dữ liệu đang thay đổi')||attempt===5)throw error;}
    if(attempt<5)await new Promise(resolve=>setTimeout(resolve,80));
@@ -843,7 +843,15 @@ window.SceneForgeStorage=(()=>{
  if(enabled)observeWindow(window);
  function pause(){active=false;clearTimeout(timer);}
  async function edit(fn){if(editing)throw Error('Đang cập nhật thư viện.');if(managed&&!active)throw Error('Thư viện chưa sẵn sàng để thu gọn.');if(busy)await busy;editing=true;clearTimeout(timer);try{return await fn();}finally{editing=false;if(active&&dirty.size)timer=setTimeout(()=>checkpoint().catch(()=>{}),1800);}}
- return {ready,edit,markMutation,adoptCommittedSnapshot,clearMediaCache:()=>{blobCache.clear();urlCache.clear();workflowMedia.clear();immutableHashes=new WeakMap();},observeWindow,rawRecords:readAll,checkpoint,flush,api,decode,hydrate,hashBlob,pinBlob,browserBundle,useDisk,pause,get managed(){return managed;},get state(){return {enabled,managed,revision,root:diskRoot,active,error,lastSaved,busy:!!busy,mutating:editing,dirty:dirty.size,phase};}};
+ async function inspectStatus(){
+  let remote=null,connectionError='';
+  let timer;try{remote=await Promise.race([api('status'),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('Máy chưa phản hồi sau 10 giây.')),10000);})]);}catch(e){connectionError=e.message;}finally{clearTimeout(timer);}
+  const changed=Number.isInteger(remote?.revision)&&remote.revision!==revision;
+  const writable=!!remote&&active&&!editing&&!changed;
+  const reason=connectionError?'Không kết nối được kho máy: '+connectionError:error||(!active?'Kho đang tạm dừng ghi; chưa có lý do chi tiết được lưu.':editing?'Kho đang cập nhật dữ liệu.':changed?'Phiên bản kho trên máy đã thay đổi; cần đối soát trước khi gửi AI.':'');
+  return {ready:writable,connected:!!remote,active,reason,phase,localRevision:revision,remoteRevision:remote?.revision??null,checkedAt:Date.now(),message:writable?'Kho đang kết nối và cho phép lưu. Có thể bấm Tạo lại toàn bộ để thử tiếp.':reason||'Kho chưa sẵn sàng để lưu lượt AI.'};
+ }
+ return {ready,inspectStatus,edit,markMutation,adoptCommittedSnapshot,clearMediaCache:()=>{blobCache.clear();urlCache.clear();workflowMedia.clear();immutableHashes=new WeakMap();},observeWindow,rawRecords:readAll,checkpoint,flush,api,decode,hydrate,hashBlob,pinBlob,browserBundle,useDisk,pause,get managed(){return managed;},get state(){return {enabled,managed,revision,root:diskRoot,active,error,lastSaved,busy:!!busy,mutating:editing,dirty:dirty.size,phase};}};
 })();
 
 let appBootReady=false;
