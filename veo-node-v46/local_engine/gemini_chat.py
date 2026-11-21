@@ -55,6 +55,9 @@ class GeminiChat(MuseProvider):
         self.root.mkdir(exist_ok=True, mode=0o700)
         self.pool = AccountPool(vault, 'gemini_chat')
         self.logins = {}
+        self.login_tasks = {}
+        self.login_results = {}
+        self.login_locks = {}
         self.conversation_locks = {}
         self.image_slots = ImageSlots(vault, 'gemini_chat')
 
@@ -80,7 +83,7 @@ class GeminiChat(MuseProvider):
         return {'installed': self.engine().is_file(), 'configured': selection['available'], 'adapter': True,
                 'selection': selection, 'accounts': self.accounts(), 'per_account': 1, 'max_concurrency': 3, **self.image_slots.status(),
                 'generation_verified': bool(self.vault.secret('gemini-chat-generation')), 'automatic_retry': False,
-                'roles': self.vault.secret('gemini-chat-roles') or {}, 'service_url': 'https://gemini.google.com/'}
+                'web_login': self.web_login_status(), 'roles': self.vault.secret('gemini-chat-roles') or {}, 'service_url': 'https://gemini.google.com/'}
 
     def require_sdk(self):
         if self.runner == self.worker and not self.engine().is_file():
@@ -106,32 +109,62 @@ class GeminiChat(MuseProvider):
             browser = context = pw = login
             aid = 'gchat-account-' + uuid.uuid4().hex
             self.logins[aid] = {'name': name.strip(), 'browser': browser, 'context': context, 'pw': pw,'profile_entry':entry}
+            self.login_results[aid]={'id':aid,'state':'waiting','message':'Đăng nhập Gemini rồi đóng cửa sổ đó; app vẫn nhận phiên khi bạn quay lại bảng tài khoản.'}
+            self.login_locks[aid]=asyncio.Lock()
+            self.login_tasks[aid]=asyncio.create_task(self.watch_login(aid))
             return {'id': aid, 'awaiting_login': True}
         return await self.import_session(name.strip(), supplied)
 
+    def web_login_status(self):
+        return list(self.login_results.values())[-5:]
+
+    async def watch_login(self, aid):
+        try:
+            while aid in self.logins:
+                context=self.logins[aid]['context']
+                process=getattr(context,'process',None)
+                if getattr(context,'deferred_capture',False) and process is not None and process.poll() is not None:
+                    await self.confirm({'id':aid})
+                    return
+                await asyncio.sleep(1)
+        except asyncio.CancelledError:raise
+        except Exception as exc:
+            self.login_results[aid]={'id':aid,'state':'failed','message':str(exc.detail) if isinstance(exc,HTTPException) else 'Chưa kiểm chứng được phiên Gemini; dữ liệu đăng nhập vẫn giữ để thử nhận lại.'}
+
     async def login_status(self, aid):
-        login = self.logins.get(aid)
-        if not login:
-            raise HTTPException(409, 'Lượt đăng nhập không còn; mở lại Đăng nhập trên web.')
-        context = login['context']
-        process = getattr(context, 'process', None)
-        return {'ready_to_capture': bool(getattr(context, 'deferred_capture', False) and process is not None and process.poll() is not None)}
+        if aid not in self.login_results:
+            raise HTTPException(409,'Lượt đăng nhập không còn; mở lại Đăng nhập trên web.')
+        return self.login_results[aid]
 
     async def confirm(self, body: dict):
-        login = self.logins.get(body.get('id'))
-        if not login:
-            raise HTTPException(409, 'Cửa sổ đăng nhập không còn mở.')
-        cookies = await login['context'].cookies()
-        # Keep the interactive window available when sign-in is incomplete or
-        # verification fails. Close only after a verified session was committed.
-        result = await self.import_session(login['name'], cookies)
-        if login.get('profile_entry'):
-            from .browser_profiles import profiles
-            profiles(self.vault,self.data).bind(login['profile_entry'],result['id'])
-        await self.cancel_login(body['id'])
-        return result
+        aid=body.get('id')
+        if aid not in self.login_locks:raise HTTPException(409,'Lượt đăng nhập không còn.')
+        async with self.login_locks[aid]:
+            previous=self.login_results.get(aid,{})
+            if previous.get('state')=='done':return previous['result']
+            login=self.logins.get(aid)
+            if not login:raise HTTPException(409,'Lượt đăng nhập không còn.')
+            self.login_results[aid]={'id':aid,'state':'checking','message':'Đang nhận và kiểm chứng phiên Gemini…'}
+            try:
+                cookies=await login['context'].cookies()
+                result=await self.import_session(login['name'],cookies)
+                if login.get('profile_entry'):
+                    from .browser_profiles import profiles
+                    profiles(self.vault,self.data).bind(login['profile_entry'],result['id'])
+                await self.cancel_login(aid,completed=True)
+                self.login_results[aid]={'id':aid,'state':'done','message':'Đã kiểm chứng và lưu phiên Gemini.','result':result}
+                return result
+            except Exception as exc:
+                self.login_results[aid]={'id':aid,'state':'failed','message':str(exc.detail) if isinstance(exc,HTTPException) else 'Chưa kiểm chứng được phiên Gemini; có thể thử nhận lại.'}
+                raise
 
-    async def cancel_login(self, aid):
+    async def cancel_login(self, aid, completed=False):
+        task=self.login_tasks.pop(aid,None)
+        if task and task is not asyncio.current_task() and not task.done():
+            task.cancel()
+            try:await task
+            except asyncio.CancelledError:pass
+        if not completed:self.login_results.pop(aid,None)
         login = self.logins.pop(aid, None)
         if login:
             await login['browser'].close()
