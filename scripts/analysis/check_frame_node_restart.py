@@ -26,7 +26,7 @@ try:
    };
    directRecover=async()=>{for(const job of project.cloudJobs||[])if(job.state==='done')job.state='imported';};
    const first=SFPromptPipeline.runImages(project.scenes).catch(e=>e.message);
-   while(!release)await delay(10);render();check(document.querySelector('[data-mn=pause-frames]'),'stop button missing');check(document.querySelector('[data-mn=rerun-node]').textContent.includes('2'),'all-scene count wrong');
+   while(!release)await delay(10);render();check(document.querySelector('[data-frame-progress] progress')?.max===2,'progress missing');check(document.querySelector('[data-frame-progress]').textContent.includes('ĐANG HOẠT ĐỘNG'),'active state missing');check(document.querySelector('[data-mn=pause-frames]'),'stop button missing');check(document.querySelector('[data-mn=rerun-node]').textContent.includes('2'),'all-scene count wrong');
    document.querySelector('[data-mn=pause-frames]').click();const stopped=await Promise.race([first,delay(500).then(()=>{throw Error('stop hung on network')})]);check(!SFPromptPipeline.isRunning(),'still running after stop');check(stopped.includes('dừng'),'stop reason missing');
    const old=Object.values(SFPromptPipeline.records().records)[0];check(old.job.state==='unknown','stopped intent missing');
    // A separate old media request must also stop blocking the same scene.
@@ -36,7 +36,9 @@ try:
    const stable=JSON.stringify(SFPromptPipeline.records().records);release({state:'done',result:{text:JSON.stringify({promptFrame:{vi:'CŨ',en:'LATE OLD'},used_refs:['R1'],warnings:[]})}});await delay(40);check(stable===JSON.stringify(SFPromptPipeline.records().records),'late old response changed current records');
    // A second click starts another full run, with fresh request IDs.
    await SFPromptPipeline.restartImagesAll();check(posted.filter(x=>x.kind==='image').length===4,'next rerun did not create all frames');check(new Set(posted.map(x=>x.request_id)).size===posted.length,'request ID reused');
-   failNext=true;const partial=await SFPromptPipeline.restartImagesAll();check(partial.failures.length===1&&partial.completed===1,'one failed scene blocked remaining scene');check(SFPromptPipeline.records().run.state==='attention','partial run marked successful');
+   failNext=true;const partial=await SFPromptPipeline.restartImagesAll();check(partial.failures.length===1&&partial.completed===1,'one failed scene blocked remaining scene');check(SFPromptPipeline.records().run.state==='attention','partial run marked successful');check(document.querySelector('[data-frame-progress] progress').value===2,'completed/error count wrong');check(document.querySelector('[data-frame-progress]').textContent.includes('1 ảnh nhận được'),'real completed count missing');
+   const savedRequest=workflowLocalRequest;let blockedPosts=0;workflowLocalRequest=async(path,body)=>{if(path==='gemini-chat/jobs'){blockedPosts++;throw Error('Kho máy chưa sẵn sàng; chưa gửi AI.');}return savedRequest(path,body);};
+   try{await SFPromptPipeline.restartImagesAll()}catch(e){check(e.message.includes('Kho máy'),'wrong storage failure');}check(blockedPosts===1,'retried storage failure across scenes');check(document.querySelector('[data-frame-progress]').textContent.includes('Chưa gửi AI'),'storage block not visible');check(!SFPromptPipeline.isRunning(),'storage error left spinner active');
    return {stoppedWhilePostHung:true,allFramesIncludingUnknown:true,lateReplyIgnored:true,historyAndVersionsPreserved:true,repeatClickWorks:true};
   }''');assert not errors,errors;print('PASS',out);browser.close()
 finally:server.shutdown()
