@@ -1,0 +1,7 @@
+# SceneForge .147
+
+Frame generation uses a deterministic local image-edit recipe when there is no current applied AI/user prompt. The recipe binds the original source capture plus ordered role references, preserving product geometry, materials, packaging and visible labels, and retaining source pose/camera/light. It does not generate new text remotely. Existing current optimized prompts and manual overrides remain authoritative. Video writing and Motion Studio transport are unchanged.
+
+Unapplied writer records are archived without altering the remote state; the inspector can read their receipt while direct image generation proceeds independently. An unresolved image receipt blocks a new local recipe/duplicate image submission. Actual source captures are reused and all output versions remain unapproved until review. The full-run frame stage also uses local preparation; explicit AI optimization remains available.
+
+Validation: real frame button produces zero text POST and one image POST with actual MP4 source + product; pending writer preserved and inspectable; pending image blocks another submission; MP4 canvas/native fallback and old version preservation; optional writer compatibility; stop/restart and ignored late reply regression; inspector reopen/timeouts; inline JavaScript syntax and cumulative ZIP byte/hash verification. No live Gemini generation, Windows installer execution or claim that provider-side latency is fixed.

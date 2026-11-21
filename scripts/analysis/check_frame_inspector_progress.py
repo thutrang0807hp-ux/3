@@ -17,7 +17,7 @@ async def main():
     workflowLocalRequest=async(path,body)=>{if(path==='gemini-chat/status')return {installed:true,selection:{available:true,token:'same'}};if(path==='gemini-chat/jobs'){posts.push(body);return writerMode==='wait'?new Promise(r=>window.releaseWriter=r):writerReply;}if(path.startsWith('gemini-chat/jobs/'))return writerMode==='done'?writerReply:{state:remoteState};return {};};render();
    }''')
    await page.locator('#node-frames [data-mn=open]').first.click();panel=page.locator('[data-frame-inspector-progress]')
-   await expect(panel).to_contain_text('Viết prompt: Chưa có lượt')
+   await expect(panel).to_contain_text('AI viết prompt · tùy chọn: Chưa có lượt')
    await page.locator('[data-mn=prepare-image-prompt]').click();await page.wait_for_function('typeof releaseWriter==="function"')
    await expect(panel).to_contain_text('ĐANG HOẠT ĐỘNG',timeout=4000)
    assert await panel.locator('progress').get_attribute('value')is None
