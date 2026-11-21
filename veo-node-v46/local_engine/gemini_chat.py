@@ -136,6 +136,19 @@ class GeminiChat(MuseProvider):
             raise HTTPException(409,'Lượt đăng nhập không còn; mở lại Đăng nhập trên web.')
         return self.login_results[aid]
 
+    async def finish_login(self, body: dict):
+        aid=body.get('id');login=self.logins.get(aid)
+        if not login:
+            result=self.login_results.get(aid,{})
+            if result.get('state')=='done':return result['result']
+            raise HTTPException(409,'Lượt đăng nhập không còn; mở lại Đăng nhập trên web.')
+        try:
+            await login['context'].finish_signin()
+            return await self.confirm({'id':aid})
+        except Exception as exc:
+            self.login_results[aid]={'id':aid,'state':'failed','message':str(exc.detail) if isinstance(exc,HTTPException) else 'Không hoàn tất được bước nhận tài khoản Gemini; phiên vẫn được giữ để thử lại.'}
+            raise
+
     async def confirm(self, body: dict):
         aid=body.get('id')
         if aid not in self.login_locks:raise HTTPException(409,'Lượt đăng nhập không còn.')
@@ -472,6 +485,7 @@ def install_gemini_chat(app, vault, data, ledger):
         return service.image_slots.configure(body, bool(service.tasks))
     app.post('/local-api/gemini-chat/login')(service.login)
     app.post('/local-api/gemini-chat/confirm')(service.confirm)
+    app.post('/local-api/gemini-chat/finish-login')(service.finish_login)
     app.get('/local-api/gemini-chat/login/{aid}/status')(service.login_status)
     @app.post('/local-api/gemini-chat/login/{aid}/cancel')
     async def cancel_login(aid: str):

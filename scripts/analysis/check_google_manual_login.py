@@ -42,6 +42,21 @@ async def main():
   with patch.object(mod.subprocess,'Popen',side_effect=start)as launch:
    read=await mod.open_google_login('https://gemini.google.com/',root,profile=profile,keep_profile=True,executable='/chrome',capture_only=True)
    assert launch.call_args.args[0][-1]=='about:blank'and read.connection is None
+  # Graceful Windows handoff sends WM_CLOSE only to the owned PID.
+  import ctypes
+  process.poll.return_value=None
+  user=types.SimpleNamespace(GetWindowThreadProcessId=Mock(side_effect=lambda hwnd,out:setattr(out._obj,'value',123 if hwnd==44 else 999)),PostMessageW=Mock(),EnumWindows=Mock(side_effect=lambda callback,param:[callback(44,param),callback(45,param)]))
+  with patch.object(mod.os,'name','nt'),patch.object(ctypes,'windll',types.SimpleNamespace(user32=user),create=True),patch.object(ctypes,'WINFUNCTYPE',lambda *args:lambda callback:callback,create=True):
+   handoff=mod.ManualGoogleLogin('https://gemini.google.com/',root,profile,process,'/chrome')
+   await handoff.finish_signin()
+   user.PostMessageW.assert_called_once_with(44,0x0010,0,0)
+   assert not handoff.closed and handoff.capture is None
+   process.wait.side_effect=mod.subprocess.TimeoutExpired('chrome',12)
+   try:await handoff.finish_signin()
+   except HTTPException as e:assert e.status_code==409
+   else:raise AssertionError('Stuck Chrome reported success')
+   process.kill.assert_not_called();process.terminate.assert_not_called();process.wait.side_effect=None
+  print('PASS owned-window graceful handoff only, timeout never force-kills or captures')
   print('PASS capture launch uses blank page and original browser/profile')
   with patch.object(mod.asyncio,'open_connection',AsyncMock(return_value=(Mock(),Mock()))),patch.object(mod.subprocess,'Popen')as launch:
    try:await mod.open_google_login('https://gemini.google.com/',root,profile=profile,keep_profile=True,executable='/chrome',manual_signin=True)

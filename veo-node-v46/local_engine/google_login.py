@@ -121,6 +121,32 @@ class ManualGoogleLogin:
                     raise HTTPException(409,'Đăng nhập Gemini xong, đóng cửa sổ Chrome/Edge vừa mở để ghi phiên, rồi bấm Lưu phiên. App chưa kết nối điều khiển cửa sổ đăng nhập.')
                 self.capture=await open_google_login(self.url,self.data,profile=self.profile,keep_profile=True,executable=self.executable,capture_only=True)
             return await self.capture.cookies()
+    async def finish_signin(self):
+        """User-requested graceful handoff; never force-kill or touch other profiles."""
+        async with self.capture_lock:
+            if self.closed:raise HTTPException(409,'Lượt đăng nhập đã đóng.')
+            if self.process.poll() is not None:return
+            if os.name=='nt':
+                def request_close():
+                    import ctypes
+                    from ctypes import wintypes
+                    user=ctypes.windll.user32
+                    callback_type=ctypes.WINFUNCTYPE(wintypes.BOOL,wintypes.HWND,wintypes.LPARAM)
+                    user.GetWindowThreadProcessId.argtypes=[wintypes.HWND,ctypes.POINTER(wintypes.DWORD)]
+                    user.PostMessageW.argtypes=[wintypes.HWND,wintypes.UINT,wintypes.WPARAM,wintypes.LPARAM]
+                    user.EnumWindows.argtypes=[callback_type,wintypes.LPARAM]
+                    def visit(hwnd,param):
+                        owner=wintypes.DWORD();user.GetWindowThreadProcessId(hwnd,ctypes.byref(owner))
+                        if owner.value==self.process.pid:user.PostMessageW(hwnd,0x0010,0,0)
+                        return True
+                    callback=callback_type(visit);user.EnumWindows(callback,0)
+                await asyncio.to_thread(request_close)
+            else:
+                raise HTTPException(409,'Đóng cửa sổ đăng nhập do app mở rồi bấm Nhận tài khoản lại.')
+            try:await asyncio.to_thread(self.process.wait,timeout=12)
+            except subprocess.TimeoutExpired:
+                raise HTTPException(409,'Chrome chưa thoát để ghi phiên. Kiểm tra cửa sổ đăng nhập do app mở có hộp thoại đang chờ; app không ép tắt hoặc xóa dữ liệu.')from None
+
     async def close(self):
         async with self.capture_lock:
             if self.closed:return
