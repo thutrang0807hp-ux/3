@@ -2,13 +2,14 @@ import asyncio,importlib.util,io,subprocess,tempfile,unittest
 from pathlib import Path
 import httpx
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from PIL import Image
 spec=importlib.util.spec_from_file_location('frame_capture',Path(__file__).parents[1]/'local_engine/frame_capture.py');module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
 class CaptureTest(unittest.IsolatedAsyncioTestCase):
  async def test_capture_and_rejections(self):
   with tempfile.TemporaryDirectory()as folder:
    root=Path(folder);video=root/'test.mp4';subprocess.run(['ffmpeg','-v','error','-f','lavfi','-i','color=c=blue:s=180x320:r=24','-t','2','-c:v','libx264','-pix_fmt','yuv420p',str(video)],check=True)
-   app=FastAPI();module.install_frame_capture(app,root)
+   app=FastAPI();module.install_frame_capture(app,root);app.mount('/',StaticFiles(directory=root))
    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app),base_url='http://local')as client:
     data=video.read_bytes();headers={'X-SceneForge-Local':'1','X-Frame-Time':'1'}
     response=await client.post('/local-api/analysis/frame-capture',content=data,headers=headers);self.assertEqual(response.status_code,200,response.text[:100]if response.status_code!=200 else '')

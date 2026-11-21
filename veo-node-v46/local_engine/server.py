@@ -570,6 +570,9 @@ install_fingerprints(app,VAULT,DATA,fingerprint_busy)
 from .profile_cache import install_profile_cache
 install_profile_cache(app,VAULT,DATA,fingerprint_busy)
 
+from .frame_capture import install_frame_capture
+install_frame_capture(app,DATA)
+
 if frontend.is_dir():app.mount('/',StaticFiles(directory=frontend,html=True),name='frontend')
 
 from .flow_web_login import FlowWebLogin
@@ -583,6 +586,3 @@ FLOW_ACCOUNTS.web_ui=FLOW_PROVIDER.web_ui
 # Apply branding only to the matching desktop host; browser/worker startup is unchanged.
 from .desktop_icon import install_desktop_icon
 DESKTOP_ICON_THREAD=install_desktop_icon(DATA,ROOT)
-
-from .frame_capture import install_frame_capture
-install_frame_capture(app,DATA)
