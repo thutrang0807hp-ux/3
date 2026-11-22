@@ -10,7 +10,7 @@ try:
   page.goto(f'http://127.0.0.1:{server.server_port}/workflow.html?mode=reference');page.wait_for_function('window.SFPromptPipeline&&window.SFMediaNodes')
   out=page.evaluate('''async()=>{
    const check=(v,m)=>{if(!v)throw Error(m)},delay=ms=>new Promise(r=>setTimeout(r,ms));
-   storeProject=async()=>{};SFProviderReceipts.persistIntent=async()=>{};
+   window.confirm=()=>true;storeProject=async()=>{};SFProviderReceipts.persistIntent=async()=>{};
    const canvas=document.createElement('canvas');canvas.width=canvas.height=16;canvas.getContext('2d').fillRect(0,0,16,16);const source=canvas.toDataURL();
    project=blankProject();project.id='restart-frames';project.scenes=[sceneRecord(0,4,0,[source]),sceneRecord(4,8,1,[source])];project.script=[];project.scenes.forEach(s=>{s.refsUsed=[];s.frames=[{id:'keep-'+s.id,image:source,version:1}];});
    let stuck=true,release,posted=[],failNext=false;const replies=new Map();
@@ -31,7 +31,7 @@ try:
    const old=project.cloudJobs[0];check(old.state==='unknown','stopped intent missing');
    // A separate old media request must also stop blocking the same scene.
    project.cloudJobs=[old,{id:'old-unknown',kind:'image',provider:'gemini-chat',sceneId:project.scenes[1].id,state:'unknown'}];stuck=false;
-   await SFPromptPipeline.restartImagesAll();const fresh=posted.slice(1);check(fresh.filter(x=>x.kind==='text').length===0,'unexpected writer request');check(fresh.filter(x=>x.kind==='image').length===2,'did not create both frames');
+   await SFPromptPipeline.restartImagesAll();const fresh=posted.slice(1);check(fresh.filter(x=>x.kind==='text').length===0,'unexpected writer request');check(fresh.filter(x=>x.kind==='image').length===2,'did not create both frames');check(fresh.filter(x=>x.kind==='image').every(x=>x.conversation_scope),'whole-node retry did not isolate conversations');
    check(project.cloudJobs[0].state==='abandoned'&&project.cloudJobs[0].previousState==='unknown','old media receipt lost');check(project.cloudJobs.some(x=>x.id===old.id&&x.state==='abandoned'),'old image receipt lost');check(project.scenes.every(s=>s.frames[0].id==='keep-'+s.id),'old frame versions deleted');
    const stable=JSON.stringify(SFPromptPipeline.records().records);release({state:'done',result:{text:JSON.stringify({promptFrame:{vi:'CŨ',en:'LATE OLD'},used_refs:['R1'],warnings:[]})}});await delay(40);check(stable===JSON.stringify(SFPromptPipeline.records().records),'late old response changed current records');
    // A second click starts another full run, with fresh request IDs.

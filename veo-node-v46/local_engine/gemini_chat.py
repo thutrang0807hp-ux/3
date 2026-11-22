@@ -314,7 +314,7 @@ class GeminiChat(MuseProvider):
         aid = min(plan, key=lambda a: list(self.phases.values()).count(a)) if payload['mode'] == 'balanced' else plan[0]
         self.phases[rid] = aid
         self.tasks[rid] = asyncio.create_task(self.run(rid, aid, payload))
-        self.tasks[rid].add_done_callback(lambda t: self.tasks.pop(rid, None))
+        self.tasks[rid].add_done_callback(lambda t: self.tasks.pop(rid, None) if self.tasks.get(rid) is t else None)
         return self.lookup(rid)
 
     def lookup(self, rid):
@@ -351,6 +351,11 @@ class GeminiChat(MuseProvider):
                 record['message'] += ' HTTP ' + str(status) + '.'
         elif record.get('state')=='failed':
             record.update(code='GEMINI_JOB_FAILED',message='Lượt Gemini thất bại; bản ghi cũ chưa lưu nguyên nhân chi tiết. Kiểm tra lịch sử tài khoản trước khi bỏ lượt hoặc gửi lại.')
+        metadata = self.ledger.metadata(rid)
+        if metadata.get('last_error_code') == 'GEMINI_IMAGE_DOWNLOAD_ERROR' or metadata.get('image_result_available'):
+            record['can_receive_image'] = record.get('state') != 'done'
+        if metadata.get('receive_active') and rid in self.tasks and record.get('state') != 'done':
+            record.update(state='downloading', phase='receiving_existing_image')
         return record
 
     @staticmethod
@@ -401,8 +406,11 @@ class GeminiChat(MuseProvider):
                             self.vault.set_secret(chat_key, {**cursor, 'state': 'ready'})
                         else:
                             self.vault.set_secret(chat_key, {**cursor, 'state': 'unknown', 'request_id': rid})
+                    if response.get('image_result'):
+                        self.vault.set_secret('gemini-image-result:' + rid, {'request_id':rid,'account_id':aid,'image_result':response['image_result']})
+                        self.ledger.set_metadata(rid, {'account_id':aid,'image_result_available':True})
                     if not response.get('ok'):
-                        self.ledger.set_metadata(rid,{'last_error_code':response.get('code')or response.get('reason')or'UNKNOWN',**{key:response[key] for key in ('phase','error_type','http_status') if key in response}})
+                        self.ledger.set_metadata(rid,{'last_error_code':response.get('code')or response.get('reason')or'UNKNOWN',**{key:response.get(key) for key in ('phase','error_type','http_status')}})
                     if safe_rejection(response):
                         dispatched = False
                         self.pool.limit(aid, response['reason'])
@@ -428,7 +436,7 @@ class GeminiChat(MuseProvider):
                             image.verify()
                         name = rid + ext
                         os.replace(output, self.root / name)
-                        result.update(file=name, mime_type=mime)
+                        result.update(file=name, mime_type=mime, width=image.width, height=image.height, download_variant=response.get('download_variant','full-size'))
                     else:
                         text = response.get('text')
                         if not isinstance(text, str) or not 0 < len(text) <= 500000:
@@ -449,6 +457,91 @@ class GeminiChat(MuseProvider):
             self.ledger.finish(rid, state, result)
             self.vault.put('logs', {'id': rid, 'service': 'gemini_chat', 'kind': payload['role'], 'state': state,
                 'account_id': aid, 'room_id': payload['room_id'], 'scene_id': payload['scene_id'], 'at': time.time(), 'cost': None})
+
+    async def receive_image(self, rid, body=None):
+        self.valid_id(rid)
+        record = self.lookup(rid)
+        if record['state'] == 'done':
+            return record
+        task = self.tasks.get(rid)
+        if task is not None:
+            if record['state'] == 'unknown' and self.ledger.metadata(rid).get('image_result_available'):
+                await asyncio.shield(task)
+            elif not task.done():
+                return record
+            if self.tasks.get(rid) is task:
+                self.tasks.pop(rid, None)
+        meta = self.ledger.metadata(rid)
+        pointer = self.vault.secret('gemini-image-result:' + rid)
+        # Legacy .151 errors retained a cursor but no per-request descriptor.
+        # Accept it only if its exact request_id still matches this receipt.
+        if not pointer:
+            scope = (body or {}).get('conversation_scope')
+            scopes = [None]
+            if scope is not None:
+                try:
+                    if not isinstance(scope, str) or str(uuid.UUID(scope)) != scope:
+                        raise ValueError()
+                except (ValueError, AttributeError):
+                    raise HTTPException(400, 'Phạm vi nhận lại ảnh không hợp lệ.') from None
+                scopes.append(scope)
+            for account in self.accounts():
+                for candidate in scopes:
+                    room = self.conversation_room({'room_id':meta.get('room_id',''),'conversation_scope':candidate})
+                    cursor = self.vault.secret(conversation_key(room, account['id'])) or {}
+                    if cursor.get('request_id') == rid and valid_metadata(cursor.get('metadata')):
+                        pointer = {'request_id':rid,'account_id':account['id'],'image_result':{'metadata':cursor['metadata']}}
+                        break
+                if pointer:
+                    break
+        if not pointer or pointer.get('request_id') != rid:
+            raise HTTPException(409, 'Không còn dấu ảnh chính xác của lượt cũ để nhận lại. Không tạo ảnh mới tự động.')
+        self.require_sdk()
+        aid = pointer['account_id']
+        self.vault.set_secret('gemini-image-result:' + rid, pointer)
+        self.ledger.set_metadata(rid, {'receive_active':True,'image_result_available':True,'account_id':aid})
+        self.tasks[rid] = asyncio.create_task(self._receive_image(rid, pointer, meta))
+        self.tasks[rid].add_done_callback(lambda task: self.tasks.pop(rid, None) if self.tasks.get(rid) is task else None)
+        return self.lookup(rid)
+
+    async def _receive_image(self, rid, pointer, meta):
+        output = self.root / (rid + '.receive.partial')
+        aid = pointer['account_id']
+        try:
+            async with self.image_slots.slot(aid):
+                session = self.vault.secret('gemini-chat-session:' + aid) or {}
+                response = await self.runner({'operation':'receive_image','kind':'image','session':session,
+                    'image_result':pointer['image_result'],'output':str(output)})
+                if response.get('image_result'):
+                    pointer = {**pointer,'image_result':response['image_result']}
+                    self.vault.set_secret('gemini-image-result:' + rid, pointer)
+                if not response.get('ok'):
+                    self.ledger.set_metadata(rid, {'last_error_code':response.get('code')or response.get('reason')or'UNKNOWN',
+                        **{key:response.get(key) for key in ('phase','error_type','http_status')}})
+                    return
+                if not output.is_file() or not 0 < output.stat().st_size <= 24 * 1024**2:
+                    raise ValueError('invalid recovered image size')
+                with Image.open(output) as image:
+                    ext,mime = {'PNG':('.png','image/png'),'JPEG':('.jpg','image/jpeg'),'WEBP':('.webp','image/webp')}[image.format]
+                    width,height = image.size
+                    if width * height > 40_000_000:
+                        raise ValueError('oversized recovered image')
+                    image.verify()
+                name = rid + ext
+                os.replace(output, self.root / name)
+                self.ledger.finish(rid, 'done', {'file':name,'mime_type':mime,'account_id':aid,
+                    'room_id':meta.get('room_id',''),'scene_id':meta.get('scene_id',''),'kind':'image','origin':'gemini-chat',
+                    'cost':None,'model':meta.get('model',''),'width':width,'height':height,
+                    'download_variant':response.get('download_variant','full-size'),'received_existing_image':True})
+                if response.get('session') and self.image_slots.limit()==1 and self.vault.secret('gemini-chat-session:' + aid)==session:
+                    self.vault.set_secret('gemini-chat-session:' + aid,response['session'])
+        except asyncio.CancelledError:
+            raise
+        except Exception as error:
+            self.ledger.set_metadata(rid, {'last_error_code':'GEMINI_IMAGE_DOWNLOAD_ERROR','phase':'download_image','error_type':type(error).__name__[:80],'http_status':None})
+        finally:
+            output.unlink(missing_ok=True)
+            self.ledger.set_metadata(rid, {'receive_active':False})
 
     async def execute_json(self, body, instruction, media=None, images=None, role='writing', read_only=False, expected_store_id=None):
         raw_id = body.get('request_id') or str(uuid.uuid4())
@@ -532,6 +625,9 @@ def install_gemini_chat(app, vault, data, ledger):
         return service.select(body)
     app.post('/local-api/gemini-chat/jobs')(service.submit)
     app.get('/local-api/gemini-chat/jobs/{rid}')(service.lookup)
+    @app.post('/local-api/gemini-chat/jobs/{rid}/receive')
+    async def receive_image(rid: str, body: dict):
+        return await service.receive_image(rid, body)
     app.get('/local-api/gemini-chat/files/{rid}')(service.file)
     @app.post('/local-api/gemini-chat/roles')
     async def roles(body: dict):

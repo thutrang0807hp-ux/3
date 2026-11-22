@@ -29,6 +29,10 @@ def error_detail(error, phase):
     status = getattr(error, 'status_code', None)
     if status is None:
         status = getattr(getattr(error, 'response', None), 'status_code', None)
+    if status is None:
+        match = re.match(r'^Error downloading image: ([1-5][0-9]{2})(?:\s|$)', str(error))
+        if match:
+            status = int(match.group(1))
     codes = {'initialize': 'GEMINI_INIT_ERROR', 'prepare_references': 'GEMINI_ATTACHMENT_ERROR',
              'upload_or_prepare': 'GEMINI_UPLOAD_ERROR', 'generate': 'GEMINI_GENERATE_ERROR',
              'download_image': 'GEMINI_IMAGE_DOWNLOAD_ERROR', 'read_result': 'GEMINI_RESULT_ERROR'}
@@ -47,6 +51,11 @@ async def execute(body, client_type=None):
     import importlib
     importlib.import_module('gemini_webapi.utils.get_access_token').HAS_BC3 = False
 
+    try:
+        from .gemini_image_results import image_descriptor, download_existing, find_exact_image
+    except ImportError:
+        from gemini_image_results import image_descriptor, download_existing, find_exact_image
+
     cookies = body.get('session', {}).get('cookies', {})
     if not cookies.get('__Secure-1PSID'):
         return {'ok': False, 'accepted': False, 'reason': 'auth'}
@@ -57,6 +66,7 @@ async def execute(body, client_type=None):
     sent = False
     chat = None
     conversation = None
+    image_result = None
     phase = 'initialize'
     if client_type is None:
         client._sf_generate_started = False
@@ -67,6 +77,13 @@ async def execute(body, client_type=None):
         models = [{'id': m.model_name, 'name': m.model_name} for m in (client.list_models() or [])]
         if body['operation'] == 'check':
             answer = {'ok': True, 'models': models}
+        elif body['operation'] == 'receive_image':
+            phase = 'download_image'
+            image_result = body['image_result']
+            image = await find_exact_image(client, image_result)
+            image_result = image_descriptor(image, image_result.get('metadata'))
+            variant = await download_existing(image, client, body['output'])
+            answer = {'ok': True, 'image': True, 'download_variant': variant, 'image_result': image_result}
         else:
             model = body.get('model') or None
             if model and model not in {m['id'] for m in models}:
@@ -110,12 +127,9 @@ async def execute(body, client_type=None):
                 if not images:
                     return {'ok': False, 'accepted': True, 'reason': 'no_generated_image', 'conversation': conversation}
                 phase = 'download_image'
-                url = urlsplit(images[0].url)
-                if url.scheme != 'https' or not url.hostname or not (url.hostname == 'googleusercontent.com' or url.hostname.endswith('.googleusercontent.com')):
-                    raise ValueError('unsupported generated image URL')
-                await images[0].save(path=str(Path(body['output']).parent), filename=Path(body['output']).name,
-                                     client=client.client, full_size=True, verbose=False)
-                answer = {'ok': True, 'image': True}
+                image_result = image_descriptor(images[0], (conversation or {}).get('metadata') or list(response.metadata))
+                variant = await download_existing(images[0], client, body['output'])
+                answer = {'ok': True, 'image': True, 'download_variant': variant, 'image_result': image_result}
             else:
                 text = response.text
                 if not isinstance(text, str) or not text.strip() or len(text) > 500000:
@@ -140,7 +154,7 @@ async def execute(body, client_type=None):
         # Only the pinned SingleSend transport can prove generation was never entered.
         not_dispatched = not sent or (client_type is None and not client._sf_generate_started)
         return {'ok': False, 'accepted': False if not_dispatched else None,
-                'reason': 'unknown', 'conversation': conversation, **error_detail(error, phase)}
+                'reason': 'unknown', 'conversation': conversation, **({'image_result': image_result} if image_result else {}), **error_detail(error, phase)}
     finally:
         with contextlib.suppress(Exception):
             await client.close()
