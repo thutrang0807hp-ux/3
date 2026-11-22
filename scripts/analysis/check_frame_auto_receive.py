@@ -22,7 +22,7 @@ try:
    workflowLocalRequest=async(path,body)=>{if(path.endsWith('/receive')){receives++;ready=true;}else if(body)posts.push(body);return ready?{state:'done',result:{mime_type:'image/jpeg',scene_id:s.id,room_id:project.id,download_variant:'standard',received_existing_image:true}}:{state:'unknown',can_receive_image:true,code:'GEMINI_IMAGE_DOWNLOAD_ERROR'};};render();SFMediaNodes.open('frame',s.id);}''',state)
   assert page.evaluate('mediaUrl("fixed-source")')!=original
   assert page.evaluate('directSignature(project.scenes[0],"","image")')==signature
-  assert page.locator('[data-mn=create-product-frame]').inner_text()=='Tải lại ảnh đã tạo'
+  assert page.locator('[data-mn=create-product-frame]').inner_text()=='Tải lại ảnh'
   page.locator('[data-mn=create-product-frame]').click();page.wait_for_function('project.scenes[0].frames.length===1&&!SFPromptPipeline.isRunning()')
   assert page.evaluate('posts.length===0&&receives===1&&project.cloudJobs[0].state==="imported"')
   assert page.evaluate('!project.cloudJobs[0].error&&!project.cloudJobs[0].errorCode&&!project.cloudJobs[0].waitError&&!project.scenes[0].approvedFrame')

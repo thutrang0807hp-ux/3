@@ -1,0 +1,27 @@
+function framePrimarySpec(s,r,allowApprove=false){
+ const pipeline=window.SFPromptPipeline,active=pipeline?.isRunning(),job=frameRetryJob(s);
+ if(operation||active)return {action:'create-product-frame',text:active&&pipeline?.activity?.()?.sceneId!==s.id?'Đang xử lý cảnh khác…':'Đang xử lý…',disabled:true};
+ if(s.frameInspectorCheck?.busy)return {action:'frame-inspector-refresh',text:'Đang kiểm tra…',disabled:true};
+ if(frameCanReceive(job))return {action:'create-product-frame',text:'Tải lại ảnh',disabled:false};
+ if(job&&['prepared','preparing','submitted','queued','running','downloading','unknown','missing','invalid','stale'].includes(job.state))return {action:'frame-inspector-refresh',text:'Kiểm tra kết quả',disabled:false};
+ if(allowApprove&&s.frames.length)return {action:'approve',text:'Duyệt ảnh',disabled:false};
+ return {action:'create-product-frame',text:s.frames.length?'Tạo lại ảnh':'Tạo ảnh khung',disabled:false};
+}
+function framePrimaryButton(s,r,allowApprove){const spec=framePrimarySpec(s,r,allowApprove);return btn(spec.action,spec.text,'data-frame-main '+(spec.disabled?'disabled':''),'primary');}
+function syncFramePrimary(s){
+ const button=q('#modalFooter [data-frame-main]'),data=inspectData();if(!button||inspect?.k!=='frame'||data?.s!==s)return;
+ const r=data.r,has=!!s.frames.length&&frameFile(s,data.v),allow=has&&!['running','error','unknown','blocked','approved'].includes(r.bucket);
+ const spec=framePrimarySpec(s,r,allow);button.dataset.mn=spec.action;button.disabled=spec.disabled;if(button.textContent!==spec.text)button.textContent=spec.text;
+}
+function frameInspectorProgress(s){
+ const pipeline=window.SFPromptPipeline,activity=pipeline?.activity?.(),active=pipeline?.isRunning()&&activity?.sceneId===s.id;
+ const image=frameRetryJob(s),writing=frameWriterReceipt(s),raw=image?.error||image?.waitError||s.frameActionError?.message||((!image||activity?.stage==='writing')&&!['applied','done'].includes(writing?.state)?writing?.error||writing?.waitError:'')||'';
+ const code=image?.errorCode||(!['applied','done'].includes(writing?.state)?writing?.errorCode:'')||'';
+ const title=active?(activity.stage==='writing'?'Đang tối ưu prompt…':activity.stage==='frame-preparing'?'Đang chuẩn bị ảnh…':'Đang tạo / nhận ảnh…'):image?.state==='imported'?'Ảnh đã nhận về cảnh':frameCanReceive(image)?'Ảnh đã tạo · chưa tải xong':image&&['unknown','missing','invalid','stale'].includes(image.state)?'Cần kiểm tra kết quả':image?.state==='failed'?'Chưa tạo được ảnh':s.frames.length?'Ảnh đang chờ bạn xem':'Sẵn sàng tạo ảnh khung';
+ const is403=(image?.errorCode==='GEMINI_IMAGE_DOWNLOAD_ERROR'||image?.canReceiveImage)&&/HTTP\s*403/.test(raw),summary=active?(activity.stage==='writing'?'AI đang cập nhật prompt. Chưa gửi tạo ảnh.':frameCanReceive(image)?'Đang tải kết quả cũ, không gọi tạo ảnh mới.':'Bạn có thể đóng khung này và mở lại để xem tiến trình.'):is403?'Google từ chối tải ảnh (403). Bấm Tải lại ảnh để nhận kết quả cũ.':frameCanReceive(image)?'Nhận lại ảnh của lượt cũ, không gọi tạo ảnh mới.':raw?'Có lỗi ở lượt hiện tại. Mở Chi tiết để xem nguyên nhân.':active?'Bạn có thể đóng khung này và mở lại để xem tiến trình.':image?.state==='imported'||s.frames.length?'Xem lại người, sản phẩm và chi tiết ảnh trước khi duyệt.':'Prompt và ảnh tham khảo được xử lý tự động.';
+ const labels={imported:'Đã nhận ảnh',queued:'Đang xếp hàng',downloading:'Đang tải ảnh',not_submitted:'Chưa gửi',invalid:'Cần xem lại',missing:'Cần kiểm tra lượt cũ',stale:'Đầu vào đã đổi',submitted:'Đã gửi · chờ phản hồi',running:'Động cơ báo đang xử lý',done:'Có kết quả',applied:'Đã cập nhật prompt',failed:'Thất bại',unknown:'Chưa rõ kết quả · cần kiểm tra'};
+ const expanded=q('[data-frame-inspector-progress] details[data-frame-technical]')?.open;
+ syncFramePrimary(s);
+ return '<section style="border:1px solid #3d4941;border-radius:12px;padding:14px;margin-bottom:14px" role="status"><b>'+esc(title)+'</b>'+(active?'<progress aria-label="Đang xử lý cảnh" style="width:100%;height:8px;margin-top:10px"></progress>':'')+'<p style="margin:8px 0;color:#aab4bd">'+esc(summary)+'</p>'+(active?btn('pause-frames','Dừng xử lý'):'')+'<details data-frame-technical '+(expanded?'open':'')+'><summary style="cursor:pointer;color:#8997a4;font-size:11px">Chi tiết</summary><div style="padding-top:8px;font-size:11px"><p>AI viết prompt · tùy chọn: '+esc(writing?labels[writing.state]||writing.state:'Chưa có lượt')+'</p><p>Tạo ảnh: '+esc(image?labels[image.state]||image.state:'Chưa có lượt')+'</p>'+(raw?'<p data-frame-receipt-error style="overflow-wrap:anywhere;color:#edb088">'+esc(raw)+'</p>':'')+(code&&!raw.includes(code)?'<p>'+esc(code)+'</p>':'')+(image?.id?'<p>Mã lượt: '+esc(image.id)+'</p>':'')+(s.frameInspectorCheck?.message?'<p>'+esc(s.frameInspectorCheck.message)+'</p>':'')+btn('frame-inspector-refresh','Đọc lại trạng thái',s.frameInspectorCheck?.busy?'disabled':'')+'</div></details></section>';
+}
+function paintFrameInspectorProgress(target,s){const html=frameInspectorProgress(s);if(target._frameHTML!==html){target.innerHTML=html;target._frameHTML=html;}}

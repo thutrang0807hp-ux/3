@@ -38,6 +38,7 @@ try:
    assert 'Cloud Mountain Series No.5' not in packed and 'visual_name_policy' in packed
    assert 'PRODUCT LOCK' in result['prompt'] and 'R2' in result['prompt'] and 'lighting' in result['prompt']
    page.evaluate('SFMediaNodes.open("frame",target.id)')
+   page.locator('[data-frame-technical] > summary').click()
    assert 'Đã gửi · chờ phản hồi' in page.locator('[data-frame-inspector-progress]').inner_text()
    page.locator('[data-mn=frame-inspector-refresh]').click()
    page.wait_for_function('!target.frameInspectorCheck.busy')

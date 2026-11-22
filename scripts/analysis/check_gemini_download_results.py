@@ -32,7 +32,7 @@ async def main():
  with tempfile.TemporaryDirectory()as d:
   image=old.images[0];path=Path(d)/'same.partial'
   variant=await helper.download_existing(image,SimpleNamespace(client=Transport()),path)
-  assert variant=='standard'and path.read_bytes()==data and len(requests)==2
+  assert variant=='provided'and path.read_bytes()==data and len(requests)==1
   pointer={'metadata':['c_original','r_original','rc_original']}
   client=SimpleNamespace(read_chat=lambda cid,**kwargs:asyncio.sleep(0,result=history))
   exact=await helper.find_exact_image(client,pointer);assert '/original='in exact.url and '/wrong-later'not in exact.url
@@ -40,8 +40,8 @@ async def main():
   except ValueError:pass
   else:raise AssertionError('latest turn was substituted')
   result=await worker.execute({'_workspace':d,'operation':'receive_image','kind':'image','image_result':pointer,'session':{'cookies':{'__Secure-1PSID':'fixture'}},'output':str(path)},Fake)
-  assert result['ok'] and result['download_variant']=='standard'and path.read_bytes()==data
+  assert result['ok'] and result['download_variant']=='provided'and path.read_bytes()==data
   error=Exception('Error downloading image: 403 Forbidden')
   assert worker.error_detail(error,'download_image')['http_status']==403
- print('PASS actual SDK full-size HTTP403 -> same image standard file; exact old history turn only; worker receive calls no generation; status recovered without raw exception logging')
+ print('PASS exact provider image downloaded without URL rewrite; exact old history turn only; worker receive calls no generation; status recovered without raw exception logging')
 asyncio.run(main())

@@ -16,19 +16,73 @@ def image_descriptor(image, metadata=None):
     return {'image': data, 'metadata': metadata}
 
 
+class ImageDownloadError(Exception):
+    def __init__(self, status=None):
+        super().__init__('Generated image transfer failed')
+        self.status_code = status
+
+
+async def download_provided(image, client, output):
+    """Use the exact provider URL: never append size suffixes to signed query strings."""
+    import asyncio
+    image_descriptor(image)
+    response = await asyncio.wait_for(client.client.get(str(image.url), headers={'Referer':'https://gemini.google.com/'}), 45)
+    status = getattr(response, 'status_code', None)
+    if status != 200:
+        raise ImageDownloadError(status)
+    data = response.content
+    if not isinstance(data, bytes) or not 0 < len(data) <= 24 * 1024**2:
+        raise ImageDownloadError()
+    if not (data.startswith(b'\x89PNG\r\n\x1a\n') or data.startswith(b'\xff\xd8\xff') or (data[:4] == b'RIFF' and data[8:12] == b'WEBP')):
+        raise ImageDownloadError()
+    Path(output).write_bytes(data)
+    return 'provided'
+
+
 async def download_existing(image, client, output):
-    """Two bounded file downloads, never a second generation. Expose actual variant."""
-    original = image.url
+    """Downloads only this image. Preserve signed URLs; no second generation."""
+    import asyncio
+    original = str(image.url)
     output = Path(output)
     try:
-        await image.save(path=str(output.parent), filename=output.name, client=client.client, full_size=True, verbose=False)
+        return await download_provided(image, client, output)
+    except Exception as original_error:
+        output.unlink(missing_ok=True)
+        if urlsplit(original).query:
+            # If the original link expired, the SDK's authenticated image RPC
+            # can mint a new link for this exact cid/rid/rcid/image_id. Permit
+            # that route but block its fallback that appends sizes to a query.
+            if not all(getattr(image, key, None) for key in ('client_ref','cid','rid','rcid','image_id')):
+                raise
+            failure = original_error
+            from types import SimpleNamespace
+            class SignedSession:
+                def __init__(self):
+                    self.provided = {original}
+                async def get(self, url, **kwargs):
+                    candidate = str(url)
+                    for known in self.provided:
+                        changed = {known+'=s1024-rj', known+'=s2048-rj', known.replace('=s1024-rj','=s2048-rj'), known.replace('=s2048-rj','=s1024-rj')}
+                        if candidate == original or (candidate != known and candidate in changed):
+                            raise failure
+                    image_descriptor(SimpleNamespace(url=candidate))
+                    if urlsplit(candidate).query:
+                        self.provided.add(candidate)
+                    return await client.client.get(url, **kwargs)
+            try:
+                image.url = original
+                await asyncio.wait_for(image.save(path=str(output.parent), filename=output.name, client=SignedSession(), full_size=True, verbose=False), 45)
+                return 'full-size'
+            finally:
+                image.url = original
+    try:
+        image.url = original
+        await asyncio.wait_for(image.save(path=str(output.parent), filename=output.name, client=client.client, full_size=True, verbose=False), 45)
         return 'full-size'
     except Exception:
-        # SDK mutates the URL when requesting full-size. Restore before using its
-        # standard rendition of the SAME generated image, not a resized local fake.
         output.unlink(missing_ok=True)
         image.url = original
-        await image.save(path=str(output.parent), filename=output.name, client=client.client, full_size=False, verbose=False)
+        await asyncio.wait_for(image.save(path=str(output.parent), filename=output.name, client=client.client, full_size=False, verbose=False), 30)
         return 'standard'
 
 

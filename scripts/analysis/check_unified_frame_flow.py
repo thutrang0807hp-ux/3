@@ -52,6 +52,7 @@ try:
   page.once('dialog',lambda d:d.accept())
   page.evaluate("directDialog([target],{source:'gemini-chat'})")
   assert page.evaluate('posts.length===0&&target.frames.length===1&&!target.approvedFrame')
+  page.evaluate('''()=>{const order=window.SFMergeOrder;try{delete window.SFMergeOrder;render();}finally{window.SFMergeOrder=order;render();}}''')
   assert not errors,errors;browser.close()
  print('PASS legacy/picker/local prepare/automatic/node share one image owner; no mandatory writer; matching result reused; concurrent entry blocked; old image received without generation or duplicate import')
 finally:server.shutdown()
