@@ -20,6 +20,16 @@ try:
   assert page.locator('#modal [data-mn=pause-frames]').count()==0
   assert page.locator('#modal').text_content().count('TRANSFER_FIXTURE_403')==1
   page.screenshot(path='/tmp/frame154-compact-error.png')
+  # A receive preflight failure must supersede the saved 403, and survive reopening.
+  page.evaluate('''()=>{window.realRequest=workflowLocalRequest;workflowLocalRequest=async(path,body)=>{if(path.endsWith('/receive'))throw Error('HTTP 409: Không còn dấu ảnh chính xác của lượt cũ để nhận lại.');return realRequest(path,body);};}''')
+  page.locator('#modal [data-frame-main]').click()
+  page.wait_for_function('project.cloudJobs[0].receiveAttempt?.state==="failed"&&!SFFrameImages.isRunning()')
+  assert 'HTTP 409' in page.locator('#modal').text_content()
+  assert 'TRANSFER_FIXTURE_403' not in page.locator('#modal').text_content()
+  assert page.evaluate('generations===0&&receives===0')
+  page.evaluate('SFMediaNodes.open("frame",project.scenes[0].id)')
+  assert 'HTTP 409' in page.locator('#modal').text_content()
+  page.evaluate('()=>{workflowLocalRequest=realRequest;}')
   page.locator('#modal [data-frame-main]').click();page.wait_for_function('typeof finishReceive==="function"')
   page.wait_for_function('!!document.querySelector("#modal [data-mn=pause-frames]")')
   assert page.locator('#modal [data-frame-main]').is_disabled()
