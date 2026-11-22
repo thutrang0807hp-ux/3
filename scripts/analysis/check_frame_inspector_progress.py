@@ -45,6 +45,16 @@ async def main():
    await page.locator('#node-frames [data-mn=open]').first.click()
    await expect(panel).to_contain_text('chưa rõ kết quả')
    assert await page.evaluate('posts.length')==count
+   unknown=await page.evaluate('''async()=>{workflowLocalRequest=async(path,body)=>path.endsWith('/status')?{installed:true,selection:{available:true,token:'same'}}:{state:'unknown',code:'unknown',message:'Chưa xác định kết quả phía Gemini.'};try{await SFPromptPipeline.runImages(project.scenes,{regenerate:true});return '';}catch(e){return e.message;}}''')
+   assert unknown.startswith('Tạo ảnh Gemini Chat:') and 'Gemini viết prompt' not in unknown and 'Mã lượt: gchat-' in unknown,unknown
+   await page.evaluate('''()=>{project.cloudJobs.at(-1).state='not_submitted';workflowLocalRequest=async(path,body)=>path.endsWith('/status')?{installed:true,selection:{available:true,token:'same'}}:body?.kind==='image'?new Promise(resolve=>window.failImage=()=>resolve({state:'unknown',code:'unknown'})):{state:'unknown',code:'unknown'};}''')
+   await page.locator('[data-mn=create-product-frame]').click()
+   await page.wait_for_function('typeof failImage==="function"')
+   await page.locator('#modal > header [data-action=close-modal]').click()
+   await page.evaluate('failImage()')
+   await page.wait_for_function('!SFPromptPipeline.isRunning()')
+   await page.wait_for_timeout(100)
+   assert not await page.locator('#modal').is_visible(),'late error reopened a user-closed inspector'
    assert not errors,errors;await browser.close()
   print('PASS inspector indeterminate progress, live status, read-only refresh while waiting, stop, completed prompt and no unintended media dispatch')
  finally:server.shutdown()

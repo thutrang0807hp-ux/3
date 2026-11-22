@@ -21,8 +21,15 @@ try:
     const c=document.createElement('canvas');c.width=c.height=16;c.getContext('2d').fillStyle='red';c.getContext('2d').fillRect(0,0,16,16);const thumbnail=c.toDataURL();const file=await(await fetch('/frame-source.mp4')).blob();project=blankProject();project.id='repair-frame';project.source={asset:'source',duration:3,width:180,height:320,poster:thumbnail};assets.set('source',file);project.refs.product={images:[{id:'product1',name:'Sản phẩm của tôi',image:thumbnail}],description:'Replacement product'};window.target=sceneRecord(0,2.8,0,[thumbnail]);target.hasProduct=false;target.refsUsed=[];project.scenes=[target];render();}''')
    page.evaluate("""()=>{const s=target;project.productScript={brief:{name:'Cloud Mountain Series No.5',facts:'Real product facts'}};project.promptPipeline={version:1,records:{[s.id+':image:']:{input:'old-input',applied:false,job:{id:'old-writer-pending',sceneId:s.id,stage:'image',provider:'gemini-chat',state:'submitted'}}},run:null};receipts['old-writer-pending']={state:'running'};}""")
    page.evaluate('SFMediaNodes.open("frame",target.id)')
+   page.evaluate('''()=>{const request=workflowLocalRequest;workflowLocalRequest=async(path,body)=>{const reply=await request(path,body);if(body?.kind==='image')await new Promise(resolve=>window.finishImage=resolve);return reply;};}''')
    page.locator('[data-mn=create-product-frame]').click()
+   page.wait_for_function('typeof finishImage==="function"')
+   assert page.locator('#modal').is_visible()
+   assert page.locator('[data-mn=create-product-frame]').is_disabled()
+   assert page.evaluate('posts.length')==1
+   page.evaluate('finishImage()')
    page.wait_for_function('!SFPromptPipeline.isRunning()&&target.frames.length===1')
+   assert page.locator('#modal').is_visible()
    result=page.evaluate("""()=>{const r=SFPromptPipeline.records().records[target.id+':image:'],old=SFPromptPipeline.records().history.find(x=>x.job?.id==='old-writer-pending');return{writer:posts.filter(x=>x.kind==='text').length,image:posts.filter(x=>x.kind==='image').length,refs:posts[0]?.references.length,prompt:posts[0]?.prompt,oldState:old?.job.state,local:r.localRecipe,width:target.sourceFrame.width,approved:target.approvedFrame};}""")
    assert result['writer']==0 and result['image']==1 and result['refs']==2 and result['oldState']=='submitted' and result['local'] and result['width']==180 and not result['approved'],result
    assert 'Cloud Mountain Series No.5' not in result['prompt']

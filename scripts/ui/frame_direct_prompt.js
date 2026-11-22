@@ -1,6 +1,6 @@
 /* Local image-edit recipe: no text-generation request and no video-prompt changes. */
 async function prepareFrameDirect(s){
- ensure(s);SFFrameRefs.validate(s);
+ ensure(s);currentActivity={sceneId:s.id,stage:'frame-preparing',startedAt:Date.now()};SFFrameRefs.validate(s);
  if(current(s,'image'))return;
  const slot=key(s,'image'),previous=record(s,'image'),input=snapshot(s,'image');
  const pending=(project.cloudJobs||[]).find(j=>j.sceneId===s.id&&j.kind==='image'&&!['imported','failed','not_submitted','abandoned','stale','invalid'].includes(j.state));
