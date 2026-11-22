@@ -1,0 +1,7 @@
+# SceneForge .150
+
+Add a per-scene explicit recovery action for unknown/missing/invalid image receipts, with a quota/possible remote-continuation confirmation. Cancel sends nothing. Confirm archives unresolved receipts as abandoned, preserves previousState and all image versions, and submits one direct image for the selected scene only. Active queued/submitted/running images block this action. Normal create is visibly disabled while an unresolved receipt requires reconciliation. Completed receipts expose Receive generated image using existing verified recovery restricted to that scene.
+
+The confirmed path persists a per-scene UUID conversation_scope. The Gemini adapter validates and fingerprints it, keeps true room_id/scene_id in ledger/results/logs, and uses a separately hashed conversation key/lock. Thus a stale unknown project cursor is preserved, while an explicitly authorized retry can start a new conversation. Default/unscoped behavior and other scenes remain unchanged; later turns in the same scope resume its new cursor. No remote cancellation, automatic retry or provider-success guarantee.
+
+Validation: actual UI cancel/confirm, zero vs one image submission, selected-scene-only scope, history/version retention, actual adapter dispatch methods under fake runner showing stale default cursor blocks but scoped request succeeds/resumes without resetting the old cursor, scope validation, normal direct generation, inspector regression, Python/JavaScript syntax and cumulative package byte/hash checks. No live Gemini or Windows installer execution.

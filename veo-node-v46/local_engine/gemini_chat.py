@@ -295,6 +295,15 @@ class GeminiChat(MuseProvider):
         payload = {'prompt': prompt, 'references': refs, 'kind': body['kind'], 'role': role, 'model': model,
                    'plan': selection['permitted'], 'mode': selection['mode'], 'selection_token': selection['token'],
                    'room_id': str(body.get('room_id', ''))[:100], 'scene_id': str(body.get('scene_id', ''))[:100]}
+        scope = body.get('conversation_scope')
+        if scope is not None:
+            if body['kind'] != 'image' or not isinstance(scope, str) or not re.fullmatch(r'[a-f0-9-]{36}', scope):
+                raise HTTPException(400, 'Phạm vi hội thoại ảnh không hợp lệ.')
+            try:
+                uuid.UUID(scope)
+            except ValueError:
+                raise HTTPException(400, 'Phạm vi hội thoại ảnh không hợp lệ.') from None
+            payload['conversation_scope'] = scope
         try:
             _, cached = self.ledger.claim(rid, payload, envelope=body.get('_envelope'))
         except (ValueError, RequestConflict) as error:
@@ -328,11 +337,18 @@ class GeminiChat(MuseProvider):
             record.update(code='GEMINI_JOB_FAILED',message='Lượt Gemini thất bại; bản ghi cũ chưa lưu nguyên nhân chi tiết. Kiểm tra lịch sử tài khoản trước khi bỏ lượt hoặc gửi lại.')
         return record
 
+    @staticmethod
+    def conversation_room(payload):
+        room, scope = payload.get('room_id', ''), payload.get('conversation_scope')
+        if not scope:
+            return room
+        return 'scoped:' + hashlib.sha256(json.dumps([room, scope]).encode()).hexdigest()
+
     async def run(self, rid, aid, payload):
         # Serialize turns for this project before choosing its latest saved cursor.
         # Different projects retain their existing account image-slot scheduling.
         if payload['kind'] == 'image' and payload['room_id']:
-            lock = self.conversation_locks.setdefault(payload['room_id'], asyncio.Lock())
+            lock = self.conversation_locks.setdefault(self.conversation_room(payload), asyncio.Lock())
             async with lock:
                 return await self._run(rid, aid, payload)
         return await self._run(rid, aid, payload)
@@ -347,7 +363,7 @@ class GeminiChat(MuseProvider):
                     row = next((a for a in self.accounts() if a['id'] == aid), None)
                     if not row or not self.pool.eligible(row):
                         continue
-                    chat_key = (conversation_key(payload['room_id'], aid)
+                    chat_key = (conversation_key(self.conversation_room(payload), aid)
                                 if payload['kind'] == 'image' and payload['room_id'] else None)
                     cursor = self.vault.secret(chat_key) or {} if chat_key else {}
                     if cursor.get('state') in ('in_flight', 'unknown'):
