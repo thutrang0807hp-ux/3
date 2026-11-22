@@ -144,7 +144,7 @@ class BrowserBridge:
                     results[service] = {'state':'failed',**(flow_public_error(exc) if service=='flow' else {'code':'GEMINI_SESSION_CHECK_FAILED','message':'Chưa kiểm tra/kết nối được Gemini. Kiểm tra đăng nhập trong trình duyệt rồi kết nối lại.'})}
                     if service=='gemini_chat' and isinstance(exc,HTTPException):
                         detail=exc.detail
-                        allowed={'GEMINI_SESSION_CHECK_TIMEOUT','GEMINI_SDK_UNAVAILABLE','GEMINI_SESSION_AUTH_REJECTED','GEMINI_SDK_INCOMPATIBLE','GEMINI_SESSION_CHECK_FAILED'}
+                        allowed={'GEMINI_SESSION_COOKIE_MISSING','GEMINI_SESSION_GUEST','GEMINI_SESSION_TOKEN_MISSING','GEMINI_ACCOUNT_UNAVAILABLE','GEMINI_SESSION_INIT_FAILED','GEMINI_SESSION_AUTH_ERROR','GEMINI_SESSION_CHECK_TIMEOUT','GEMINI_SDK_UNAVAILABLE','GEMINI_SESSION_AUTH_REJECTED','GEMINI_SDK_INCOMPATIBLE','GEMINI_SESSION_CHECK_FAILED'}
                         if isinstance(detail,dict) and detail.get('code') in allowed:
                             results[service].update(code=detail['code'],message=detail['message'])
                         elif detail=='Chạy local_engine/install-gemini-web.bat trước khi dùng Gemini Chat.':

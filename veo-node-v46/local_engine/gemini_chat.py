@@ -225,6 +225,18 @@ class GeminiChat(MuseProvider):
                 reason = result.get('reason')
                 message = 'Cookie đã chuyển nhưng Gemini không chấp nhận phiên đăng nhập này.' if reason == 'auth' else 'Bộ chạy Gemini không tương thích; chưa thể kiểm tra và lưu tài khoản.' if reason == 'sdk_incompatible' else 'Đã chuyển phiên nhưng bộ chạy chưa xác minh được tài khoản Gemini.'
                 code = 'GEMINI_SESSION_AUTH_REJECTED' if reason == 'auth' else 'GEMINI_SDK_INCOMPATIBLE' if reason == 'sdk_incompatible' else 'GEMINI_SESSION_CHECK_FAILED'
+                messages = {
+                    'GEMINI_SESSION_COOKIE_MISSING':'Tiện ích chưa cung cấp cookie đăng nhập bắt buộc cho bộ chạy Gemini.',
+                    'GEMINI_SESSION_GUEST':'SDK khởi tạo thành phiên khách thay vì tài khoản đã đăng nhập; chưa lưu tài khoản.',
+                    'GEMINI_SESSION_TOKEN_MISSING':'SDK mở được phiên nhưng chưa đọc được token đăng nhập Gemini; chưa lưu tài khoản.',
+                    'GEMINI_ACCOUNT_UNAVAILABLE':'SDK có token đăng nhập nhưng báo tài khoản chưa sẵn sàng; đây không phải kết luận cookie bị từ chối.',
+                    'GEMINI_SESSION_INIT_FAILED':'SDK không khởi tạo được phiên từ cookie đã chuyển. Chưa xác định do cookie, SDK hay phản hồi Google.',
+                    'GEMINI_SESSION_AUTH_ERROR':'SDK báo lỗi xác thực sau khi khởi tạo phiên; chưa lưu tài khoản.'}
+                if result.get('code') in messages:
+                    code=result['code'];message=messages[code]
+                    status=result.get('account_status')
+                    if code=='GEMINI_ACCOUNT_UNAVAILABLE' and isinstance(status,str) and re.fullmatch(r'[A-Z_]{1,60}',status):
+                        message+=' Trạng thái SDK: '+status+'.'
                 raise HTTPException(409, {'code':code,'message':message})
             previous = next((a for a in self.accounts() if a['id'] == aid), {})
             row = {**previous, 'id': aid, 'name': name, 'service': 'gemini_chat', 'enabled': True,

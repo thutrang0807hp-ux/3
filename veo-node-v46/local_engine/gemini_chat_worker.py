@@ -58,7 +58,7 @@ async def execute(body, client_type=None):
 
     cookies = body.get('session', {}).get('cookies', {})
     if not cookies.get('__Secure-1PSID'):
-        return {'ok': False, 'accepted': False, 'reason': 'auth'}
+        return {'ok':False,'accepted':False,'reason':'auth','code':'GEMINI_SESSION_COOKIE_MISSING','phase':'read_session'}
     if client_type is None and not callable(getattr(getattr(GeminiClient,'_generate',None),'__wrapped__',None)):
         return {'ok':False,'accepted':False,'reason':'sdk_incompatible','code':'SDK_CONTRACT_MISMATCH'}
     client = (client_type or single_send_type(GeminiClient))(secure_1psid=cookies['__Secure-1PSID'], secure_1psidts=cookies.get('__Secure-1PSIDTS'))
@@ -72,8 +72,16 @@ async def execute(body, client_type=None):
         client._sf_generate_started = False
     try:
         await client.init(timeout=450, auto_refresh=False, auto_close=False, watchdog_timeout=10000, verbose=False)
-        if not client._check_account_status() or getattr(client, '_cookie_source', '') == 'Guest' or not client.access_token:
-            raise AuthError('account required')
+        if getattr(client, '_cookie_source', '') == 'Guest':
+            return {'ok':False,'accepted':False,'reason':'auth','code':'GEMINI_SESSION_GUEST','phase':'initialize'}
+        if not client.access_token:
+            return {'ok':False,'accepted':False,'reason':'auth','code':'GEMINI_SESSION_TOKEN_MISSING','phase':'initialize'}
+        if not client._check_account_status():
+            status = getattr(getattr(client, 'account_status', None), 'name', 'UNKNOWN')
+            if not isinstance(status,str) or not re.fullmatch(r'[A-Z_]{1,60}',status):
+                status = 'UNKNOWN'
+            return {'ok':False,'accepted':False,'reason':'account_unavailable','code':'GEMINI_ACCOUNT_UNAVAILABLE',
+                    'phase':'account_status','account_status':status}
         models = [{'id': m.model_name, 'name': m.model_name} for m in (client.list_models() or [])]
         if body['operation'] == 'check':
             answer = {'ok': True, 'models': models}
@@ -145,7 +153,7 @@ async def execute(body, client_type=None):
         # generic HTTP 429/network error.
         return {'ok': False, 'accepted': True if getattr(client, '_sf_received_output', False) else False, 'reason': 'quota'}
     except AuthError:
-        return {'ok': False, 'accepted': sent, 'reason': 'auth'}
+        return {'ok':False,'accepted':sent,'reason':'auth','code':'GEMINI_SESSION_INIT_FAILED' if phase=='initialize' else 'GEMINI_SESSION_AUTH_ERROR','phase':phase}
     except ModelInvalidError:
         return {'ok': False, 'accepted': sent, 'reason': 'input'}
     except Exception as error:
