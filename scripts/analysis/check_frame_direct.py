@@ -43,7 +43,7 @@ try:
    page.wait_for_function('!target.frameInspectorCheck.busy')
    assert page.evaluate('posts.length')==1
    # An unresolved image receipt must block a new image, independent of writer state.
-   page.evaluate("""()=>{target.promptRevision={image:'Giữ nhãn thật'};project.cloudJobs.push({id:'image-pending',kind:'image',provider:'gemini-chat',sceneId:target.id,state:'submitted'});} """)
+   page.evaluate("""()=>{target.promptRevision={image:'Giữ nhãn thật'};receipts['image-pending']={state:'unknown',message:'Lượt ảnh cũ chưa rõ; kiểm tra trước khi gửi mới.'};project.cloudJobs.push({id:'image-pending',kind:'image',provider:'gemini-chat',sceneId:target.id,state:'submitted'});} """)
    blocked=page.evaluate("""async()=>{try{await SFPromptPipeline.runImages([target],{regenerate:true});return false}catch(e){return e.message.includes('Lượt ảnh cũ')&&posts.length===1}}""");assert blocked
    page.evaluate("project.cloudJobs.at(-1).state='not_submitted'")
    repaired=page.evaluate('''async()=>{const versions=target.frames.length;target.sourceFrame={id:'source',image:target.thumbs[0]};target.frameSelectionId='source';const old=HTMLCanvasElement.prototype.toBlob;HTMLCanvasElement.prototype.toBlob=function(cb){cb(null)};try{const [a,b]=await Promise.all([SFFrameCapture.source(target),SFFrameCapture.source(target)]);if(a!==b)throw Error('Duplicate capture');return {engine:a.captureEngine,width:a.width,height:a.height,versions:target.frames.length,originalVersions:versions};}finally{HTMLCanvasElement.prototype.toBlob=old;}}''')
