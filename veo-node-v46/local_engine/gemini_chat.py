@@ -330,9 +330,25 @@ class GeminiChat(MuseProvider):
             'no_generated_image':'Gemini đã nhận lượt nhưng chưa trả ảnh tạo. Kiểm tra hội thoại trước khi gửi thêm.',
             'unknown':'Chưa xác định kết quả phía Gemini. Kiểm tra lịch sử; không tự gửi lại.',
             'UNKNOWN':'Chưa xác định kết quả phía Gemini. Kiểm tra lịch sử; không tự gửi lại.',
+            'GEMINI_INIT_ERROR':'Lỗi khởi tạo kết nối/phiên Gemini; chưa tới bước tạo ảnh.',
+            'GEMINI_ATTACHMENT_ERROR':'Lỗi chuẩn bị tệp tham khảo trước khi gửi tạo ảnh.',
+            'GEMINI_UPLOAD_ERROR':'Lỗi tải ảnh tham khảo hoặc chuẩn bị yêu cầu; chưa bắt đầu tạo ảnh.',
+            'GEMINI_GENERATE_ERROR':'Lỗi khi gửi/đọc phản hồi tạo nội dung Gemini; chưa xác định kết quả, không tự gửi lại.',
+            'GEMINI_IMAGE_DOWNLOAD_ERROR':'Gemini đã trả ảnh nhưng tải tệp kết quả thất bại; tránh tạo lại vì có thể dùng thêm hạn mức.',
+            'GEMINI_RESULT_ERROR':'Đã nhận phản hồi Gemini nhưng xử lý kết quả thất bại.',
+            'GEMINI_WORKER_ERROR':'Lỗi ở tiến trình gọi Gemini. Cần xem loại lỗi kỹ thuật bên dưới.',
+            'GEMINI_ADAPTER_ERROR':'Lỗi gọi tiến trình Gemini hoặc kiểm tra tệp trả về; chưa đủ bằng chứng xác định kết quả.',
         }
         if code in messages and record.get('state') not in ('done',):
             record.update(code=code,message=messages[code])
+            metadata = self.ledger.metadata(rid) if hasattr(self.ledger, 'metadata') else {}
+            metadata = metadata or {}
+            kind = metadata.get('error_type')
+            status = metadata.get('http_status')
+            if isinstance(kind, str) and re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]{0,79}', kind):
+                record['message'] += ' Loại lỗi: ' + kind + '.'
+            if isinstance(status, int) and not isinstance(status, bool) and 100 <= status <= 599:
+                record['message'] += ' HTTP ' + str(status) + '.'
         elif record.get('state')=='failed':
             record.update(code='GEMINI_JOB_FAILED',message='Lượt Gemini thất bại; bản ghi cũ chưa lưu nguyên nhân chi tiết. Kiểm tra lịch sử tài khoản trước khi bỏ lượt hoặc gửi lại.')
         return record
@@ -386,7 +402,7 @@ class GeminiChat(MuseProvider):
                         else:
                             self.vault.set_secret(chat_key, {**cursor, 'state': 'unknown', 'request_id': rid})
                     if not response.get('ok'):
-                        self.ledger.set_metadata(rid,{'last_error_code':response.get('code')or response.get('reason')or'UNKNOWN'})
+                        self.ledger.set_metadata(rid,{'last_error_code':response.get('code')or response.get('reason')or'UNKNOWN',**{key:response[key] for key in ('phase','error_type','http_status') if key in response}})
                     if safe_rejection(response):
                         dispatched = False
                         self.pool.limit(aid, response['reason'])
@@ -424,7 +440,8 @@ class GeminiChat(MuseProvider):
         except asyncio.CancelledError:
             state = 'unknown' if dispatched else 'failed'
             raise
-        except Exception:
+        except Exception as error:
+            self.ledger.set_metadata(rid, {'last_error_code': 'GEMINI_ADAPTER_ERROR', 'error_type': type(error).__name__[:80]})
             state = 'unknown' if dispatched else 'failed'
         finally:
             output.unlink(missing_ok=True)
