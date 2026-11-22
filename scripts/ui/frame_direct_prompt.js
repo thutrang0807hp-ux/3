@@ -15,7 +15,7 @@ async function prepareFrameDirect(s){
  const roles=bindings.filter(b=>b.replace).map(b=>b.code+' = '+b.role+' ('+b.purpose+')').join('; ');
  const notes=refsFor(s).map(role=>role+': '+(sceneReference(s,role).description||'')).join('\n');
  const replaceProduct=refsFor(s).includes('product')&&sceneReference(s,'product').images.length>0;
- const label=replaceProduct?(s.expectedLabel||context?.product?.name||''):'';
+ const label=replaceProduct?(s.expectedLabel||''):'';
  const en=[
   'IMAGE EDIT — one unified still frame, not a video, collage or storyboard.',
   'R1 is the original scene: preserve its camera angle, framing, pose, hand placement, perspective, scene layout and lighting. Replace only the roles identified below; preserve all other content.',
@@ -30,7 +30,7 @@ async function prepareFrameDirect(s){
   s.promptRevision?.image?'USER FRAME EDIT: '+s.promptRevision.image:''
  ].filter(Boolean).join('\n\n');
  const vi=['Chỉnh một ảnh khung duy nhất. Giữ góc máy, bố cục, tư thế, vị trí tay và ánh sáng của R1; chỉ thay các vai trò có ảnh tham khảo.',roles?'Vai trò ảnh: '+roles:'Giữ người và đồ gốc vì chưa chọn ảnh thay thế.',replaceProduct?'Sao chép đúng hình dáng, tỉ lệ, màu, chất liệu, bao bì, logo và chữ nhìn thấy của sản phẩm tham khảo. Giữ tiếp xúc tay, che khuất, bóng và phản chiếu tự nhiên. Không trộn mặt, không đổi thiết kế đồ, không bịa chữ.':'Không chọn thay sản phẩm: giữ nguyên đồ và nhãn thật của cảnh nguồn.',label?'Tên/nhãn cần giữ theo ảnh: '+label:'','Bỏ phụ đề và chữ quảng cáo đè trên video mẫu; giữ chữ thật trên sản phẩm. Một ảnh liền mạch, không chia ô, không thêm chữ hay watermark.',notes,s.extraRequest||'',s.promptRevision?.image||''].filter(Boolean).join('\n\n');
- const next={input,template:SFPromptContract.version,applied:true,localRecipe:true,manual:owners(s,'image'),manualInput:owners(s,'image')?input:undefined,bindings,result:{promptFrame:{en,vi},used_refs:bindings.map(b=>b.code),warnings:[]},sourceCapture:capture?{asset:capture.asset,stamp:capture.captureStamp,sha256:capture.sha256}:null};
+ const next={input,template:SFPromptContract.version,applied:true,localRecipe:true,namePolicy:'reference-only-v1',manual:owners(s,'image'),manualInput:owners(s,'image')?input:undefined,bindings,result:{promptFrame:{en,vi},used_refs:bindings.map(b=>b.code),warnings:[]},sourceCapture:capture?{asset:capture.asset,stamp:capture.captureStamp,sha256:capture.sha256}:null};
  if(previous){state().history??=[];state().history.push({...clone(previous),archivedAt:Date.now(),action:'direct-frame-without-writer'});}
  state().records[slot]=next;delete s.frameActionError;await storeProject();
 }
