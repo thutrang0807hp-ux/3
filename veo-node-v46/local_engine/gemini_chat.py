@@ -214,9 +214,18 @@ class GeminiChat(MuseProvider):
         # Fingerprint the supplied session, not an unverified account email.
         aid = 'gchat-account-' + hashlib.sha256(clean['__Secure-1PSID'].encode()).hexdigest()[:24]
         async with self.image_slots.exclusive(aid), self.lock(aid):
-            result = await self.runner({'operation': 'check', 'session': {'cookies': clean}})
+            self.require_sdk()
+            try:
+                result = await self.runner({'operation': 'check', 'session': {'cookies': clean}})
+            except (asyncio.TimeoutError, TimeoutError):
+                raise HTTPException(504, {'code':'GEMINI_SESSION_CHECK_TIMEOUT','message':'Đã chuyển phiên nhưng kiểm tra Gemini quá thời gian; tài khoản chưa được lưu.'}) from None
+            except (FileNotFoundError, OSError):
+                raise HTTPException(503, {'code':'GEMINI_SDK_UNAVAILABLE','message':'Đã chuyển phiên nhưng bộ chạy Gemini trên máy chưa khởi động được.'}) from None
             if not result.get('ok'):
-                raise HTTPException(409, 'Chưa kiểm chứng được phiên Gemini. Không lưu phiên thay thế hoặc suy đoán hạn mức.')
+                reason = result.get('reason')
+                message = 'Cookie đã chuyển nhưng Gemini không chấp nhận phiên đăng nhập này.' if reason == 'auth' else 'Bộ chạy Gemini không tương thích; chưa thể kiểm tra và lưu tài khoản.' if reason == 'sdk_incompatible' else 'Đã chuyển phiên nhưng bộ chạy chưa xác minh được tài khoản Gemini.'
+                code = 'GEMINI_SESSION_AUTH_REJECTED' if reason == 'auth' else 'GEMINI_SDK_INCOMPATIBLE' if reason == 'sdk_incompatible' else 'GEMINI_SESSION_CHECK_FAILED'
+                raise HTTPException(409, {'code':code,'message':message})
             previous = next((a for a in self.accounts() if a['id'] == aid), {})
             row = {**previous, 'id': aid, 'name': name, 'service': 'gemini_chat', 'enabled': True,
                    'session_verified': True, 'state': 'ready', 'active': previous.get('active', False),
