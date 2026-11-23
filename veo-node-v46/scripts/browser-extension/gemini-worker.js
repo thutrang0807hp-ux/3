@@ -10,7 +10,7 @@ async function geminiTabJob(link,job){
  if(prior?.result)return prior.result;
  // A restarted worker never repeats a prompt whose send may already have occurred.
  if(prior?.started)return {ok:false,accepted:null,code:'GEMINI_BROWSER_FAILED',tab_id:prior.tabId};
- let tabId=link.tabId,created=false,recorded=false;
+ let tabId=link.tabId,created=false,recorded=false,receiveSingleTurn=false;
  const keepAlive=setInterval(()=>chrome.runtime.getPlatformInfo(()=>{}),20000);
  try{
   const paired=await chrome.tabs.get(link.tabId);const url=new URL(paired.url);
@@ -24,10 +24,10 @@ async function geminiTabJob(link,job){
   }
   if(job.request.operation==='receive'){
    const original=(await chrome.storage.local.get('geminiJob:'+job.request.target_job))['geminiJob:'+job.request.target_job];
-   if(!original?.tabId)return {ok:false,accepted:null,code:'GEMINI_BROWSER_FAILED'};tabId=original.tabId;
+   if(!original?.tabId)return {ok:false,accepted:null,code:'GEMINI_BROWSER_FAILED'};tabId=original.tabId;receiveSingleTurn=original.started&&original.operation==='generate'&&original.linkId===link.id;
   }
   await chrome.storage.local.set({[key]:{started:true,tabId,linkId:link.id,operation:job.request.operation}});recorded=true;
-  const [execution]=await chrome.scripting.executeScript({target:{tabId},func:sceneForgeGeminiTab,args:[{...job.request,request_id:job.id}]});let result=execution?.result||{ok:false,accepted:null,code:'GEMINI_BROWSER_FAILED'};
+  const [execution]=await chrome.scripting.executeScript({target:{tabId},func:sceneForgeGeminiTab,args:[{...job.request,request_id:job.id,...(receiveSingleTurn?{owned_single_turn:true}:{})}]});let result=execution?.result||{ok:false,accepted:null,code:'GEMINI_BROWSER_FAILED'};
   if(result.imageUrl){
    try{
     const url=new URL(result.imageUrl);if(url.protocol!=='https:'||!url.hostname.endsWith('.googleusercontent.com'))throw Error();

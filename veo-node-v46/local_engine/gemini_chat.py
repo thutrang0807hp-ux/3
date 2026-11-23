@@ -349,6 +349,9 @@ class GeminiChat(MuseProvider):
             'GEMINI_BROWSER_OUTCOME_UNKNOWN':'Đã gửi qua trình duyệt nhưng chưa nhận kết quả; kiểm tra tab Gemini, không tự gửi lại.',
             'GEMINI_BROWSER_TRANSFER_FAILED':'Gemini đã tạo ảnh; cần nhận lại ảnh từ tab cũ, không tạo mới.',
             'GEMINI_BROWSER_ATTACH_FAILED':'Chưa tải đủ ảnh tham khảo vào Gemini; chưa gửi prompt. Kiểm tra tab của lượt này.',
+            'GEMINI_BROWSER_SEND_CONTROL_MISSING':'Chưa tìm được nút gửi Gemini khả dụng; chưa gửi prompt.',
+            'GEMINI_BROWSER_TEXT_TIMEOUT':'Đã gửi prompt nhưng chưa đọc được văn bản hoàn tất trong tab Gemini; không tự gửi lại.',
+            'GEMINI_BROWSER_IMAGE_TIMEOUT':'Đã gửi prompt nhưng chưa đọc được ảnh trong tab Gemini; giữ tab mở và nhận lại kết quả cũ, không tự gửi lại.',
             'GEMINI_BROWSER_FAILED':'Gemini chưa trả kết quả qua trình duyệt. Xem tab Gemini của lượt này.',
             'CHAT_TURN_UNRESOLVED':'Chat ảnh của dự án còn lượt trước chưa rõ kết quả. Kiểm tra lịch sử trước khi gửi thêm.',
             'SDK_CONTRACT_MISMATCH':'SDK Gemini Chat không tương thích với adapter hiện tại. Cần kiểm tra/cập nhật SDK; chưa gửi lại.',
@@ -514,7 +517,7 @@ class GeminiChat(MuseProvider):
         if not result.get('ok'):
             if result.get('accepted')is False:self.ledger.set_metadata(rid,{'browser_request':False})
             code=result.get('code')
-            if code not in {'GEMINI_BROWSER_TRANSFER_FAILED','GEMINI_BROWSER_OFFLINE','GEMINI_BROWSER_ATTACH_FAILED'}:code='GEMINI_BROWSER_FAILED'
+            if code not in {'GEMINI_BROWSER_TRANSFER_FAILED','GEMINI_BROWSER_OFFLINE','GEMINI_BROWSER_ATTACH_FAILED','GEMINI_BROWSER_SEND_CONTROL_MISSING','GEMINI_BROWSER_TEXT_TIMEOUT','GEMINI_BROWSER_IMAGE_TIMEOUT'}:code='GEMINI_BROWSER_FAILED'
             return {'ok':False,'accepted':result.get('accepted'),'code':code}
         if payload['kind']=='image':
             try:
