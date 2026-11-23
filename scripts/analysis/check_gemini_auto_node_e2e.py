@@ -8,6 +8,7 @@ from playwright.async_api import async_playwright
 from PIL import Image
 import uvicorn
 ROOT=Path(__file__).resolve().parents[2]
+PORT=int(os.environ.get('SCENEFORGE_TEST_PORT','8840'))
 class Vault:
  def __init__(self):self.lock=threading.RLock();self.tables={};self.secrets={}
  def secret(self,k):return self.secrets.get(k)
@@ -34,7 +35,7 @@ async def main():
   app.mount('/',StaticFiles(directory=str(ROOT),html=True))
   buf=io.BytesIO();Image.new('RGB',(360,640),'#325977').save(buf,'PNG');png=buf.getvalue();image=base64.b64encode(png).decode()
   fixture='''<rich-textarea><div contenteditable="true" role="textbox"></div></rich-textarea><input type="file" multiple><button class="send-button" aria-label="Send message">Send</button><script>document.querySelector('input').onchange=e=>{for(const f of e.target.files){const n=document.createElement('div');n.className='file-preview';n.textContent=f.name;document.body.append(n);}};document.querySelector('button').onclick=()=>{window.sends=(window.sends||0)+1;window.refCount=document.querySelector('input').files.length;window.sentText=document.querySelector('[contenteditable]').innerText;const n=document.createElement('model-response');n.innerHTML='<generated-image><img src="data:image/png;base64,IMAGE"></generated-image>';document.body.append(n);};</script>'''.replace('IMAGE',image)
-  server=uvicorn.Server(uvicorn.Config(app,host='127.0.0.1',port=8840,log_level='error'));server_task=asyncio.create_task(server.serve());extension_task=None
+  server=uvicorn.Server(uvicorn.Config(app,host='127.0.0.1',port=PORT,log_level='error'));server_task=asyncio.create_task(server.serve());extension_task=None
   try:
    for _ in range(100):
     if server.started:break
@@ -43,7 +44,7 @@ async def main():
     browser=await pw.chromium.launch(executable_path='/usr/bin/chromium',headless=True,args=['--no-sandbox']);context=await browser.new_context()
     import httpx
     async def extension():
-     async with httpx.AsyncClient(base_url='http://127.0.0.1:8840',headers={'Origin':bridge.origin,'X-SceneForge-Bridge':'1'},timeout=30)as client:
+     async with httpx.AsyncClient(base_url=f'http://127.0.0.1:{PORT}',headers={'Origin':bridge.origin,'X-SceneForge-Bridge':'1'},timeout=30)as client:
       found=(await client.post('/local-api/browser-bridge/gemini-discover',json={'installation_id':'12345678-1234-4234-8234-123456789abc','version':'1.7.1'})).json()
       assert 'code'not in found and 'submission'not in found
       auth={'id':found['relay']['id'],'key':found['relay']['browser_key']}
@@ -70,7 +71,7 @@ async def main():
      await asyncio.sleep(.05)
     assert bridge.gemini_browser.auto_status()['ready']
     assert len(service.accounts())==1 and service.selection()['available']and not service.engine().exists()
-    page=await context.new_page();await page.goto('http://127.0.0.1:8840/workflow.html?demo=1');await page.wait_for_function('window.SFFrameImages&&window.SFMediaNodes')
+    page=await context.new_page();await page.goto(f'http://127.0.0.1:{PORT}/workflow.html?demo=1');await page.wait_for_function('window.SFFrameImages&&window.SFMediaNodes')
     await page.evaluate('''async()=>{storeProject=async()=>{};SFProviderReceipts.persistIntent=async()=>{};const c=document.createElement('canvas');c.width=180;c.height=320;c.getContext('2d').fillRect(0,0,180,320);const source=c.toDataURL();project=blankProject();project.id='auto-e2e';project.source={poster:source};project.scenes=[sceneRecord(0,4,0,[source])];project.refs.product.images=[{image:source,name:'Product'}];const s=project.scenes[0];s.refsUsed=['product'];await SFFrameImages.prepare(s);render();await SFMediaNodes.open('frame',s.id);project.cloudJobs=[{id:'gchat-'+crypto.randomUUID(),kind:'image',provider:'gemini-chat',sceneId:s.id,state:'unknown',error:'LEGACY_NODE_ERROR'}];window.confirm=()=>false;await SFFrameImages.create([s]);if(project.cloudJobs.length!==1||project.cloudJobs[0].state!=='unknown')throw Error('Cancelled migration changed old receipt');window.confirm=()=>true;window.runResult=SFFrameImages.create([s]);runResult.catch(e=>window.runError=e.message);SFFrameImages.create([s]).catch(e=>window.duplicateBlocked=!!e.message);}''')
     for _ in range(140):
      if extension_task.done():await extension_task
@@ -83,7 +84,35 @@ async def main():
     assert Path(service.file(jobs[0]).path).read_bytes()==png and result['result']['download_variant']=='browser-authenticated'
     assert await page.evaluate('project.cloudJobs.at(-1).frameStudioVersion===164&&window.duplicateBlocked&&project.cloudJobs[0].state==="abandoned"&&project.cloudJobs[0].previousState==="unknown"')
     assert await page.locator('#node-frames [data-mn]').count()==0
+    # Exercise real per-scene controls and attachment packing without sending another request.
+    await page.evaluate("""()=>{const other=sceneRecord(4,8,1,[project.source.poster]);other.refsUsed=['product'];project.scenes.push(other);}""")
+    await page.click('[data-studio="ref-mode"][data-role="person"][data-mode="keep"]')
+    await page.click('[data-studio="ref-mode"][data-role="background"][data-mode="custom"]')
+    await page.locator('[data-studio-upload="background"]').set_input_files({'name':'interior.png','mimeType':'image/png','buffer':png})
+    await page.wait_for_function("project.scenes[0].frameReferenceChoices.background.images?.length===1")
+    await page.wait_for_function("!SFFrameImages.isRunning()")
+    await page.evaluate("""async()=>{const [s,other]=project.scenes;const refs=await SFPromptPipeline.generationRefs(s,null,true);if(refs.length!==3)throw Error('Wrong attachment count '+refs.length);if(refsFor(s).includes('person')||!refsFor(s).includes('background'))throw Error('Wrong roles');if(other.frameReferenceChoices)throw Error('Leaked scene override');if(!SFFrameImages.prompt(s).includes('background reference'))throw Error('Prompt missed background');}""")
+    await page.click('[data-studio="tab"][data-tab="prompt"]')
+    await page.wait_for_function("document.querySelector('#studioEnglish').offsetParent!==null")
+    assert await page.locator('#studioEnglish').input_value()
+    await page.click('[data-studio="tab"][data-tab="refs"]')
+    await page.wait_for_function("document.querySelector('#studioResultSize').textContent.includes('360 × 640')")
+    assert '9:16' in await page.locator('#studioResultSize').inner_text()
+    await page.locator('#studioCompare').fill('70')
+    assert '70%' in await page.locator('.sfStudioResult').get_attribute('style')
+    await page.locator('#modalContent').evaluate('(el)=>el.scrollTop=0')
+    await page.screenshot(path='/tmp/frame-studio165-editor.png')
+    await page.click('[data-studio="ref-mode"][data-role="product"][data-mode="keep"]')
+    await page.wait_for_function("!SFFrameImages.isRunning()")
+    assert await page.evaluate("!refsFor(project.scenes[0]).includes('product')&&!productFrameContext(project.scenes[0])?.visible_in_scene")
+    await page.click('[data-studio="ref-mode"][data-role="product"][data-mode="shared"]')
+    await page.wait_for_function("!SFFrameImages.isRunning()")
+    assert await page.evaluate("refsFor(project.scenes[0]).includes('product')&&project.cloudJobs.filter(j=>j.frameStudioVersion===164).length===1")
+    await page.click('[data-studio="reset-refs"]')
+    await page.wait_for_function("!project.scenes[0].frameReferenceChoices&&!SFFrameImages.isRunning()")
+    assert await page.evaluate("!project.scenes[1].frameReferenceChoices&&project.scenes[0].frames.length===1")
     assert await page.locator('#frameStudioEditor').count()==1
+    assert await page.locator('[data-studio-progress] progress').first.get_attribute('value')=='1'
     assert await page.locator('#modal [data-mn]').count()==0
     await page.screenshot(path='/tmp/frame-studio164.png')
     extension_task.cancel();await asyncio.gather(extension_task,return_exceptions=True);await browser.close()

@@ -17,7 +17,7 @@ async function receiveFrameJob(s,job,{requestReceive=false,readOnly=false}={}){
  if(requestReceive&&job.state!=='done')await pipelineRequest('gemini-chat/jobs/'+job.id+'/receive',{});
  const started=Date.now();
  do{
-  const record=await pipelineRequest('gemini-chat/jobs/'+job.id);ensure(s);jobReadRecord(job,record);await storeProject();
+  const record=await pipelineRequest('gemini-chat/jobs/'+job.id);ensure(s);jobReadRecord(job,record);if(state().run?.state==='running')state().run.phase=(record.state==='downloading'?'Đang nhận ảnh':record.state==='done'?'Đang nhập ảnh':record.state==='queued'?'Đang chờ Gemini':'Đang tạo / chờ Gemini')+' · cảnh '+(s.index+1);await storeProject();
   if(record.state==='done'){await studioImport(s,job,record);return {sceneId:s.id,requestId:job.id,received:true};}
   if(readOnly)return {sceneId:s.id,pending:true};
   if(!['prepared','preparing','submitted','queued','running','downloading'].includes(record.state))throw Error(record.message||'Chưa nhận được ảnh. Giữ lượt hiện tại; có thể bấm Nhận ảnh, chưa tạo thêm.');
