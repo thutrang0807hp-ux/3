@@ -2506,6 +2506,7 @@ async function openFlowWebLogin(button,newProfile=false,accountId=null){
  }catch(error){toast(error.message);}finally{if(button)button.disabled=false;}
 }
 async function connectBrowserSession(service='gemini_chat',options={}){
+ if(service==='gemini_chat')return window.SFGeminiAuto.open();
  if(service==='gemini_chat'||service==='flow'&&options.separate===undefined)options={...options,separate:true};
  let setup;try{setup=await engineRequest('browser-bridge/setup');}catch(e){return toast(e.message);}
  const label=service==='flow'?'Flow · Veo':'Gemini Chat';
@@ -3339,7 +3340,7 @@ const storageManagerBindBefore=g5BindSettings;g5BindSettings=function(){storageM
 const smBindTrashBefore=g5BindSettings;g5BindSettings=function(){smBindTrashBefore();if($('#smOpenTrash'))$('#smOpenTrash').onclick=()=>hubOpen('trash');};
 </script><script id="account-web-login-js">// One visible web-login path. Session validation/storage remain provider-owned.
 async function openAccountWebLogin(service,options={}){
- if(service==='gemini_chat')return connectBrowserSession('gemini_chat',{separate:true});
+ if(service==='gemini_chat')return window.SFGeminiAuto.open();
  if(service==='flow')return openFlowWebLogin(null,false,options.account_id||null);
  if(!['gemini_chat','muse','grok','chatgpt','meta'].includes(service))return;
  const existing=options.account_id?accountRows().find(a=>a.id===options.account_id):null;const label=existing?.name||accountName(service);let pending=null,closed=false,saving=false,opening=false,autoTimer=null;
@@ -3378,12 +3379,12 @@ async function geminiRefreshLoginPanel(panel){
  }catch(e){if(panel.isConnected){panel.hidden=false;panel.textContent='Chưa đọc được trạng thái đăng nhập Gemini: '+e.message;}}
 }
 const accountMuseOTP=connectMuseWeb;
-connectGeminiChat=()=>connectBrowserSession('gemini_chat',{separate:true});
+connectGeminiChat=()=>window.SFGeminiAuto.open();
 connectMuseWeb=()=>openAccountWebLogin('muse');
 connectWebImageAccount=source=>openAccountWebLogin(source);
-const accountWebGoogleMarkupBefore=googleConnectionMarkup;googleConnectionMarkup=function(){return accountWebGoogleMarkupBefore().replace('<button data-google-connect="both" class="primary">Kết nối cả hai bằng một lượt</button>','<details><summary>Nâng cao · dùng chung phiên qua tiện ích</summary><button data-google-connect="both">Kết nối bằng mã tiện ích</button></details>').replace('Dùng tài khoản khác cho Flow','Đăng nhập Flow').replace('Kết nối riêng Gemini Chat','Kết nối Gemini bằng mã');};
+const accountWebGoogleMarkupBefore=googleConnectionMarkup;googleConnectionMarkup=function(){return accountWebGoogleMarkupBefore().replace('<button data-google-connect="both" class="primary">Kết nối cả hai bằng một lượt</button>','').replace('Dùng tài khoản khác cho Flow','Đăng nhập Flow').replace('Kết nối riêng Gemini Chat','Gemini tự kết nối');};
 const accountWebGoogleBindBefore=bindGoogleConnectionPanel;bindGoogleConnectionPanel=function(box,beforeOpen=()=>{}){accountWebGoogleBindBefore(box,beforeOpen);box?.querySelectorAll('[data-google-connect]').forEach(b=>{if(b.dataset.googleConnect!=='both')b.onclick=()=>{beforeOpen();return openAccountWebLogin(b.dataset.googleConnect);};});};
-const accountWebPaintBefore=paintAccounts;paintAccounts=function(){accountWebPaintBefore();const ctx=accountDashboard,button=$('#connectAccount');if(!ctx||ctx.demo||!button)return;button.textContent=ctx.service==='gemini_chat'?'Kết nối bằng mã tiện ích':'Đăng nhập trên web';button.onclick=()=>openAccountWebLogin(ctx.service);};
+const accountWebPaintBefore=paintAccounts;paintAccounts=function(){accountWebPaintBefore();const ctx=accountDashboard,button=$('#connectAccount');if(!ctx||ctx.demo||!button)return;button.textContent=ctx.service==='gemini_chat'?'Gemini tự kết nối':'Đăng nhập trên web';button.onclick=()=>openAccountWebLogin(ctx.service);};
 </script><script id="account-compact-js">// Compact account overview and direct row actions; keep existing account APIs.
 
 accountTable=function(rows){if(!rows.length)return '<div class="acctEmpty"><b>'+(accountDashboard.error?'Chưa đọc được danh sách tài khoản':'Chưa có tài khoản '+accountName(activeAccountService))+'</b><small>'+(accountDashboard.error?'Bấm Làm mới để thử lại.':'Bấm Đăng nhập trên web để thêm tài khoản.')+'</small></div>';const demo=accountDashboard.demo,canRun=accountDashboard.status.engines?.[activeAccountService]?.adapter;return '<div class="acctTableScroll acctCompactScroll"><table class="acctTable acctCompactTable"><colgroup><col class="acPriority"><col><col class="acSession"><col class="acCredit"><col class="acEnabled"><col class="acActions"></colgroup><thead><tr>'+['Ưu tiên','Tài khoản','Trạng thái phiên','Credit','Bật','Thao tác'].map(t=>'<th>'+t+'</th>').join('')+'</tr></thead><tbody>'+rows.map((a,i)=>{const st=accountState(a),usable=a.enabled!==false&&['ready','active'].includes(a.state);return '<tr data-account-row="'+esc(a.id)+'" class="'+(st==='active'?'current':'')+'"><td data-label="Ưu tiên"><div class="acctPriority"><span class="acctGrip" draggable="true" tabindex="0" data-account-drag="'+esc(a.id)+'" aria-label="Kéo ưu tiên '+esc(a.name)+'">⠿</span><b>'+(i+1)+'</b><div><button data-account-move="'+esc(a.id)+'" data-direction="-1" '+(!i?'disabled':'')+' aria-label="Đưa '+esc(a.name)+' lên">↑</button><button data-account-move="'+esc(a.id)+'" data-direction="1" '+(i===rows.length-1?'disabled':'')+' aria-label="Đưa '+esc(a.name)+' xuống">↓</button></div></div></td><td class="acName" data-label="Tài khoản"><div class="acctIdentity"><span>'+esc(a.name[0]?.toUpperCase()||'A')+'</span><b title="'+esc(a.name)+'">'+esc(a.name)+'</b></div><details class="acctRowDetails"><summary>Chi tiết</summary><button data-account-fingerprint="'+esc(a.id)+'">Fingerprint · nâng cao</button><p>Profile: '+(a.browser_profile_id?'Đã lưu · '+esc(a.browser_profile_id):a.login_transport==='web_ui'?'Profile Flow đã lưu':'Tạo khi đăng nhập hoặc mở phiên lần tới')+'</p><p>Nhận diện: giữ cùng trình duyệt và khung cửa sổ; không đổi ngẫu nhiên.</p><p class="acFullName">'+esc(a.name)+'</p><p>Thành công '+acctNumber(a.successes)+' · Thất bại '+acctNumber(a.failures)+'</p><p>Dùng gần nhất: '+esc(a.last_used_at?age(a.last_used_at*1000):'Chưa ghi nhận')+'</p><p>'+esc(a.note||a.last_error||'Chưa có ghi chú')+'</p></details></td><td data-label="Phiên"><div class="acctSessionBadges">'+accountChip(st)+accountFingerprintBadge(a.id)+'</div><small>'+esc(accountSession(a))+'</small></td><td data-label="Credit"><div class="acctCredit"><small>'+acctNumber(a.credit)+(Number.isFinite(a.credit)?' credit':' · chưa đọc')+'</small></div></td><td data-label="Bật"><button class="acctSwitch" role="switch" aria-checked="'+(a.enabled!==false)+'" aria-label="Bật tài khoản '+esc(a.name)+'" data-account-enable="'+esc(a.id)+'"><i></i></button></td><td class="acActionCell" data-label="Thao tác"><div class="acctRowActions"><button class="'+(st==='ready'?'primary':'')+'" data-use-account="'+esc(a.id)+'" '+(!usable||st==='active'?'disabled':'')+'>'+(st==='active'?'Đang dùng':'Dùng')+'</button>'+(a.state==='awaiting_login'?'<button data-confirm-login="'+esc(a.id)+'">Lưu phiên</button>':'<button data-check-account="'+esc(a.id)+'" '+(!canRun&&!demo?'disabled':'')+'>Kiểm tra</button>')+'<button data-account-edit="'+esc(a.id)+'" title="Sửa tên và ghi chú" aria-label="Sửa '+esc(a.name)+'">Sửa</button><button data-account-profile="'+esc(a.id)+'" title="Mở lại profile riêng của tài khoản">Mở phiên</button><button class="acctRemoveDirect" data-account-remove-direct="'+esc(a.id)+'" aria-label="Gỡ '+esc(a.name)+'">Gỡ</button></div></td></tr>';}).join('')+'</tbody></table></div>';};
@@ -3644,5 +3645,27 @@ const accountFPSimplePaintBefore=paintAccounts;paintAccounts=function(){accountF
   $('#batchCheckModels').onclick=async()=>{const button=$('#batchCheckModels'),source=engine.value;if(!specific(source))return;button.disabled=true;try{const status=source==='flow'?await engineRequest('flow/models',{}):await batchImageAPI('/models',{});const list=(status.models||[]).filter(n=>typeof n==='string'&&/^[A-Za-z0-9._:-]+$/.test(n)&&(source!=='flow'||/image|imagen|flux|banana/i.test(n)&&!n.startsWith('veo-')));catalog.set(source,list);if(engine.value===source){fill();if(pending&&list.includes(pending))model.value=pending;pending=null;$('#batchProviderHint').textContent='Đã đọc '+list.length+' model. Chọn nguồn và model trong ô Tạo ảnh bằng; chưa gửi tạo ảnh.';paint();}}catch(e){if(engine.value===source)$('#batchProviderHint').textContent=e.message;}finally{button.disabled=false;}};
   paint();
  };
+})();
+</script><script id="gemini-auto-connect">/* Gemini's browser transport is discovered automatically; this panel only shows status/help. */
+(()=>{
+ let signature='',reading=false;
+ const q=s=>document.querySelector(s);
+ async function open(){
+  let setup;try{setup=await engineRequest('browser-bridge/setup');}catch(e){toast(e.message);return;}
+  modal('Gemini Chat · tự kết nối','<section id="geminiAutoConnect"><p>Cài tiện ích SceneForge, mở Chrome/Edge đã đăng nhập Gemini và mở app. Tiện ích tự kết nối; không nhập mã.</p><p id="geminiAutoStatus" role="status">Đang nhận trạng thái tiện ích…</p><p><a href="'+esc(setup.download)+'" download="SceneForge-Browser-Connect.zip">Tải tiện ích Chrome/Edge</a> · <a href="https://gemini.google.com/app" target="_blank" rel="noopener">Đăng nhập Gemini trong trình duyệt</a></p><details><summary>Cài tiện ích lần đầu</summary><p>Giải nén ZIP. Mở chrome://extensions hoặc edge://extensions → Chế độ nhà phát triển → Tải tiện ích đã giải nén. Nếu đã cài, thay file trong thư mục cũ rồi bấm Tải lại ⟳.</p></details><p>Khi tiện ích nhận được app và đọc được ô chat Gemini, tài khoản xuất hiện tại đây. Node, prompt và ảnh tham khảo giữ nguyên.</p></section>','<button id="geminiAutoBack">Về tài khoản</button>');
+  const host=q('#geminiAutoConnect');q('#geminiAutoBack').onclick=()=>accountScreen('gemini_chat');
+  async function poll(){
+   if(!host.isConnected||!q('#shellDialog')?.open)return;
+   try{const data=await engineRequest('gemini-chat/browser-status');if(!host.isConnected)return;q('#geminiAutoStatus').textContent=data.message+(data.extension_version?' · tiện ích '+data.extension_version:'');if(data.ready){await accountScreen('gemini_chat');return;}}
+   catch(e){if(host.isConnected)q('#geminiAutoStatus').textContent=e.message;}
+   setTimeout(poll,1500);
+  }
+  poll();
+ }
+ async function watch(){
+  if(reading||!q('#shellDialog')?.open||!q('#settingsAccounts')||typeof accountDashboard==='undefined'||accountDashboard?.service!=='gemini_chat')return;
+  reading=true;try{const data=await engineRequest('gemini-chat/browser-status'),next=JSON.stringify([data.ready,data.account_ids,data.extension_version]);if(signature!==next){signature=next;if(data.ready)await accountScreen('gemini_chat',false);}}catch{}finally{reading=false;}
+ }
+ setInterval(watch,2000);window.SFGeminiAuto={open};
 })();
 </script></body></html>

@@ -32,6 +32,17 @@ async def main():
    done=(await c.get(prefix+'pairs/'+p['id'])).json();assert done['state']=='done',done
    account=rows[done['account_id']];assert account['transport']=='browser'and account['session_verified']and selected[-1]['account_id']==account['id']
    assert not any('session' in k for k in secret),'cookie session was stored'
+   # Normal Gemini flow now auto-discovers, with no issue/claim/code exchange.
+   account['active']=True
+   ident='12345678-1234-4234-8234-123456789abc'
+   found=(await c.post(prefix+'gemini-discover',json={'installation_id':ident,'version':'1.7.1'},headers=headers)).json()
+   assert found['service']=='sceneforge-gemini-browser'and 'code'not in found and 'submission'not in found
+   auto_auth={'id':found['relay']['id'],'key':found['relay']['browser_key']}
+   auto_packet=(await c.post(prefix+'gemini-poll',json=auto_auth,headers=headers)).json()['job'];assert auto_packet['request']=={'operation':'identity'}
+   await c.post(prefix+'gemini-result',json={**auto_auth,'job_id':auto_packet['id'],'result':{'ok':True}},headers=headers);await asyncio.sleep(.03)
+   state=(await c.get('/local-api/gemini-chat/browser-status')).json();assert state['ready']and state['extension_version']=='1.7.1'
+   again=(await c.post(prefix+'gemini-discover',json={'installation_id':ident,'version':'1.7.1'},headers=headers)).json();assert again['relay']==found['relay']and len(rows)==2
+   assert selected[-1]['account_id']=='gchat-browser-'+found['relay']['id']
    # Existing Flow UI pairing still negotiates protocol 4 with the upgraded extension.
    flow=(await c.post(prefix+'pairs',json={'service':'flow','services':['flow'],'name':'Flow'})).json();flow_claim=(await c.post(prefix+'claim',json={'code':flow['code'],'protocol':5},headers=headers)).json();assert flow_claim['protocol']==4
    for task in b.tasks:task.cancel()

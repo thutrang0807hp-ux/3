@@ -64,11 +64,16 @@ async function geminiLoop(link){
   }
  }finally{geminiLoops.delete(link.id);}
 }
+async function geminiConnectLink(link){
+ const tab=await chrome.tabs.get(link.tabId);const url=new URL(tab.url);if(url.origin!=='https://gemini.google.com')throw Error('tab');
+ link.accountPath=url.pathname.match(/^\/u\/\d+/)?.[0]||'';
+ await geminiWire(link,'poll',{hello:true});const all=(await chrome.storage.local.get('geminiLinks')).geminiLinks||{};all[link.id]=link;await chrome.storage.local.set({geminiLinks:all});geminiLoop(link);return {ok:true};
+}
 chrome.runtime.onMessage.addListener((message,sender,respond)=>{
  if(message?.type!=='pairGemini'||sender.id!==chrome.runtime.id||!sender.url?.startsWith('chrome-extension://'+chrome.runtime.id+'/'))return;
  const link=message.link;let u;try{u=new URL(link.base);}catch{respond({ok:false});return;}
  if(u.protocol!=='http:'||u.hostname!=='127.0.0.1'||!Number.isInteger(link.tabId)){respond({ok:false});return;}
- (async()=>{const tab=await chrome.tabs.get(link.tabId);const url=new URL(tab.url);if(url.origin!=='https://gemini.google.com')throw Error('tab');link.accountPath=url.pathname.match(/^\/u\/\d+/)?.[0]||'';await geminiWire(link,'poll',{hello:true});const all=(await chrome.storage.local.get('geminiLinks')).geminiLinks||{};all[link.id]=link;await chrome.storage.local.set({geminiLinks:all});geminiLoop(link);return {ok:true};})().then(respond,()=>respond({ok:false}));return true;
+ geminiConnectLink(link).then(respond,()=>respond({ok:false}));return true;
 });
 async function resumeGemini(){const all=(await chrome.storage.local.get('geminiLinks')).geminiLinks||{};for(const link of Object.values(all))geminiLoop(link);}
 chrome.alarms.create('gemini-browser-resume',{periodInMinutes:.5});chrome.alarms.onAlarm.addListener(a=>{if(a.name==='gemini-browser-resume')resumeGemini();});resumeGemini();

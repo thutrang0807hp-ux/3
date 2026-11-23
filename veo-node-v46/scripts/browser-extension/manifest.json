@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "SceneForge · Kết nối phiên",
-  "version": "1.7.0",
+  "version": "1.7.1",
   "description": "Gửi prompt, ảnh tham khảo và nhận kết quả Gemini trực tiếp qua trình duyệt; giữ kết nối Flow.",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAnrjgH1MfWIhFfrSWDLy5MBi1BKP57s/6BVMXDxiFhB1wQb/LGcMNVbnGxBx3KLdSnO78JjanJddkZCttSIsd1liTRbclawKYgC2Ldq3IgeCkjGQPOwNuSnxTFp+bOVoVI0nulvsBRO9+DiAvbJoszhagQjiodSC2tIeOKoqFLr7ghudL+B15lmUwPsqQ3rCDYgXb5Y3SdwwIWeC8n3ApP6bTDlg729xuN/owSiFEsCUhCu5+Eq4xaj+JUDdXNFWKNfnlHwo6fPGGFOL4OmpUZOk70DL3y95xT5z0w92uqLU3mzHWGFF6ns35pE0eho9EZz8SOvrS3N5nYkI++z9O1wIDAQAB",
   "permissions": [
@@ -17,7 +17,8 @@
     "https://labs.google/*",
     "https://flow.google.com/*",
     "http://127.0.0.1/*",
-    "https://*.googleusercontent.com/*"
+    "https://*.googleusercontent.com/*",
+    "http://localhost/*"
   ],
   "action": {
     "default_title": "Kết nối SceneForge",
@@ -26,5 +27,17 @@
   "incognito": "not_allowed",
   "background": {
     "service_worker": "worker.js"
-  }
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "http://127.0.0.1/*",
+        "http://localhost/*"
+      ],
+      "js": [
+        "sceneforge-local.js"
+      ],
+      "run_at": "document_start"
+    }
+  ]
 }

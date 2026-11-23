@@ -107,3 +107,6 @@ uiReportButton.addEventListener('click',async()=>{
  uiReportText.value=JSON.stringify(report,null,2);copyUiReport.hidden=false;uiReportButton.disabled=false;
 });
 copyUiReport.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(uiReportText.value);copyUiReport.textContent='Đã chép';}catch{uiReportText.focus();uiReportText.select();}});
+
+// Gemini connects on its own; code form above remains only for Flow compatibility.
+if(document.querySelector('#geminiAutoPopup')){const refresh=()=>chrome.runtime.sendMessage({type:'sceneforge-auto-now'}).then(r=>{document.querySelector('#geminiAutoPopup').textContent=r?.message||'Đang tìm SceneForge…';},()=>{document.querySelector('#geminiAutoPopup').textContent='Tải lại tiện ích SceneForge rồi mở app.';});document.querySelector('#geminiAutoOpen').onclick=()=>chrome.tabs.create({url:'https://gemini.google.com/app',active:true});refresh();setInterval(refresh,2000);}
