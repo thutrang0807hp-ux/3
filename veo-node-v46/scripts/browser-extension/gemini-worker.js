@@ -27,7 +27,13 @@ async function geminiTabJob(link,job){
    if(!original?.tabId)return {ok:false,accepted:null,code:'GEMINI_BROWSER_FAILED'};tabId=original.tabId;receiveSingleTurn=original.started&&original.operation==='generate'&&original.linkId===link.id;
   }
   await chrome.storage.local.set({[key]:{started:true,tabId,linkId:link.id,operation:job.request.operation}});recorded=true;
-  const [execution]=await chrome.scripting.executeScript({target:{tabId},func:sceneForgeGeminiTab,args:[{...job.request,request_id:job.id,...(receiveSingleTurn?{owned_single_turn:true}:{})}]});let result=execution?.result||{ok:false,accepted:null,code:'GEMINI_BROWSER_FAILED'};
+  let execution;
+  const request={...job.request,request_id:job.id,...(receiveSingleTurn?{owned_single_turn:true}:{})};
+  if(job.request.engine==='frame-studio'){
+   await chrome.scripting.executeScript({target:{tabId},files:['studio-gemini-original.js','frame-studio-tab.js']});
+   [execution]=await chrome.scripting.executeScript({target:{tabId},func:r=>window.SFStudioBridge.run(r),args:[request]});
+  }else [execution]=await chrome.scripting.executeScript({target:{tabId},func:sceneForgeGeminiTab,args:[request]});
+  let result=execution?.result||{ok:false,accepted:null,code:'GEMINI_BROWSER_FAILED'};
   if(result.imageUrl){
    try{
     const url=new URL(result.imageUrl);if(url.protocol!=='https:'||!url.hostname.endsWith('.googleusercontent.com'))throw Error();

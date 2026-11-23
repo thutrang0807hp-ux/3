@@ -33,7 +33,7 @@ async def main():
   async def guard(request,call_next):return await bridge.extension_request(request,call_next)if request.url.path in EXCHANGE else await call_next(request)
   app.mount('/',StaticFiles(directory=str(ROOT),html=True))
   buf=io.BytesIO();Image.new('RGB',(360,640),'#325977').save(buf,'PNG');png=buf.getvalue();image=base64.b64encode(png).decode()
-  fixture='''<rich-textarea><div contenteditable="true" role="textbox"></div></rich-textarea><input type="file" multiple><button class="send-button" aria-label="Send message">Send</button><script>document.querySelector('input').onchange=e=>{for(const f of e.target.files){const n=document.createElement('div');n.className='file-preview';n.textContent=f.name;document.body.append(n);}};document.querySelector('button').onclick=()=>{window.sends=(window.sends||0)+1;window.refCount=document.querySelector('input').files.length;const n=document.createElement('model-response');n.innerHTML='<generated-image><img src="data:image/png;base64,IMAGE"></generated-image>';document.body.append(n);};</script>'''.replace('IMAGE',image)
+  fixture='''<rich-textarea><div contenteditable="true" role="textbox"></div></rich-textarea><input type="file" multiple><button class="send-button" aria-label="Send message">Send</button><script>document.querySelector('input').onchange=e=>{for(const f of e.target.files){const n=document.createElement('div');n.className='file-preview';n.textContent=f.name;document.body.append(n);}};document.querySelector('button').onclick=()=>{window.sends=(window.sends||0)+1;window.refCount=document.querySelector('input').files.length;window.sentText=document.querySelector('[contenteditable]').innerText;const n=document.createElement('model-response');n.innerHTML='<generated-image><img src="data:image/png;base64,IMAGE"></generated-image>';document.body.append(n);};</script>'''.replace('IMAGE',image)
   server=uvicorn.Server(uvicorn.Config(app,host='127.0.0.1',port=8840,log_level='error'));server_task=asyncio.create_task(server.serve());extension_task=None
   try:
    for _ in range(100):
@@ -51,8 +51,14 @@ async def main():
        packet=(await client.post('/local-api/browser-bridge/gemini-poll',json=auth)).json()
        if not packet.get('job'):continue
        job=packet['job'];tab=await context.new_page();await tab.set_content(fixture);await tab.add_script_tag(path=str(ROOT/'veo-node-v46/scripts/browser-extension/gemini-tab.js'))
-       result=await tab.evaluate('(r)=>sceneForgeGeminiTab(r)',{**job['request'],'request_id':job['id']})
+       if job['request'].get('engine')=='frame-studio':
+        await tab.add_script_tag(path=str(ROOT/'veo-node-v46/scripts/browser-extension/studio-gemini-original.js'));await tab.add_script_tag(path=str(ROOT/'veo-node-v46/scripts/browser-extension/frame-studio-tab.js'))
+        result=await tab.evaluate('(r)=>SFStudioBridge.run(r)',{**job['request'],'request_id':job['id']})
+       else:result=await tab.evaluate('(r)=>sceneForgeGeminiTab(r)',{**job['request'],'request_id':job['id']})
        if job['request']['operation']=='generate':
+        assert job['request'].get('engine')=='frame-studio'
+        assert job['request']['prompt']==await page.evaluate('SFFrameImages.prompt(project.scenes[0])')
+        assert ' '.join(job['request']['prompt'].split())in ' '.join((await tab.evaluate('sentText')).split())
         assert await tab.evaluate('sends')==1
         assert await tab.evaluate('refCount')==2
        reply=await client.post('/local-api/browser-bridge/gemini-result',json={**auth,'job_id':job['id'],'result':result});assert reply.status_code==200,reply.text
@@ -65,13 +71,21 @@ async def main():
     assert bridge.gemini_browser.auto_status()['ready']
     assert len(service.accounts())==1 and service.selection()['available']and not service.engine().exists()
     page=await context.new_page();await page.goto('http://127.0.0.1:8840/workflow.html?demo=1');await page.wait_for_function('window.SFFrameImages&&window.SFMediaNodes')
-    await page.evaluate('''async()=>{storeProject=async()=>{};SFProviderReceipts.persistIntent=async()=>{};const c=document.createElement('canvas');c.width=180;c.height=320;c.getContext('2d').fillRect(0,0,180,320);const source=c.toDataURL();project=blankProject();project.id='auto-e2e';project.source={poster:source};project.scenes=[sceneRecord(0,4,0,[source])];project.refs.product.images=[{image:source,name:'Product'}];const s=project.scenes[0];s.refsUsed=['product'];await SFFrameImages.prepare(s);render();SFMediaNodes.open('frame',s.id);window.runResult=SFFrameImages.create([s]);runResult.catch(e=>window.runError=e.message);}''')
-    await page.wait_for_function('project.scenes[0].frames.length===1||window.runError',timeout=35000)
+    await page.evaluate('''async()=>{storeProject=async()=>{};SFProviderReceipts.persistIntent=async()=>{};const c=document.createElement('canvas');c.width=180;c.height=320;c.getContext('2d').fillRect(0,0,180,320);const source=c.toDataURL();project=blankProject();project.id='auto-e2e';project.source={poster:source};project.scenes=[sceneRecord(0,4,0,[source])];project.refs.product.images=[{image:source,name:'Product'}];const s=project.scenes[0];s.refsUsed=['product'];await SFFrameImages.prepare(s);render();await SFMediaNodes.open('frame',s.id);project.cloudJobs=[{id:'gchat-'+crypto.randomUUID(),kind:'image',provider:'gemini-chat',sceneId:s.id,state:'unknown',error:'LEGACY_NODE_ERROR'}];window.confirm=()=>false;await SFFrameImages.create([s]);if(project.cloudJobs.length!==1||project.cloudJobs[0].state!=='unknown')throw Error('Cancelled migration changed old receipt');window.confirm=()=>true;window.runResult=SFFrameImages.create([s]);runResult.catch(e=>window.runError=e.message);SFFrameImages.create([s]).catch(e=>window.duplicateBlocked=!!e.message);}''')
+    for _ in range(140):
+     if extension_task.done():await extension_task
+     if await page.evaluate('project.scenes[0].frames.length===1||window.runError'):break
+     await asyncio.sleep(.25)
     assert not await page.evaluate('window.runError'),await page.evaluate('window.runError')
     if extension_task.done():await extension_task
-    assert await page.evaluate('project.cloudJobs.filter(j=>j.kind==="image").length===1&&!project.scenes[0].approvedFrame')
-    jobs=await page.evaluate('project.cloudJobs.filter(j=>j.kind==="image").map(j=>j.id)');result=service.lookup(jobs[0]);assert result['state']=='done'and result['result']['scene_id']==await page.evaluate('project.scenes[0].id')
+    assert await page.evaluate('project.cloudJobs.filter(j=>j.frameStudioVersion===164).length===1&&!project.scenes[0].approvedFrame')
+    jobs=await page.evaluate('project.cloudJobs.filter(j=>j.frameStudioVersion===164).map(j=>j.id)');result=service.lookup(jobs[0]);assert result['state']=='done'and result['result']['scene_id']==await page.evaluate('project.scenes[0].id')
     assert Path(service.file(jobs[0]).path).read_bytes()==png and result['result']['download_variant']=='browser-authenticated'
+    assert await page.evaluate('project.cloudJobs.at(-1).frameStudioVersion===164&&window.duplicateBlocked&&project.cloudJobs[0].state==="abandoned"&&project.cloudJobs[0].previousState==="unknown"')
+    assert await page.locator('#node-frames [data-mn]').count()==0
+    assert await page.locator('#frameStudioEditor').count()==1
+    assert await page.locator('#modal [data-mn]').count()==0
+    await page.screenshot(path='/tmp/frame-studio164.png')
     extension_task.cancel();await asyncio.gather(extension_task,return_exceptions=True);await browser.close()
     print('PASS E2E: no-code discovery -> production account/pool -> existing frame node -> production submit/ledger -> two refs in actual injected DOM -> PNG committed/imported to same scene; no SDK installed or automatic approval. Extension/network and Gemini site are fixtures; installed extension blocked by environment policy.')
   finally:

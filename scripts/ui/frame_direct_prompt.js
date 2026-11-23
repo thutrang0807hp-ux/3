@@ -3,7 +3,7 @@ async function prepareFrameDirect(s){
  ensure(s);currentActivity={sceneId:s.id,stage:'frame-preparing',startedAt:Date.now()};SFFrameRefs.validate(s);
  if(current(s,'image'))return;
  const slot=key(s,'image'),previous=record(s,'image'),input=snapshot(s,'image');
- const pending=(project.cloudJobs||[]).find(j=>j.sceneId===s.id&&j.kind==='image'&&!['imported','failed','not_submitted','abandoned','stale','invalid'].includes(j.state));
+ const pending=(project.cloudJobs||[]).find(j=>j.frameStudioVersion===164&&j.sceneId===s.id&&j.kind==='image'&&!['imported','failed','not_submitted','abandoned','stale','invalid'].includes(j.state));
  if(pending)throw Error('Lượt ảnh cũ chưa rõ kết quả. Kiểm tra lượt hiện tại trước; chưa gửi ảnh mới.');
  if(owners(s,'image')&&previous?.manualInput&&previous.manualInput!==input){manualDecision(s,'image',null,input);throw Error('Giữ bản sửa tay; rà tham khảo mới trước khi tạo ảnh.');}
  const context=productFrameContext(s);

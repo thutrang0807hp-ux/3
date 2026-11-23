@@ -281,6 +281,7 @@ class GeminiChat(MuseProvider):
     @guarded_submission
     async def submit(self, body: dict):
         selection = self.selection()
+        if body.get('image_engine')=='studio-v1' and (not selection.get('permitted')or any(self.account(a).get('transport')!='browser'for a in selection['permitted'])):raise HTTPException(409,'Node ảnh khung mới cần kết nối Gemini qua trình duyệt đang được chọn; đợi tiện ích tự kết nối.')
         if not selection.get('permitted') or any(self.account(a).get('transport')!='browser' for a in selection['permitted']):self.require_sdk()
         if body.get('confirm_send') is not True or body.get('selection_token') != selection['token']:
             raise HTTPException(409, 'Rà lại tài khoản và xác nhận gửi Gemini Chat.')
@@ -319,6 +320,7 @@ class GeminiChat(MuseProvider):
         payload = {'prompt': prompt, 'references': refs, 'kind': body['kind'], 'role': role, 'model': model,
                    'plan': selection['permitted'], 'mode': selection['mode'], 'selection_token': selection['token'],
                    'room_id': str(body.get('room_id', ''))[:100], 'scene_id': str(body.get('scene_id', ''))[:100]}
+        if body.get('image_engine')=='studio-v1' and body['kind']=='image':payload['image_engine']='studio-v1'
         scope = body.get('conversation_scope')
         if scope is not None:
             if body['kind'] != 'image' or not isinstance(scope, str) or not re.fullmatch(r'[a-f0-9-]{36}', scope):
@@ -507,9 +509,9 @@ class GeminiChat(MuseProvider):
             old=self.browser.read(rid)
             if payload.get('browser_receive') and (old is None or not old.get('ok')):
                 receive_id='receive-'+uuid.uuid4().hex
-                result=await self.browser.request(route,receive_id,{'operation':'receive','target_job':rid,'kind':payload['kind']},240)
+                result=await self.browser.request(route,receive_id,{'operation':'receive','target_job':rid,'kind':payload['kind'],**({'engine':'frame-studio'}if payload.get('image_engine')=='studio-v1'else{})},240)
             else:
-                result=await self.browser.request(route,rid,{'operation':'generate','prompt':payload.get('prompt',''),'kind':payload['kind'],'references':payload.get('references',[])},240)
+                result=await self.browser.request(route,rid,{'operation':'generate','prompt':payload.get('prompt',''),'kind':payload['kind'],'references':payload.get('references',[]),**({'engine':'frame-studio'}if payload.get('image_engine')=='studio-v1'else{})},240)
         except HTTPException as exc:
             detail=exc.detail if isinstance(exc.detail,dict)else {}
             if detail.get('sent')is False:self.ledger.set_metadata(rid,{'browser_request':False})
