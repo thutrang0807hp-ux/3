@@ -20,7 +20,8 @@ from fastapi.responses import FileResponse, JSONResponse
 from .flow_connection import error as flow_error, public_error as flow_public_error, diagnostics as flow_diagnostics
 
 from .flow_browser_relay import BrowserRelay, PATHS as NATIVE_PATHS
-EXCHANGE = {'/local-api/browser-bridge/claim', '/local-api/browser-bridge/complete'} | NATIVE_PATHS
+from .gemini_browser import GeminiBrowser, PATHS as GEMINI_PATHS
+EXCHANGE = {'/local-api/browser-bridge/claim', '/local-api/browser-bridge/complete'} | NATIVE_PATHS | GEMINI_PATHS
 
 
 class BrowserBridge:
@@ -31,6 +32,7 @@ class BrowserBridge:
         digest = hashlib.sha256(base64.b64decode(manifest['key'])).hexdigest()[:32]
         self.extension_id = ''.join(chr(ord('a')+int(c,16)) for c in digest)
         self.origin = 'chrome-extension://'+self.extension_id
+        self.gemini_browser=GeminiBrowser(app,gemini);gemini.browser=self.gemini_browser
         self.relay=BrowserRelay(app,gemini.vault)
         flow.native_relay=self.relay
         self.pairs = {}
@@ -62,7 +64,7 @@ class BrowserBridge:
         body = bytearray()
         async for part in request.stream():
             body.extend(part)
-            if len(body)>(21*1024**2 if request.url.path in NATIVE_PATHS else 128*1024):
+            if len(body)>(35*1024**2 if request.url.path in NATIVE_PATHS | GEMINI_PATHS else 128*1024):
                 return JSONResponse({'detail':'Phiên quá lớn; chưa nhận.'},413,headers=headers)
         request._body = bytes(body)
         # BaseHTTPMiddleware forwards the cached body via Request.wrapped_receive.
@@ -176,6 +178,7 @@ class BrowserBridge:
             p.update(state='partial' if any(r.get('state')=='done' for r in results.values()) else 'failed',message='Đã xử lý phiên nhưng chưa lưu đủ liên kết. Xem từng dịch vụ trong Tài khoản; không tự gửi lại.')
 
     async def close(self):
+        await self.gemini_browser.close()
         await self.relay.close()
         for task in list(self.tasks):task.cancel()
         if self.tasks:await asyncio.gather(*self.tasks,return_exceptions=True)
@@ -207,7 +210,7 @@ class BrowserBridge:
             services = body.get('services', [service])
             if not isinstance(services,list) or not services or len(services)>2 or len(set(str(v) for v in services))!=len(services) or any(v not in ('gemini_chat','flow') for v in services) or service not in services:
                 raise HTTPException(400,'Chọn Gemini Chat, Flow hoặc cả hai dịch vụ.')
-            if 'gemini_chat' in services:self.gemini.require_sdk()
+            # Gemini protocol 5 uses the authenticated browser, without SDK/cookie export.
             self.prune()
             if sum(p['state'] in {'issued','claimed','checking'} and p['expires_at']>time.time() for p in self.pairs.values())>=8:
                 raise HTTPException(409,'Có nhiều mã đang chờ. Đóng các kết nối cũ hoặc chờ mã hết hạn.')
@@ -230,6 +233,7 @@ class BrowserBridge:
             p=self.pairs.get(id)
             if p and p['state'] in {'issued','claimed'}:
                 p.update(state='cancelled',message='Đã hủy mã.');p['code']=''
+                if p.get('gemini_route'):self.gemini_browser.revoke(p['gemini_route']['id'])
                 if p.get('native_route'):self.relay.revoke(p['native_route']['id'])
             return {'ok':True}
 
@@ -238,12 +242,15 @@ class BrowserBridge:
             p=self.find_code(body.get('code'))
             if p['state']!='issued':raise HTTPException(409,'Mã đã dùng. Kiểm tra trạng thái trong app trước khi tạo mã khác.')
             p.update(state='claimed',submission=secrets.token_urlsafe(32))
+            if p['services']==['gemini_chat'] and body.get('protocol')==5:
+                p['gemini_route']=self.gemini_browser.issue()
+                return {'service':'gemini_chat','services':['gemini_chat'],'protocol':5,'name':p['name'],'submission':p['submission'],'relay':p['gemini_route']}
             relay=None
-            if 'flow' in p['services'] and body.get('protocol') in (3,4):
+            if 'flow' in p['services'] and body.get('protocol') in (3,4,5):
                 port=request.url.port or 8840
                 relay,route=self.relay.issue('http://127.0.0.1:'+str(port)+'/local-api/browser-bridge/flow-execute',self.origin)
                 p['native_route']=route
-                p['ui_protocol']=body.get('protocol')==4 and p['services']==['flow']
+                p['ui_protocol']=body.get('protocol') in (4,5) and p['services']==['flow']
             return {'service':p['service'],'services':p['services'],'protocol':4 if p.get('ui_protocol') else 3 if relay else 2,'name':p['name'],'submission':p['submission'],**({'relay':relay}if relay else {})}
 
         @app.post('/local-api/browser-bridge/complete')
@@ -251,6 +258,20 @@ class BrowserBridge:
             p=self.find_code(body.get('code'))
             if p['state']!='claimed' or not isinstance(body.get('submission'),str) or not secrets.compare_digest(body['submission'],p['submission']):
                 raise HTTPException(409,'Mã không còn quyền nhận phiên. Kiểm tra trạng thái trong app.')
+            if p.get('gemini_route'):
+                if body.get('protocol')!=5:raise HTTPException(409,'Cần tiện ích Gemini browser mới.')
+                route=p['gemini_route'];p.update(state='checking',message='Đang kiểm tra tab Gemini đã đăng nhập; không chuyển cookie.')
+                async def register():
+                    try:
+                        result=await self.gemini_browser.request(route['id'],'identity-'+secrets.token_hex(16),{'operation':'identity'},45)
+                        if not result.get('ok'):raise ValueError('not signed in')
+                        aid='gchat-browser-'+route['id'];row={'id':aid,'service':'gemini_chat','name':p['name'],'enabled':True,'active':False,'state':'ready','session_verified':True,'transport':'browser','browser_route':route['id'],'models':[],'priority':len(self.gemini.accounts()),'checked_at':time.time()}
+                        self.gemini.vault.put('accounts',row);self.gemini_browser.routes[route['id']]['bound']=True;self.gemini_browser.save();self.gemini.pool.select({'mode':'selected','account_id':aid})
+                        p.pop('submission',None);p['code']='';p.update(state='done',account_id=aid,message='Đã nối tab Gemini. Gửi prompt và nhận ảnh qua trình duyệt; không dùng SDK/cookie.')
+                    except Exception:
+                        self.gemini_browser.revoke(route['id']);p.update(state='failed',message='Chưa đọc được ô chat Gemini đã đăng nhập. Giữ tab Gemini mở và kiểm tra tiện ích.',results={'gemini_chat':{'state':'failed','code':'GEMINI_BROWSER_PAIR_FAILED','message':'Chưa nối được tab Gemini.'}})
+                task=asyncio.create_task(register());self.tasks.add(task);task.add_done_callback(self.tasks.discard)
+                return {'accepted':True,'state':'checking','message':p['message']}
             if p.get('ui_protocol'):
                 if body.get('protocol')!=4:raise HTTPException(409,'Cập nhật tiện ích kết nối giao diện Flow.')
                 route=p['native_route'];self.relay.activate(route['id'])

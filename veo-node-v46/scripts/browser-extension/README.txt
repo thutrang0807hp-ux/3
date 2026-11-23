@@ -1,3 +1,13 @@
+GEMINI BROWSER · SceneForge 1.7.0
+
+Cài bản app .161 trở lên. Trong Chrome/Edge mở Gemini đã đăng nhập, giữ tab này mở. Trong SceneForge: Cài đặt → Tài khoản → Gemini Chat → Kết nối bằng mã tiện ích → Tạo mã. Chọn tab Gemini, bấm tiện ích, nhập mã và đúng cổng app rồi Kết nối. App sẽ chọn kết nối trình duyệt mới.
+
+Prompt, ảnh nguồn và ảnh tham khảo do node SceneForge chuẩn bị. Tiện ích chỉ gửi trên tab Gemini và lấy kết quả về. Không chuyển cookie Gemini hoặc dùng Python SDK cho kết nối mới. Mỗi lượt mở tab riêng để không nhầm kết quả giữa các cảnh. Nếu chưa nhận được ảnh, giữ tab lỗi để nhận lại; không tự gửi tạo thêm. Không đổi nick trong tab đã kết nối; đổi nick thì kết nối lại rõ ràng.
+
+Quyền googleusercontent dùng tải ảnh; unlimitedStorage chỉ giữ tạm kết quả đang chuyển nếu kết nối app bị ngắt. Sau khi app nhận xong, tiện ích bỏ dữ liệu ảnh tạm. Ảnh nguồn nhỏ vẫn chỉ có độ phân giải nguồn. Cơ chế tham khảo từ test-gemoni-chat 0.2.2 của cùng chủ repo; không thay node hoặc luồng prompt SceneForge.
+
+Hướng dẫn Flow cũ (giữ tương thích):
+
 SceneForge — Kết nối phiên trình duyệt
 
 Cài một lần trên Chrome hoặc Edge đang đăng nhập tài khoản của bạn:

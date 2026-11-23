@@ -17,6 +17,8 @@ try:
   assert not page.locator('#frameInspectorAdvanced').get_attribute('open')
   assert not page.locator('#modal [data-mn=prepare-image-prompt]').is_visible()
   assert page.locator('#modal [data-mn=receive-scene-image]').count()==0
+  assert page.locator('#frameInspectorAdvanced [data-mn=retry-scene-image]').count()==1
+  assert not page.locator('#frameInspectorAdvanced [data-mn=retry-scene-image]').is_visible()
   assert page.locator('#modal [data-mn=pause-frames]').count()==0
   assert page.locator('#modal').text_content().count('TRANSFER_FIXTURE_403')==1
   page.screenshot(path='/tmp/frame154-compact-error.png')

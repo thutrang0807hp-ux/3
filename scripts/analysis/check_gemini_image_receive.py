@@ -21,7 +21,7 @@ async def main():
   def fresh():
    a=Adapter();a.root=Path(d);a.tasks={};a.phases={};a.conversation_locks={};a.states=states;a.require_sdk=lambda:None
    a.lock=lambda key:a.conversation_locks.setdefault(key,asyncio.Lock())
-   a.image_slots=SimpleNamespace(slot=slot,limit=lambda:1);a.pool=SimpleNamespace(eligible=lambda row:True);a.accounts=lambda:[{'id':'account'}]
+   a.image_slots=SimpleNamespace(slot=slot,limit=lambda:1);a.pool=SimpleNamespace(eligible=lambda row:True);a.accounts=lambda:[{'id':'account'}];a.account=lambda aid:{'id':aid}
    a.vault=SimpleNamespace(secret=lambda key:secrets.get(key),set_secret=lambda key,v:secrets.__setitem__(key,v),put=lambda *args:None)
    a.ledger=SimpleNamespace(storage=None,metadata=lambda rid:metadata.get(rid,{}),set_metadata=lambda rid,v:metadata.setdefault(rid,{}).update(v),finish=lambda rid,state,result:states.__setitem__(rid,(state,result)))
    async def runner(body):

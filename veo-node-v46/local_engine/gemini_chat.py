@@ -80,7 +80,7 @@ class GeminiChat(MuseProvider):
 
     def status(self):
         selection = self.selection()
-        return {'installed': self.engine().is_file(), 'configured': selection['available'], 'adapter': True,
+        return {'installed': self.engine().is_file() or any(a.get('transport')=='browser' for a in self.accounts()), 'configured': selection['available'], 'adapter': True,
                 'selection': selection, 'accounts': self.accounts(), 'per_account': 1, 'max_concurrency': 3, **self.image_slots.status(),
                 'generation_verified': bool(self.vault.secret('gemini-chat-generation')), 'automatic_retry': False,
                 'web_login': self.web_login_status(), 'roles': self.vault.secret('gemini-chat-roles') or {}, 'service_url': 'https://gemini.google.com/'}
@@ -251,8 +251,11 @@ class GeminiChat(MuseProvider):
                 'message': 'Phiên Gemini đã kiểm tra; chưa chứng nhận tạo nội dung hoặc hạn mức.'}
 
     async def check(self, aid):
-        self.require_sdk()
         row = self.account(aid)
+        if row.get('transport')=='browser':
+            if not self.browser.available(row['browser_route']):raise HTTPException(409,'Tiện ích Gemini chưa online. Mở trình duyệt đã kết nối.')
+            return {'account':row}
+        self.require_sdk()
         async with self.image_slots.exclusive(aid), self.lock(aid):
             result = await self.runner({'operation': 'check', 'session': self.vault.secret('gemini-chat-session:' + aid) or {}})
             if not result.get('ok'):
@@ -277,8 +280,8 @@ class GeminiChat(MuseProvider):
 
     @guarded_submission
     async def submit(self, body: dict):
-        self.require_sdk()
         selection = self.selection()
+        if not selection.get('permitted') or any(self.account(a).get('transport')!='browser' for a in selection['permitted']):self.require_sdk()
         if body.get('confirm_send') is not True or body.get('selection_token') != selection['token']:
             raise HTTPException(409, 'Rà lại tài khoản và xác nhận gửi Gemini Chat.')
         rid, prompt, refs = body.get('request_id'), body.get('prompt'), body.get('references', [])
@@ -342,6 +345,11 @@ class GeminiChat(MuseProvider):
         record = super().lookup(rid)
         code=self.ledger.metadata(rid).get('last_error_code')
         messages={
+            'GEMINI_BROWSER_OFFLINE':'Tiện ích Gemini chưa online; chưa gửi prompt. Mở trình duyệt đã kết nối.',
+            'GEMINI_BROWSER_OUTCOME_UNKNOWN':'Đã gửi qua trình duyệt nhưng chưa nhận kết quả; kiểm tra tab Gemini, không tự gửi lại.',
+            'GEMINI_BROWSER_TRANSFER_FAILED':'Gemini đã tạo ảnh; cần nhận lại ảnh từ tab cũ, không tạo mới.',
+            'GEMINI_BROWSER_ATTACH_FAILED':'Chưa tải đủ ảnh tham khảo vào Gemini; chưa gửi prompt. Kiểm tra tab của lượt này.',
+            'GEMINI_BROWSER_FAILED':'Gemini chưa trả kết quả qua trình duyệt. Xem tab Gemini của lượt này.',
             'CHAT_TURN_UNRESOLVED':'Chat ảnh của dự án còn lượt trước chưa rõ kết quả. Kiểm tra lịch sử trước khi gửi thêm.',
             'SDK_CONTRACT_MISMATCH':'SDK Gemini Chat không tương thích với adapter hiện tại. Cần kiểm tra/cập nhật SDK; chưa gửi lại.',
             'auth':'Phiên đăng nhập Gemini không còn hợp lệ. Kiểm tra kết nối tài khoản Gemini Chat trong Cài đặt.',
@@ -373,7 +381,9 @@ class GeminiChat(MuseProvider):
         elif record.get('state')=='failed':
             record.update(code='GEMINI_JOB_FAILED',message='Lượt Gemini thất bại; bản ghi cũ chưa lưu nguyên nhân chi tiết. Kiểm tra lịch sử tài khoản trước khi bỏ lượt hoặc gửi lại.')
         metadata = self.ledger.metadata(rid)
-        if metadata.get('last_error_code') == 'GEMINI_IMAGE_DOWNLOAD_ERROR' or metadata.get('image_result_available'):
+        if metadata.get('browser_request'):
+            record['transport']='browser'
+        if (metadata.get('browser_request') and record.get('state') in ('unknown','failed')) or metadata.get('last_error_code') == 'GEMINI_IMAGE_DOWNLOAD_ERROR' or metadata.get('image_result_available'):
             record['can_receive_image'] = record.get('state') != 'done'
         if metadata.get('receive_active') and rid in self.tasks and record.get('state') != 'done':
             record.update(state='downloading', phase='receiving_existing_image')
@@ -401,12 +411,12 @@ class GeminiChat(MuseProvider):
         try:
             plan = payload['plan'] if payload['mode'] == 'failover' else [aid]
             for aid in plan:
-                async with (self.image_slots.slot(aid) if payload['kind']=='image' else self.image_slots.exclusive(aid)), (nullcontext() if payload['kind']=='image' else self.lock(aid)), (nullcontext() if payload['kind']=='image' else self.lane):
+                async with (self.image_slots.slot(aid) if payload['kind']=='image' else self.image_slots.exclusive(aid)), (self.lock(aid) if self.account(aid).get('transport')=='browser' or payload['kind']!='image' else nullcontext()), (nullcontext() if payload['kind']=='image' else self.lane):
                     row = next((a for a in self.accounts() if a['id'] == aid), None)
                     if not row or not self.pool.eligible(row):
                         continue
                     chat_key = (conversation_key(self.conversation_room(payload), aid)
-                                if payload['kind'] == 'image' and payload['room_id'] else None)
+                                if payload['kind'] == 'image' and payload['room_id'] and row.get('transport')!='browser' else None)
                     cursor = self.vault.secret(chat_key) or {} if chat_key else {}
                     if cursor.get('state') in ('in_flight', 'unknown'):
                         self.ledger.set_metadata(rid, {'last_error_code': 'CHAT_TURN_UNRESOLVED'})
@@ -415,10 +425,10 @@ class GeminiChat(MuseProvider):
                         self.vault.set_secret(chat_key, {**cursor, 'state': 'in_flight', 'request_id': rid})
                     dispatched = True
                     session = self.vault.secret('gemini-chat-session:' + aid) or {}
-                    response = await self.runner({'operation': 'generate', 'session': session,
+                    response = await (self.browser_generate(rid,aid,payload,output) if row.get('transport')=='browser' else self.runner({'operation': 'generate', 'session': session,
                         'prompt': payload['prompt'], 'kind': payload['kind'], 'references': payload['references'],
                         'model': payload['model'], 'output': str(output),
-                        **({'conversation': {'metadata': cursor.get('metadata')}} if chat_key else {})})
+                        **({'conversation': {'metadata': cursor.get('metadata')}} if chat_key else {})}))
                     if chat_key:
                         incoming = (response.get('conversation') or {}).get('metadata')
                         if valid_metadata(incoming):
@@ -446,7 +456,7 @@ class GeminiChat(MuseProvider):
                     if response.get('session') and self.image_slots.limit()==1 and self.vault.secret('gemini-chat-session:' + aid)==session:
                         self.vault.set_secret('gemini-chat-session:' + aid, response['session'])
                     result = {'account_id': aid, 'room_id': payload['room_id'], 'scene_id': payload['scene_id'],
-                              'origin': 'gemini-chat', 'kind': payload['kind'], 'cost': None, 'model': payload['model'] or 'account-default'}
+                              'origin': 'gemini-chat', 'kind': payload['kind'], 'cost': None, 'model': 'browser-session' if row.get('transport')=='browser' else payload['model'] or 'account-default'}
                     if payload['kind'] == 'image':
                         if not output.is_file() or not 0 < output.stat().st_size <= 24 * 1024**2:
                             raise ValueError('missing image')
@@ -475,9 +485,47 @@ class GeminiChat(MuseProvider):
         finally:
             output.unlink(missing_ok=True)
             self.phases.pop(rid, None)
+            if self.ledger.metadata(rid).get('browser_request'):self.ledger.set_metadata(rid,{'receive_active':False})
             self.ledger.finish(rid, state, result)
+            if state=='done' and getattr(self,'browser',None) and self.ledger.metadata(rid).get('browser_request'):
+                self.browser.retire(rid)
+                receive_id=self.ledger.metadata(rid).get('browser_receive_job')
+                if receive_id:self.browser.retire(receive_id)
             self.vault.put('logs', {'id': rid, 'service': 'gemini_chat', 'kind': payload['role'], 'state': state,
                 'account_id': aid, 'room_id': payload['room_id'], 'scene_id': payload['scene_id'], 'at': time.time(), 'cost': None})
+
+    async def browser_generate(self,rid,aid,payload,output):
+        row=self.account(aid);route=row['browser_route']
+        # A durable browser job ID may be received again but can never be re-dispatched.
+        safe_payload={k:v for k,v in payload.items()if k not in {'prompt','references','browser_receive'}}
+        self.ledger.set_metadata(rid,{'browser_request':True,'account_id':aid,'browser_payload':safe_payload})
+        receive_id=None
+        try:
+            old=self.browser.read(rid)
+            if payload.get('browser_receive') and (old is None or not old.get('ok')):
+                receive_id='receive-'+uuid.uuid4().hex
+                result=await self.browser.request(route,receive_id,{'operation':'receive','target_job':rid,'kind':payload['kind']},240)
+            else:
+                result=await self.browser.request(route,rid,{'operation':'generate','prompt':payload.get('prompt',''),'kind':payload['kind'],'references':payload.get('references',[])},240)
+        except HTTPException as exc:
+            detail=exc.detail if isinstance(exc.detail,dict)else {}
+            if detail.get('sent')is False:self.ledger.set_metadata(rid,{'browser_request':False})
+            return {'ok':False,'accepted':None if detail.get('sent',True)else False,'code':detail.get('code','GEMINI_BROWSER_OUTCOME_UNKNOWN')}
+        if not result.get('ok'):
+            if result.get('accepted')is False:self.ledger.set_metadata(rid,{'browser_request':False})
+            code=result.get('code')
+            if code not in {'GEMINI_BROWSER_TRANSFER_FAILED','GEMINI_BROWSER_OFFLINE','GEMINI_BROWSER_ATTACH_FAILED'}:code='GEMINI_BROWSER_FAILED'
+            return {'ok':False,'accepted':result.get('accepted'),'code':code}
+        if payload['kind']=='image':
+            try:
+                data=base64.b64decode(result.get('image',''),validate=True)
+                if not 0<len(data)<=24*1024**2:raise ValueError()
+                Path(output).write_bytes(data)
+            except Exception:
+                return {'ok':False,'accepted':True,'code':'GEMINI_BROWSER_TRANSFER_FAILED'}
+            if receive_id:self.ledger.set_metadata(rid,{'browser_receive_job':receive_id})
+            return {'ok':True,'download_variant':'browser-authenticated'}
+        return {'ok':True,'text':result.get('text','')}
 
     async def receive_image(self, rid, body=None):
         self.valid_id(rid)
@@ -493,6 +541,12 @@ class GeminiChat(MuseProvider):
             if self.tasks.get(rid) is task:
                 self.tasks.pop(rid, None)
         meta = self.ledger.metadata(rid)
+        if meta.get('browser_request'):
+            aid=meta['account_id'];payload={**meta['browser_payload'],'browser_receive':True}
+            self.ledger.set_metadata(rid,{'receive_active':True});self.phases[rid]=aid
+            self.tasks[rid]=asyncio.create_task(self.run(rid,aid,payload))
+            self.tasks[rid].add_done_callback(lambda task:self.tasks.pop(rid,None) if self.tasks.get(rid)is task else None)
+            return self.lookup(rid)
         pointer = self.vault.secret('gemini-image-result:' + rid)
         # Legacy .151 errors retained a cursor but no per-request descriptor.
         # Accept it only if its exact request_id still matches this receipt.
@@ -620,6 +674,8 @@ class GeminiChat(MuseProvider):
     def remove(self, aid):
         if aid in self.phases.values() or self.lock(aid).locked():
             raise HTTPException(409, 'Đợi công việc tài khoản hoàn tất trước khi xóa phiên.')
+        row=self.account(aid)
+        if row.get('transport')=='browser':self.browser.revoke(row['browser_route'])
         self.vault.delete_secret('gemini-chat-session:' + aid)
 
     async def close(self):

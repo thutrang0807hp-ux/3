@@ -1,6 +1,6 @@
 function flowTabUrl(url){try{const u=new URL(url);return u.protocol==='https:'&&(u.hostname==='flow.google.com'||u.hostname==='labs.google'&&u.pathname.startsWith('/fx/'));}catch{return false;}}
 'use strict';
-importScripts('native-flow.js','dom-flow.js');
+importScripts('native-flow.js','dom-flow.js','gemini-tab.js','gemini-worker.js');
 const running=new Set();
 async function wire(link,path,extra={}){
  const response=await fetch(link.base+'/local-api/browser-bridge/flow-'+path,{method:'POST',headers:{'Content-Type':'application/json','X-SceneForge-Bridge':'1'},credentials:'omit',cache:'no-store',redirect:'error',body:JSON.stringify({id:link.id,key:link.browser_key,...extra}),signal:AbortSignal.timeout(path==='poll'?20000:30000)});

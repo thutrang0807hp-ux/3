@@ -14,8 +14,17 @@ form.addEventListener('submit',async event=>{
  try{
   const base='http://127.0.0.1:'+port;
   note('Đang đối chiếu mã với SceneForge…');
-  const pair=await send(base,'claim',{code,protocol:4});
+  const pair=await send(base,'claim',{code,protocol:5});
   const services=pair.services||[pair.service];if(!services.length||services.some(s=>!['gemini_chat','flow'].includes(s)))throw Error('Nguồn không được tiện ích hỗ trợ.');
+  if(pair.protocol===5){
+   const tabs=await chrome.tabs.query({url:'https://gemini.google.com/*',currentWindow:true});
+   const tab=tabs.find(t=>t.active)||(tabs.length===1?tabs[0]:null);
+   if(!tab)throw Error('Mở và chọn tab Gemini đã đăng nhập rồi tạo mã mới.');
+   const reply=await chrome.runtime.sendMessage({type:'pairGemini',link:{...pair.relay,base,tabId:tab.id}});
+   if(!reply?.ok)throw Error('Chưa nối được tiện ích với SceneForge.');
+   await send(base,'complete',{code,submission:pair.submission,protocol:5});
+   note('Đã nối tiện ích; quay lại app đợi kiểm tra tab Gemini. Prompt và ảnh sẽ chạy trực tiếp trong trình duyệt, không chuyển cookie.','checking');form.hidden=true;return;
+  }
   if(pair.protocol===4){
    const tabs=await chrome.tabs.query({url:['https://flow.google.com/*','https://labs.google/fx/*'],currentWindow:true});
    const tab=tabs.find(t=>t.active)||(tabs.length===1?tabs[0]:null);
