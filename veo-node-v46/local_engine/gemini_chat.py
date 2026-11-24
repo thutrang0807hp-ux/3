@@ -320,7 +320,11 @@ class GeminiChat(MuseProvider):
         payload = {'prompt': prompt, 'references': refs, 'kind': body['kind'], 'role': role, 'model': model,
                    'plan': selection['permitted'], 'mode': selection['mode'], 'selection_token': selection['token'],
                    'room_id': str(body.get('room_id', ''))[:100], 'scene_id': str(body.get('scene_id', ''))[:100]}
-        if body.get('image_engine')=='studio-v1' and body['kind']=='image':payload['image_engine']='studio-v1'
+        if body.get('image_engine')=='studio-v1' and body['kind']=='image':
+            payload['image_engine']='studio-v1'
+            ratio=body.get('ratio','9:16')
+            if not isinstance(ratio,str) or not re.fullmatch(r'[1-9][0-9]{0,3}:[1-9][0-9]{0,3}',ratio):raise HTTPException(400,'Tỉ lệ ảnh không hợp lệ.')
+            payload['ratio']=ratio
         scope = body.get('conversation_scope')
         if scope is not None:
             if body['kind'] != 'image' or not isinstance(scope, str) or not re.fullmatch(r'[a-f0-9-]{36}', scope):
@@ -511,7 +515,7 @@ class GeminiChat(MuseProvider):
                 receive_id='receive-'+uuid.uuid4().hex
                 result=await self.browser.request(route,receive_id,{'operation':'receive','target_job':rid,'kind':payload['kind'],**({'engine':'frame-studio'}if payload.get('image_engine')=='studio-v1'else{})},240)
             else:
-                result=await self.browser.request(route,rid,{'operation':'generate','prompt':payload.get('prompt',''),'kind':payload['kind'],'references':payload.get('references',[]),**({'engine':'frame-studio'}if payload.get('image_engine')=='studio-v1'else{})},240)
+                result=await self.browser.request(route,rid,{'operation':'generate','prompt':payload.get('prompt',''),'kind':payload['kind'],'references':payload.get('references',[]),**({'ratio':payload['ratio']}if payload.get('image_engine')=='studio-v1' and payload.get('ratio')else{}),**({'engine':'frame-studio'}if payload.get('image_engine')=='studio-v1'else{})},240)
         except HTTPException as exc:
             detail=exc.detail if isinstance(exc.detail,dict)else {}
             if detail.get('sent')is False:self.ledger.set_metadata(rid,{'browser_request':False})

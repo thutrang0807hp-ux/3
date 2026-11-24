@@ -7,9 +7,9 @@ assert (ROOT/'veo-node-v46/scripts/browser-extension/studio-gemini-original.js')
 adapter=(ROOT/'veo-node-v46/scripts/browser-extension/frame-studio-tab.js').read_text()
 assert "generateInGemini(request.prompt,request.ratio||'9:16',false)"in adapter
 assert upstream[upstream.index('  async function readImage(image) {'):upstream.index('\n  let revised')]in adapter
-old=subprocess.check_output(['git','show','379ca83:scripts/ui/frame_direct_prompt.js'],cwd=ROOT,text=True)
 new=(ROOT/'scripts/ui/frame_direct_prompt.js').read_text()
-assert new==old.replace("j.sceneId===s.id&&j.kind==='image'","j.frameStudioVersion===164&&j.sceneId===s.id&&j.kind==='image'",1)
+assert 'frameEditPolicy:166' in new and 'R1 supplies camera direction' in new
+assert 'SFFrameRefs.validate(s)' in new and 'sourceCapture:capture?' in new
 html=(ROOT/'workflow.html').read_text();before=subprocess.check_output(['git','show','379ca83:workflow.html'],cwd=ROOT,text=True)
 for prefix in ['async function generationRefs(','imageFramePrompt=function(s,lang=', 'function imageBindings(']:
  assert next(l for l in html.splitlines()if l.startswith(prefix))==next(l for l in before.splitlines()if l.startswith(prefix))
@@ -17,4 +17,5 @@ assert (ROOT/'scripts/ui/frame_image_flow.js').read_text()in html
 assert (ROOT/'scripts/ui/frame_studio_node.js').read_text()in html
 assert "if(kind==='image')return processFrameImage"in html
 assert "j.frameStudioVersion!==164"in html
-print('PASS exact upstream generator (export removed only), exact upstream image decoder, prompt recipe/reference packing unchanged, one new image owner and legacy importer exclusion')
+assert (ROOT/'scripts/ui/frame_settings.js').read_text() in html
+print('PASS exact upstream generator (export removed only), exact upstream image decoder, upgraded edit recipe with unchanged reference packing, one new image owner and legacy importer exclusion')
