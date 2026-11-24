@@ -8,7 +8,7 @@ adapter=(ROOT/'veo-node-v46/scripts/browser-extension/frame-studio-tab.js').read
 assert "generateInGemini(request.prompt,request.ratio||'9:16',false)"in adapter
 assert upstream[upstream.index('  async function readImage(image) {'):upstream.index('\n  let revised')]in adapter
 new=(ROOT/'scripts/ui/frame_direct_prompt.js').read_text()
-assert 'frameEditPolicy:166' in new and 'R1 supplies camera direction' in new
+assert 'framePromptVersion:169' in new and "SFFrameSettings.compact(s,'en')" in new
 assert 'SFFrameRefs.validate(s)' in new and 'sourceCapture:capture?' in new
 html=(ROOT/'workflow.html').read_text();before=subprocess.check_output(['git','show','379ca83:workflow.html'],cwd=ROOT,text=True)
 for prefix in ['async function generationRefs(','imageFramePrompt=function(s,lang=', 'function imageBindings(']:
