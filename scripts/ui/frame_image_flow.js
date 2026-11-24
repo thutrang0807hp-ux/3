@@ -33,6 +33,7 @@ async function processFrameImage(s,chat,{regenerate=false,receiveOnly=false,read
  const old=(project.cloudJobs||[]).filter(j=>j.sceneId===s.id&&j.kind==='image'&&!j.frameStudioVersion&&!['imported','failed','not_submitted','abandoned'].includes(j.state));
  if(old.length){if(!confirm('Tạo bằng node mới cho cảnh này? Lượt node cũ vẫn được giữ trong lịch sử và có thể đã dùng hạn mức.'))return {sceneId:s.id,cancelled:true};for(const j of old){j.previousState=j.state;j.state='abandoned';j.archivedBy='frame-studio-164';}}
  await prepareFrameDirect(s);ensure(s);
+ if(s.framePromptVersion===170)SFUniversalFrame.validateForSend(s,imageFramePrompt(s));
  const signature=await directSignature(s,'','image');if(!regenerate&&s.frames.some(f=>f.generationSignature===signature))return {sceneId:s.id,skipped:true};
  const output=SFFrameSettings.output(s),prompt=imageFramePrompt(s),references=await generationRefs(s,null,true),status=chat||await statusFor('gemini-chat');ensure(s);
  if(signature!==await directSignature(s,'','image'))throw Error('Cảnh đã đổi trước khi gửi.');
