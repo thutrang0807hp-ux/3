@@ -59,6 +59,9 @@ async def main():
        if job['request']['operation']=='generate':
         assert job['request'].get('engine')=='frame-studio'
         assert job['request']['prompt']==await page.evaluate('SFFrameImages.prompt(project.scenes[0])')
+        assert '200 g' in job['request']['prompt'] and '9 cm' in job['request']['prompt']
+        assert 'never convert mass/capacity into invented centimetres' in job['request']['prompt']
+        assert 'giảm 50%' not in job['request']['prompt']
         assert ' '.join(job['request']['prompt'].split())in ' '.join((await tab.evaluate('sentText')).split())
         assert await tab.evaluate('sends')==1
         assert await tab.evaluate('refCount')==len(job['request']['references'])
@@ -74,7 +77,7 @@ async def main():
     assert bridge.gemini_browser.auto_status()['ready']
     assert len(service.accounts())==1 and service.selection()['available']and not service.engine().exists()
     page=await context.new_page();await page.goto(f'http://127.0.0.1:{PORT}/workflow.html?demo=1');await page.wait_for_function('window.SFFrameImages&&window.SFMediaNodes')
-    await page.evaluate('''async()=>{closeChooser();storeProject=async()=>{};SFProviderReceipts.persistIntent=async()=>{};const c=document.createElement('canvas');c.width=180;c.height=320;c.getContext('2d').fillRect(0,0,180,320);const source=c.toDataURL();project=blankProject();project.id='auto-e2e';project.source={poster:source};project.scenes=[sceneRecord(0,4,0,[source])];project.refs.product.images=[{image:source,name:'Product'}];const s=project.scenes[0];s.refsUsed=['product'];await SFFrameImages.prepare(s);render();await SFMediaNodes.open('frame',s.id);project.cloudJobs=[{id:'gchat-'+crypto.randomUUID(),kind:'image',provider:'gemini-chat',sceneId:s.id,state:'unknown',error:'LEGACY_NODE_ERROR'}];window.confirm=()=>false;await SFFrameImages.create([s]);if(project.cloudJobs.length!==1||project.cloudJobs[0].state!=='unknown')throw Error('Cancelled migration changed old receipt');window.confirm=()=>true;window.runResult=SFFrameImages.create([s]);runResult.catch(e=>window.runError=e.message);SFFrameImages.create([s]).catch(e=>window.duplicateBlocked=!!e.message);}''')
+    await page.evaluate('''async()=>{closeChooser();storeProject=async()=>{};SFProviderReceipts.persistIntent=async()=>{};const c=document.createElement('canvas');c.width=180;c.height=320;c.getContext('2d').fillRect(0,0,180,320);const source=c.toDataURL();project=blankProject();project.id='auto-e2e';project.source={poster:source};project.productScript={brief:{name:'Product brief title not printed',facts:['Khối lượng tịnh: 200 g','Kích thước: cao 9 cm, đường kính 7 cm','Ưu đãi: giảm 50%'].join(String.fromCharCode(10))}};project.scenes=[sceneRecord(0,4,0,[source])];project.refs.product.images=[{image:source,name:'Product'}];const s=project.scenes[0];s.refsUsed=['product'];await SFFrameImages.prepare(s);render();await SFMediaNodes.open('frame',s.id);project.cloudJobs=[{id:'gchat-'+crypto.randomUUID(),kind:'image',provider:'gemini-chat',sceneId:s.id,state:'unknown',error:'LEGACY_NODE_ERROR'}];window.confirm=()=>false;await SFFrameImages.create([s]);if(project.cloudJobs.length!==1||project.cloudJobs[0].state!=='unknown')throw Error('Cancelled migration changed old receipt');window.confirm=()=>true;window.runResult=SFFrameImages.create([s]);runResult.catch(e=>window.runError=e.message);SFFrameImages.create([s]).catch(e=>window.duplicateBlocked=!!e.message);}''')
     for _ in range(140):
      if extension_task.done():await extension_task
      if await page.evaluate('project.scenes[0].frames.length===1||window.runError'):break
@@ -134,7 +137,7 @@ async def main():
     await page.select_option('#studioOutputPreset','shared')
     await page.wait_for_function("!project.scenes[0].frameOutput&&!SFFrameImages.isRunning()")
     await page.click('#modal [data-action="close-modal"]')
-    await page.evaluate("project.refs.product.images.push({id:'primary-blue',name:'Blue product primary',image:'data:image/png;base64,"+image+"'});render();")
+    await page.evaluate("project.refs.product.images[0].id='legacy-red';project.scenes[0].referenceImages={product:['legacy-red']};project.refs.product.images.push({id:'primary-blue',name:'Blue product primary',image:'data:image/png;base64,"+image+"'});render();")
     await page.click('[data-studio="common"]')
     await page.select_option('#studioCommonPreset','landscape')
     await page.fill('#studioCommonRequest','Replace visible hands with natural feminine hands and short nude nails; keep the grip.')
@@ -151,7 +154,7 @@ async def main():
      if await page.evaluate('project.scenes[0].frames.length===2||window.runError'):break
      await asyncio.sleep(.25)
     assert not await page.evaluate('window.runError'),await page.evaluate('window.runError')
-    assert await page.evaluate("SFPromptContract.orderedImages(sceneReference(project.scenes[0],'product').images)[0].id==='primary-blue'")
+    assert await page.evaluate("SFPromptContract.orderedImages(sceneReference(project.scenes[0],'product').images)[0].id==='primary-blue'&&project.cloudJobs.at(-1).referenceManifest.find(r=>r.role==='product').id==='primary-blue'&&project.scenes[0].frames.at(-1).referenceManifest.find(r=>r.role==='product').id==='primary-blue'")
     assert await page.evaluate("project.scenes[0].frames.length===2&&project.cloudJobs.at(-1).requestedOutput.ratio==='16:9'")
     await page.evaluate("SFMediaNodes.open('frame',project.scenes[0].id)")
     await page.wait_for_function("document.querySelector('#studioOutputNotice')?.textContent.includes('1920 × 1080')")
@@ -159,6 +162,7 @@ async def main():
     await page.screenshot(path='/tmp/frame-studio166-editor.png')
     assert await page.evaluate("sceneReference(project.scenes[0],'product').images.length===1")
     await page.evaluate("""()=>{const sc=project.scenes[0];const saved=sc.frameOutput;sc.frameOutput={width:1080,height:1080};if(SFFrameSettings.output(sc).ratio!=='1:1')throw Error('Scene output did not win');sc.frameOutput=saved;const request=sc.frameUseCommon;sc.frameUseCommon=false;if(SFFrameSettings.input(sc).request)throw Error('Common optout ignored');sc.frameUseCommon=request;}""")
+    await page.evaluate("""()=>{const sc=project.scenes[0],c=project.frameStudioDefaults,key=c.productPrimary;c.productPrimary='missing-product';let blocked=false;try{SFFrameRefs.validate(sc);}catch(e){blocked=e.message.includes('Ảnh sản phẩm chính');}if(!blocked||sceneReference(sc,'product').images.length)throw Error('Missing primary silently fell back');c.productPrimary=key;const previous=sc.frameReferenceChoices?.product;sc.frameReferenceChoices??={};sc.frameReferenceChoices.product={mode:'custom',images:[{id:'custom-red',name:'Explicit per-scene red',image:project.source.poster}]};if(sceneReference(sc,'product').images[0].id!=='custom-red')throw Error('Common primary overrode explicit custom image');if(previous)sc.frameReferenceChoices.product=previous;else delete sc.frameReferenceChoices.product;}""")
     # Migration does not invalidate an old, already submitted image when no settings changed.
     await page.evaluate("""async()=>{const sc=project.scenes[1];delete sc.frameEditPolicy;project.promptPipeline.records[sc.id+':image:']={input:SFPromptPipeline.snapshot(sc,'image'),applied:true,localRecipe:true,template:SFPromptContract.version,namePolicy:'reference-only-v1',result:{promptFrame:{en:'OLD SAVED FRAME PROMPT',vi:'Old'}}};project.cloudJobs.push({id:'old-pending',sceneId:sc.id,kind:'image',frameStudioVersion:164,state:'submitted'});const before=await directSignature(sc,'','image');await SFFrameImages.prepare(sc);if(sc.frameEditPolicy||await directSignature(sc,'','image')!==before)throw Error('Pending signature changed on update');project.cloudJobs.pop();}""")
     await page.evaluate("project.scenes[0].frameOutput={width:1080,height:1080};closeModal();render();fit(false);")
@@ -167,7 +171,7 @@ async def main():
     await page.wait_for_function("project.frameOutputDefault?.width===1920")
     assert await page.evaluate("SFFrameSettings.output(project.scenes[0]).ratio==='1:1'&&SFFrameSettings.output(project.scenes[1]).ratio==='16:9'&&project.frameStudioDefaults.request.includes('nude nails')&&project.cloudJobs.filter(j=>j.frameStudioVersion===164).length===2")
     extension_task.cancel();await asyncio.gather(extension_task,return_exceptions=True);await browser.close()
-    print('PASS .166 output settings (portrait/landscape through actual sender), scoped shared edits, primary product order and single-image default, legacy pending signature, actual result-size notice. E2E: no-code discovery -> production account/pool -> existing frame node -> production submit/ledger -> two refs in actual injected DOM -> PNG committed/imported to same scene; no SDK installed or automatic approval. Extension/network and Gemini site are fixtures; installed extension blocked by environment policy.')
+    print('PASS .168 physical script facts reach actual sender without offers or invented dimensions; exact primary survives legacy filter, missing primary blocks, custom product retained and reference manifest saved. .166 output settings (portrait/landscape through actual sender), scoped shared edits, primary product order and single-image default, legacy pending signature, actual result-size notice. E2E: no-code discovery -> production account/pool -> existing frame node -> production submit/ledger -> two refs in actual injected DOM -> PNG committed/imported to same scene; no SDK installed or automatic approval. Extension/network and Gemini site are fixtures; installed extension blocked by environment policy.')
   finally:
    if extension_task:extension_task.cancel();await asyncio.gather(extension_task,return_exceptions=True)
    await bridge.close();await service.close();server.should_exit=True;await server_task

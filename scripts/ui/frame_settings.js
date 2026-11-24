@@ -4,8 +4,30 @@
  const applied=s=>{const c=project.frameStudioDefaults;return c&&(!c.sceneIds||c.sceneIds.includes(s.id))?c:null;};
  const gcd=(a,b)=>b?gcd(b,a%b):a;
  function output(s){const c=applied(s),v=s.frameOutput||c?.output||project.frameOutputDefault||defaults,w=Number(v.width),h=Number(v.height);if(!Number.isInteger(w)||!Number.isInteger(h)||w<256||h<256||w>8192||h>8192||w*h>33554432)throw Error('Chiều rộng/cao phải là số nguyên 256–8192 px, tối đa 32 triệu điểm ảnh.');const d=gcd(w,h);return{width:w,height:h,ratio:w/d+':'+h/d};}
- function input(s){const c=applied(s);return {output:s.frameOutput||c?.output||project.frameOutputDefault||null,request:s.frameUseCommon===false?'':c?.request||'',productDimensions:c?.productDimensions||'',productPrimary:c?.productPrimary||'',productViews:c?.productViews===true,personEdit:s.frameUseCommon!==false&&c?.personEdit===true,keptRoles:Object.entries(s.frameReferenceChoices||{}).filter(([,v])=>v.mode==='keep').map(([k])=>k),enabled:s.frameEditPolicy===166};}
- function reference(s,k,ref){if(k!=='product'||!ref.images.length)return ref;const c=applied(s);if(!s.frameEditPolicy&&!c?.productPrimary)return ref;const primary=c?.productPrimary;let index=primary?ref.images.findIndex((i,n)=>(i.id||'index:'+n)===primary):-1;if(index<0)index=Math.max(0,ref.images.findIndex(i=>i.primary));const images=c?.productViews?ref.images.map((i,n)=>typeof i==='string'?{image:i,primary:n===index}:{...i,primary:n===index}):[typeof ref.images[index]==='string'?{image:ref.images[index],primary:true}:{...ref.images[index],primary:true}];return {...ref,images};}
+ function physicalFacts(s){
+  if(s.frameProductFactsVersion!==168)return '';
+  const raw=String(project.productScript?.brief?.facts||project.refs.product?.description||'').slice(0,6000);
+  const physical=/(?:\b\d+(?:[.,]\d+)?\s*(?:kg|mg|g|ml|cl|l|mm|cm)\b)|(?:kích thước|chiều cao|chiều rộng|chiều dài|đường kính|khối lượng|trọng lượng|dung tích|chất liệu|màu sắc|màu đỏ|màu xanh|nắp|hình trụ|height|width|diameter|dimensions|net weight|volume|material|colour|color|lid|cap)/i;
+  return raw.split(/\n|[;；]/).map(t=>t.trim()).filter(t=>physical.test(t)).join('\n').slice(0,1800);
+ }
+ function input(s){const c=applied(s),result={output:s.frameOutput||c?.output||project.frameOutputDefault||null,request:s.frameUseCommon===false?'':c?.request||'',productDimensions:c?.productDimensions||'',productPrimary:c?.productPrimary||'',productViews:c?.productViews===true,personEdit:s.frameUseCommon!==false&&c?.personEdit===true,keptRoles:Object.entries(s.frameReferenceChoices||{}).filter(([,v])=>v.mode==='keep').map(([k])=>k),enabled:s.frameEditPolicy===166};if(s.frameProductFactsVersion===168)result.physicalFacts=physicalFacts(s);return result;}
+ function reference(s,k,ref){
+  if(k!=='product')return ref;
+  const c=applied(s),primary=c?.productPrimary,custom=s.frameReferenceChoices?.product?.mode==='custom';
+  if(!s.frameEditPolicy&&!primary)return ref;
+  let index=primary?ref.images.findIndex((i,n)=>(i.id||'index:'+n)===primary):-1;
+  const oldPending=(project.cloudJobs||[]).some(j=>j.sceneId===s.id&&j.kind==='image'&&j.frameStudioVersion===164&&!j.referenceManifest&&!['imported','failed','not_submitted','abandoned','stale','invalid'].includes(j.state));
+  if(primary&&index<0&&!custom&&!oldPending){
+   // A legacy per-scene filter must never silently swap the explicit common primary.
+   const all=project.refs.product?.images||[],chosen=all.find((i,n)=>(i.id||'index:'+n)===primary);
+   if(!chosen)return {...ref,images:[],selectionError:'Ảnh sản phẩm chính đã chọn không còn. Chọn lại ảnh chính trước khi tạo; chưa tự dùng ảnh khác.'};
+   return {...ref,images:[typeof chosen==='string'?{image:chosen,primary:true}:{...chosen,primary:true}],selectionNote:'Dùng đúng ảnh chính chung, thay lựa chọn lọc cũ của cảnh.'};
+  }
+  if(!ref.images.length)return ref;
+  if(index<0)index=Math.max(0,ref.images.findIndex(i=>i.primary));
+  const images=c?.productViews?ref.images.map((i,n)=>typeof i==='string'?{image:i,primary:n===index}:{...i,primary:n===index}):[typeof ref.images[index]==='string'?{image:ref.images[index],primary:true}:{...ref.images[index],primary:true}];
+  return {...ref,images};
+ }
 
  function compose(s,base,lang='en'){
   const r=project.promptPipeline?.records?.[s.id+':image:'];if(!s.frameEditPolicy&&!r?.frameEditPolicy)return base; // Old pending jobs retain their exact prompt/signature.
@@ -15,6 +37,7 @@
    'OUTPUT: '+o.width+' x '+o.height+' pixels; aspect ratio '+o.ratio+'. One unified '+(o.width<o.height?'portrait':o.width>o.height?'landscape':'square')+' photograph. Recompose the outer canvas when needed; do not stretch the person or product, crop off the product, or add panels. Keep the original camera direction and action, not its old canvas aspect ratio.',
    product?'AUTHORITATIVE PRODUCT: '+bound[0]?.code+' is the primary replacement product. Other product references are supplementary views ONLY if they show that same variant. Any continuity anchor is subordinate to this primary product reference; never copy a conflicting anchor product. Discard R1 product silhouette, cap, proportions, color, surface, label and brand. Replace the whole object, not just its printed text or color. Copy the primary reference object\'s height-to-width ratio, outline, cap thickness and geometry, seams, material, true base color/gradient, logo and label layout. Do not average different packages or inherit the old source jar\'s design. Use only the product inside an advertising reference; ignore its surrounding ad text, hand and background. Preserve its own relative dimensions; adapt placement and hand contact to its geometry rather than forcing it into the old object shape.':'PRODUCT: keep the source product; no replacement product is selected.',
    product&&config.productDimensions?'REAL PRODUCT DIMENSIONS supplied by the user: '+config.productDimensions+'. Use these for scale relative to hand/environment, not as captions.':'Do not infer exact physical size from an uncalibrated photograph. Use physically plausible scale and the reference product proportions; never enlarge the product to fill the frame.',
+   product&&config.physicalFacts?'DECLARED PHYSICAL PRODUCT FACTS from the user script brief (literal supplied data, not observed source-video facts):\n'+config.physicalFacts+'\nUse explicit height/width/diameter measurements for physical scale if supplied and applicable to this selected variant. Weight such as 200 g or capacity such as 200 ml does NOT determine height, diameter or a solid volume; never convert mass/capacity into invented centimetres. The primary image remains authoritative for shape, cap geometry, colors, finish and authentic visible label. Do not overwrite its design or print the brief text as a caption/label. If the brief refers to another variant, do not import visual details from that variant. Explicit real-dimension input above takes precedence over conflicting brief measurements.':'',
    'DETAIL: high-end photorealistic product photography with 4K-level detail and clarity, natural high-definition photographic detail, accurate material and reference colors under the scene lighting, clean edges, real texture, no invented embossed details, no waxy skin or excessive sharpening. Preserve authentic visible product lettering; do not invent unreadable text.',
    config.personEdit?'VISIBLE PERSON EDIT: apply the shared request to the body parts actually visible in each source shot. A hands-only shot remains hands-only: preserve finger count, grip/action and contact points, change the requested hand appearance, never add a face or a full person. A wide shot remains wide. Do not copy the hand from a product advertising reference.':'',
    config.request?'SHARED USER EDIT for this selected scene: '+config.request+'. Explicitly requested edits may change the named source parts even without a replacement image; keep all unmentioned parts unchanged.':'',
@@ -22,9 +45,9 @@
    keep.length?'EXPLICIT PER-SCENE KEEP (highest priority for these roles): '+keep.join(', ')+'. Do not change these roles even when a shared request asks otherwise.':'',
    'Return the finished edited image, not an explanation. Requested pixel dimensions are the generation target, not permission to fake detail.'
   ].filter(Boolean).join('\n\n');
-  const vi=['YÊU CẦU ẢNH CUỐI: '+o.width+' × '+o.height+' px · '+o.ratio+'. Đổi khung theo tỉ lệ đã chọn, không kéo méo người hoặc sản phẩm.',product?'Sản phẩm theo ảnh tham chiếu chính: thay toàn bộ hình dáng, nắp, tỉ lệ, màu, chất liệu và nhãn; không giữ vỏ sản phẩm gốc, không chỉ đổi chữ/màu. Ảnh quảng cáo chỉ lấy sản phẩm, bỏ tay và bối cảnh trong ảnh tham chiếu.':'Giữ sản phẩm gốc.',config.productDimensions?'Kích thước sản phẩm thật: '+config.productDimensions:'',config.personEdit?'Chỉ đổi phần người đang xuất hiện: cảnh có tay chỉ đổi tay, giữ cách cầm, không thêm cả người.':'',config.request?'Yêu cầu chung: '+config.request:'',s.promptRevision?.image?'Yêu cầu riêng: '+s.promptRevision.image:'',keep.length?'Giữ nguyên theo lựa chọn riêng: '+keep.join(', '):''].filter(Boolean).join('\n\n');
+  const vi=['YÊU CẦU ẢNH CUỐI: '+o.width+' × '+o.height+' px · '+o.ratio+'. Đổi khung theo tỉ lệ đã chọn, không kéo méo người hoặc sản phẩm.',product?'Sản phẩm theo ảnh tham chiếu chính: thay toàn bộ hình dáng, nắp, tỉ lệ, màu, chất liệu và nhãn; không giữ vỏ sản phẩm gốc, không chỉ đổi chữ/màu. Ảnh quảng cáo chỉ lấy sản phẩm, bỏ tay và bối cảnh trong ảnh tham chiếu.':'Giữ sản phẩm gốc.',config.productDimensions?'Kích thước sản phẩm thật: '+config.productDimensions:'',product&&config.physicalFacts?'Thông số lấy từ Kịch bản: '+config.physicalFacts+' · Khối lượng/dung tích không suy ra số cm. Giữ thiết kế, màu và chữ theo ảnh chính, không biến thông số thành chữ mới trên nhãn.':'',config.personEdit?'Chỉ đổi phần người đang xuất hiện: cảnh có tay chỉ đổi tay, giữ cách cầm, không thêm cả người.':'',config.request?'Yêu cầu chung: '+config.request:'',s.promptRevision?.image?'Yêu cầu riêng: '+s.promptRevision.image:'',keep.length?'Giữ nguyên theo lựa chọn riêng: '+keep.join(', '):''].filter(Boolean).join('\n\n');
   return base+'\n\n'+(lang==='vi'?vi:en);
  }
  const before=imageFramePrompt;imageFramePrompt=(s,lang='en')=>compose(s,before(s,lang),lang);
- window.SFFrameSettings={output,input,reference,applied,compose,defaults};
+ window.SFFrameSettings={output,input,physicalFacts,reference,applied,compose,defaults};
 })();
