@@ -119,9 +119,18 @@ async def main():
     await page.screenshot(path='/tmp/frame-studio164.png')
     # Actual ratio control must update both the sent prompt and the backend-to-browser ratio.
     assert await page.evaluate("project.cloudJobs.at(-1).requestedOutput.width===1080&&SFFrameImages.prompt(project.scenes[0]).includes('1080 x 1920')")
+    assert (await page.locator('.sfStudioCompare').bounding_box())['height']>=320
+    await page.click('[data-studio="preview-mode"][data-view="result"]')
+    assert await page.locator('.sfStudioCompare').get_attribute('data-view')=='result'
+    await page.click('[data-studio="large"]')
+    assert await page.locator('#studioLightbox').evaluate('(el)=>el.open')
+    await page.keyboard.press('Escape')
+    await page.wait_for_function("!document.querySelector('#studioLightbox')&&document.querySelector('#modal').open")
+    await page.locator('.sfStudioOutputDetails summary').click()
     await page.select_option('#studioOutputPreset','landscape')
     await page.wait_for_function("project.scenes[0].frameOutput?.width===1920&&!SFFrameImages.isRunning()")
     assert await page.evaluate("SFFrameImages.prompt(project.scenes[0]).includes('1920 x 1080')")
+    await page.locator('.sfStudioOutputDetails summary').click()
     await page.select_option('#studioOutputPreset','shared')
     await page.wait_for_function("!project.scenes[0].frameOutput&&!SFFrameImages.isRunning()")
     await page.click('#modal [data-action="close-modal"]')
