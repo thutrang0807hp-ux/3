@@ -49,9 +49,9 @@ class NativeGemini:
    cfg=manager.settings(entry)
    repo.discover_chrome=lambda:Path(cfg['executable'])
    class Workspace(repo.GeminiWorkspace):
-    references=()
+    references=();request_id='';request_ratio='9:16'
     def request(self,action,**values):
-     if action in ('image','text'):values['references']=list(self.references)
+     if action in ('image','text'):values.update(references=list(self.references),request_id=self.request_id,ratio=self.request_ratio)
      return super().request(action,**values)
    folder=Path(self.service.data)/'gemini-repo-workspaces'/aid;folder.mkdir(parents=True,exist_ok=True)
    workspace=Workspace(folder);workspace.profile=manager.path(entry['service'],entry['key'])
@@ -91,7 +91,7 @@ class NativeGemini:
    if payload.get('browser_receive'):return {'ok':False,'accepted':None,'code':'GEMINI_NATIVE_RECEIPT_MISSING'}
    row=await self.context(aid);workspace=row['workspace'];accepted=None;phase='repository_request'
    def invoke():
-    workspace.references=payload.get('references',[])
+    workspace.references=payload.get('references',[]);workspace.request_id=rid;workspace.request_ratio=payload.get('ratio')or'9:16'
     try:return workspace.create_image(payload['prompt'])if payload['kind']=='image'else workspace.request('text',prompt=payload['prompt'])
     finally:workspace.references=()
    if payload['kind']=='image':
@@ -102,4 +102,6 @@ class NativeGemini:
    result=await asyncio.to_thread(invoke)
    return {'ok':True,'text':result.get('text','')}
   except Exception as exc:
+   if type(exc).__name__=='WorkspaceError'and str(exc)=='GEMINI_BROWSER_ATTACH_FAILED':
+    return {'ok':False,'accepted':False,'code':'GEMINI_BROWSER_ATTACH_FAILED','phase':'attach_references','error_type':'WorkspaceError','provider_message':'Chưa đính kèm đủ ảnh tham chiếu; prompt chưa được gửi.'}
    return {'ok':False,'accepted':accepted,'code':'GEMINI_NATIVE_FAILED','phase':phase,'error_type':type(exc).__name__,**({'provider_message':str(exc).splitlines()[0][:300]}if type(exc).__name__=='WorkspaceError'else{})}

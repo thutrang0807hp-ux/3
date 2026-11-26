@@ -171,23 +171,12 @@ async function saveResult(context, page, answer, image, output) {
   await writeFile(output, bytes, {flag:"wx"});
 }
 
-async function attachReferences(page, refs = []) {
-  if (!refs.length) return;
-  if (refs.length > 8) throw new Error("Tối đa 8 ảnh nguồn / tham chiếu.");
-  const input = page.locator("input[type=file]").first();
-  if (!await input.count()) await page.getByRole("button", {name:/upload|add files|attach|tải lên|thêm tệp|đính kèm/i}).first().click({timeout:10000});
-  await input.waitFor({state:"attached",timeout:10000});
-  const files = refs.map((r, i) => {
-    const ext = {"image/png":"png","image/jpeg":"jpg","image/webp":"webp"}[r.mime_type];
-    if (!ext) throw new Error("Ảnh tham chiếu không hợp lệ.");
-    return {name:`SceneForge-reference-${i+1}.${ext}`,mimeType:r.mime_type,buffer:Buffer.from(r.data,"base64")};
-  });
-  await input.setInputFiles(files, {timeout:30000});
-  await page.waitForFunction(n => {
-    const previews = [...document.querySelectorAll("user-query img,.input-area-container img,.file-preview img,.attachment-preview img,.attachment img,.preview-container img")].filter(i => i.complete && i.naturalWidth);
-    const labels = [...document.querySelectorAll("[aria-label],[title]")].map(e => (e.getAttribute("aria-label")||"")+" "+(e.title||""));
-    return previews.length >= n || Array.from({length:n},(_,i)=>labels.some(t=>t.includes(`SceneForge-reference-${i+1}`))).every(Boolean);
-  }, files.length, {timeout:45000});
+// SceneForge's existing sender; only the receiver/download path comes from this repo.
+const sceneSend = new Function('return ('+readFileSync(new URL('./scene-send.js',import.meta.url),'utf8')+')')();
+async function sendKnownFrame(page,request){
+ const result=await page.evaluate(sceneSend,{...request,kind:request.action==='image'?'image':'text'});
+ if(!result?.selector)throw new Error(result?.code||'Không gửi được ảnh và prompt của cảnh.');
+ return page.locator(result.selector).last();
 }
 
 async function run(port, request) {
@@ -211,17 +200,14 @@ async function run(port, request) {
       }
       const editor = await editorFor(page);
       if (request.action === "verify") return {signedIn:true};
-      await attachReferences(page, request.references);
-      if (request.action === "text") {
-        return {text:await waitForText(page,await submit(page,editor,request.prompt))};
-      }
+      if(request.action === "text")return {text:await waitForText(page,await sendKnownFrame(page,request))};
       if (request.action === "prompt") {
         const instruction = "Viết lại mô tả dưới đây thành một prompt tạo ảnh chi tiết. Giữ nguyên ngôn ngữ, " +
           "chủ thể và ý định chính. Mô tả rõ bố cục và ánh sáng nếu phù hợp. Chỉ trả prompt.\n\n" + request.prompt;
         return {text: await waitForText(page, await submit(page, editor, instruction))};
       }
       if (request.action !== "image") throw new Error("Yêu cầu Gemini không hợp lệ.");
-      const answer = await submit(page, editor, imageInstruction(request.prompt));
+      const answer = await sendKnownFrame(page,request);
       const image = await waitForImage(answer);
       await saveResult(context, page, answer, image, request.output);
       return {saved:true};

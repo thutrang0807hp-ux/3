@@ -14,12 +14,18 @@ with zipfile.ZipFile(ROOT/'veo-node-v46/vendor/gemini-native-node.zip')as z:
  assert json.loads(z.read('runtime/node_modules/playwright-core/package.json'))['version']=='1.62.1'
 print('PASS exact original send/read/download functions, Node/CDP, playwright-core 1.62.1 and runtime checksum')
 
-# Entire run() path equals upstream after removing exactly the two allowed insertions.
-extra='      await attachReferences(page, request.references);\n      if (request.action === "text") {\n        return {text:await waitForText(page,await submit(page,editor,request.prompt))};\n      }\n'
-def runpart(text):return text[text.index('async function run('):text.index('async function main(')]
-assert runpart(adapter).replace(extra,'')==runpart(original)
+# Sender is the previously used SceneForge DOM sender; receiver stays upstream.
+sender=(folder/'scene-send.js').read_text()
+legacy=(ROOT/'veo-node-v46/scripts/browser-extension/frame-studio-tab.js').read_text()
+legacy_send=(ROOT/'veo-node-v46/scripts/browser-extension/studio-gemini-original.js').read_text()
+attach=legacy[legacy.index(' const refs=request.references||[];'):legacy.index(' window.SFStudioTurn={id:request.request_id};')]
+assert attach in sender
+assert legacy_send[legacy_send.index('    async function sendMessage('):legacy_send.index('\n    if (refine)')] in sender
+assert 'const answer = await sendKnownFrame(page,request);' in adapter
+assert 'const image = await waitForImage(answer);' in adapter
+assert 'await saveResult(context, page, answer, image, request.output);' in adapter
 with zipfile.ZipFile(ROOT/'veo-node-v46/vendor/gemini-native-node.zip')as z:
  assert z.read('repo_bridge.py')==(folder/'upstream-browser-bridge.py').read_bytes()
-print('PASS whole upstream run/start/request/create_image path retained, with only reference attachment and raw-text insertion')
-
+ assert z.read('runtime/scene-send.js').decode()==sender
 assert hashlib.sha256((folder/'upstream-browser-bridge.py').read_bytes()).hexdigest()=='a861ddfc4ec841fcbac0adccde9b779bece38caa2ee3327e57bbaf40a71592fa'
+print('PASS previous exact attachment/DOM-send blocks restored; original repo image wait/download functions retained')

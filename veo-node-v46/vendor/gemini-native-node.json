@@ -1,10 +1,10 @@
 {
-  "sha256": "7df4887863b62f46eac26d9fcdfd77f686952ff9765808a598cf130c1da5ad4c",
+  "sha256": "5d837a042ec69b51b8f3272e2620f7b1f5fbf188cd2d195d4d24919b9a15daa8",
   "node": "22.23.5",
   "node_archive_sha256": "4a191082e9706866830379d577d2cc8a50c776fcd9436a8d061b063ed0d9a0e3",
   "playwright_core": "1.62.1",
   "upstream_repository": "https://github.com/thutrang0807hp-ux/test-gemoni-chat",
   "upstream_commit": "75f43c9",
   "upstream_gemini_sha256": "d024a7fda7df7e2b315cd0507d6409c498531117c3df839780fc195f58763a48",
-  "adapter_sha256": "ec5be6a162df8c226be52459725a3911adbf273d1b57fc4fa95377a488ddde7f"
+  "adapter_sha256": "93c138f71e96b43196232ef34ec5cbe5cad492db94ebf6a04d6bd9eac8ae86d3"
 }
