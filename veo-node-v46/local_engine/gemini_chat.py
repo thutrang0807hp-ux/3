@@ -419,13 +419,21 @@ class GeminiChat(MuseProvider):
         elif record.get('state')=='failed':
             record.update(code='GEMINI_JOB_FAILED',message='Lượt Gemini thất bại; bản ghi cũ chưa lưu nguyên nhân chi tiết. Kiểm tra lịch sử tài khoản trước khi bỏ lượt hoặc gửi lại.')
         metadata = self.ledger.metadata(rid)
-        if metadata.get('native_request'):record['transport']='native'
+        if metadata.get('native_request'):
+            record['transport']='native'
+            phase=metadata.get('phase')
+            labels={'connect':'kết nối Chrome riêng','editor':'mở ô chat Gemini','send_text':'gửi văn bản','receive_result':'nhận kết quả lượt cũ','open_profile':'mở hồ sơ Gemini','attach_references':'đính kèm ảnh tham chiếu','fill_prompt':'điền prompt','send_prompt':'gửi prompt','wait_image':'nhận diện ảnh kết quả','download_image':'tải ảnh kết quả'}
+            if phase in labels and record.get('state')in ('unknown','failed'):
+                record['native_phase']=phase
+                record['message']=(record.get('message')or'Chưa nhận xong ảnh.')+' Bước gặp lỗi: '+labels[phase]+'.'
+
         if metadata.get('browser_request'):
             record['transport']='browser'
         if (metadata.get('browser_request') and record.get('state') in ('unknown','failed')) or metadata.get('native_request') or metadata.get('last_error_code') == 'GEMINI_IMAGE_DOWNLOAD_ERROR' or metadata.get('image_result_available'):
             record['can_receive_image'] = record.get('state') != 'done'
         if metadata.get('receive_active') and rid in self.tasks and record.get('state') != 'done':
-            record.update(state='downloading', phase='receiving_existing_image')
+            record.update(state='downloading', phase='receiving_existing_image',message='Đang nhận lại ảnh của lượt cũ; không gửi tạo mới.')
+            record.pop('code',None);record.pop('native_phase',None)
         return record
 
     @staticmethod
@@ -524,8 +532,9 @@ class GeminiChat(MuseProvider):
         finally:
             output.unlink(missing_ok=True)
             self.phases.pop(rid, None)
-            if self.ledger.metadata(rid).get('browser_request'):self.ledger.set_metadata(rid,{'receive_active':False})
+            if self.ledger.metadata(rid).get('browser_request')or self.ledger.metadata(rid).get('native_request'):self.ledger.set_metadata(rid,{'receive_active':False})
             self.ledger.finish(rid, state, result)
+            if state=='done' and self.ledger.metadata(rid).get('native_request'):self.native.retire(rid)
             if state=='done' and getattr(self,'browser',None) and self.ledger.metadata(rid).get('browser_request'):
                 self.browser.retire(rid)
                 receive_id=self.ledger.metadata(rid).get('browser_receive_job')
@@ -587,6 +596,7 @@ class GeminiChat(MuseProvider):
         meta = self.ledger.metadata(rid)
         if meta.get('native_request'):
             aid=meta['account_id'];payload={**meta['native_payload'],'browser_receive':True}
+            self.ledger.set_metadata(rid,{'receive_active':True});self.phases[rid]=aid
             self.tasks[rid]=asyncio.create_task(self.run(rid,aid,payload))
             self.tasks[rid].add_done_callback(lambda task:self.tasks.pop(rid,None)if self.tasks.get(rid)is task else None)
             return self.lookup(rid)
