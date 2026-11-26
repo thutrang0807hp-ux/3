@@ -18,7 +18,7 @@ assert (ROOT/'scripts/ui/frame_studio_node.js').read_text()in html
 assert "if(kind==='image')return processFrameImage"in html
 assert "j.frameStudioVersion!==164"in html
 assert (ROOT/'scripts/ui/frame_settings.js').read_text() in html
-assert (ROOT/'scripts/ui/frame_universal_v51.js').read_text() in html
+assert (ROOT/'scripts/ui/frame_universal_v52.js').read_text() in html
 for path in ['scripts/ui/frame_studio_node.js','veo-node-v46/local_engine/gemini_chat.py','veo-node-v46/scripts/browser-extension/frame-studio-tab.js']:
  assert (ROOT/path).read_bytes()==subprocess.check_output(['git','show','6405507:'+path],cwd=ROOT),path+' changed outside prompt scope'
 print('PASS exact upstream generator (export removed only), exact upstream image decoder, upgraded edit recipe with unchanged reference packing, one new image owner and legacy importer exclusion')
