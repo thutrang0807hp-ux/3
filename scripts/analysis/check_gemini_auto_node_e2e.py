@@ -64,7 +64,7 @@ async def main():
         assert 'giảm 50%' not in job['request']['prompt']
         keys=re.findall(r'^## \[([A-Z_]+)\]',job['request']['prompt'],re.M)
         assert len(keys)==len(set(keys)) and keys==await page.evaluate('SFUniversalFrame.keys')
-        assert job['request']['prompt'].startswith('# UNIVERSAL REFERENCE IMAGE EDIT V5.1')
+        assert job['request']['prompt'].startswith('# UNIVERSAL REFERENCE IMAGE EDIT V'+await page.evaluate('SFUniversalFrame.version'))
         body=re.sub(r'^## \[[A-Z_]+\]\s*$','',job['request']['prompt'],flags=re.M)
         assert not re.search(r'\[[A-Z][A-Z0-9_]*\]',body)
         assert 'IMAGE EDIT CONTRACT' not in job['request']['prompt'] and 'FINAL FRAME EDIT SETTINGS' not in job['request']['prompt']
