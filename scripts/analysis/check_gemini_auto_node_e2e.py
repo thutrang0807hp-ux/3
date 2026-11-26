@@ -84,6 +84,22 @@ async def main():
     assert bridge.gemini_browser.auto_status()['ready']
     assert len(service.accounts())==1 and service.selection()['available']and not service.engine().exists()
     page=await context.new_page();await page.goto(f'http://127.0.0.1:{PORT}/workflow.html?demo=1');await page.wait_for_function('window.SFFrameImages&&window.SFMediaNodes')
+    if os.environ.get('SCENEFORGE_TEST_BACKGROUND')=='1':
+     # Visibility seam only: actual Win32 tray/controller hiding is tested separately/on Windows.
+     await page.evaluate("""async()=>{closeChooser();storeProject=async()=>{};SFProviderReceipts.persistIntent=async()=>{};const canvas=document.createElement('canvas');canvas.width=180;canvas.height=320;const source=canvas.toDataURL();project=blankProject();project.id='background-two-scenes';project.source={poster:source};project.productScript={brief:{name:'Product',facts:'Khối lượng tịnh: 200 g; chiều cao: 9 cm'}};project.refs.product.images=[{id:'same-product',name:'Product',image:source}];project.scenes=[sceneRecord(0,4,0,[source]),sceneRecord(4,8,1,[source])];for(const sc of project.scenes){sc.refsUsed=['product'];await SFFrameImages.prepare(sc);}Object.defineProperty(document,'hidden',{configurable:true,get:()=>true});Object.defineProperty(document,'visibilityState',{configurable:true,get:()=> 'hidden'});document.dispatchEvent(new Event('visibilitychange'));window.backgroundRun=SFFrameImages.create(project.scenes);window.backgroundRun.catch(e=>window.backgroundError=e.message);}""")
+     for _ in range(180):
+      if extension_task.done():await extension_task
+      if await page.evaluate("project.scenes.every(s=>s.frames.length===1)||window.backgroundError"):break
+      await asyncio.sleep(.25)
+     assert not await page.evaluate('window.backgroundError'),await page.evaluate('window.backgroundError')
+     assert await page.evaluate("document.hidden&&project.scenes.every(s=>s.frames.length===1)&&SFFrameImages.runState().completed===2&&!SFFrameImages.isRunning()")
+     jobs=await page.evaluate("project.cloudJobs.filter(j=>j.frameStudioVersion===164).map(j=>({id:j.id,scene:j.sceneId}))")
+     assert len(jobs)==2
+     for j in jobs:assert service.lookup(j['id'])['result']['scene_id']==j['scene']
+     assert bridge.gemini_browser.auto_status()['ready']
+     extension_task.cancel();await asyncio.gather(extension_task,return_exceptions=True);await browser.close()
+     print('PASS visibility-hidden production frame queue: two original job IDs, extension dispatch, correct per-scene image import, no resend, broker stays ready. Hidden visibility is simulated, not native Windows WebView2 occlusion.')
+     return
     await page.evaluate('''async()=>{closeChooser();storeProject=async()=>{};SFProviderReceipts.persistIntent=async()=>{};const c=document.createElement('canvas');c.width=180;c.height=320;c.getContext('2d').fillRect(0,0,180,320);const source=c.toDataURL();project=blankProject();project.id='auto-e2e';project.source={poster:source};project.productScript={brief:{name:'Product brief title not printed',facts:['NƯỚC HOA Ô TÔ GLYTWIN 200G – CLOUD MOUNTAIN SERIES No.5','Trọng lượng lớn 200g, sử dụng bền bỉ trong thời gian dài.','Mở nắp sản phẩm.','Khối lượng tịnh: 200 g','Kích thước: cao 9 cm, đường kính 7 cm','Ưu đãi: giảm 50%'].join(String.fromCharCode(10))}};project.scenes=[sceneRecord(0,4,0,[source])];project.refs.product.images=[{image:source,name:'Product'}];const s=project.scenes[0];s.refsUsed=['product'];s.framePromptOverride=['IMAGE EDIT CONTRACT v2','[SCENE DESCRIPTION]','Legacy app-generated instructions'].join(String.fromCharCode(10));s.frameManualInput=SFPromptPipeline.snapshot(s,'image');await SFFrameImages.prepare(s);if(s.framePromptOverride||!s.framePromptBackups?.some(b=>b.text.startsWith('IMAGE EDIT CONTRACT')))throw Error('Managed V2 was not replaced/archived');render();await SFMediaNodes.open('frame',s.id);project.cloudJobs=[{id:'gchat-'+crypto.randomUUID(),kind:'image',provider:'gemini-chat',sceneId:s.id,state:'unknown',error:'LEGACY_NODE_ERROR'}];window.confirm=()=>false;await SFFrameImages.create([s]);if(project.cloudJobs.length!==1||project.cloudJobs[0].state!=='unknown')throw Error('Cancelled migration changed old receipt');window.confirm=()=>true;window.runResult=SFFrameImages.create([s]);runResult.catch(e=>window.runError=e.message);SFFrameImages.create([s]).catch(e=>window.duplicateBlocked=!!e.message);}''')
     for _ in range(140):
      if extension_task.done():await extension_task

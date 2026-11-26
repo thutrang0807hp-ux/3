@@ -15,11 +15,13 @@ using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.WinForms;
 
 [assembly: System.Reflection.AssemblyTitle("SceneForge")]
-[assembly: System.Reflection.AssemblyVersion("2026.11.11.46110")]
+[assembly: System.Reflection.AssemblyVersion("2026.11.26.46172")]
 internal static class DesktopProgram {
  [DllImport("user32.dll")] internal static extern bool SetForegroundWindow(IntPtr h);
  [DllImport("user32.dll")] static extern bool SetProcessDPIAware();
  [DllImport("shell32.dll", CharSet=CharSet.Unicode)] static extern int SetCurrentProcessExplicitAppUserModelID(string appID);
+ [DllImport("user32.dll",CharSet=CharSet.Unicode)] static extern uint RegisterWindowMessage(string name);
+ [DllImport("user32.dll")] static extern bool PostMessage(IntPtr window,uint message,IntPtr wparam,IntPtr lparam);
  [STAThread] static int Main(string[] args) {
   if(args.Contains("--check-runtime")){try{return String.IsNullOrEmpty(CoreWebView2Environment.GetAvailableBrowserVersionString())?2:0;}catch{return 2;}}
   // Establish taskbar identity before any HWND is created.
@@ -30,10 +32,11 @@ internal static class DesktopProgram {
    var config=new JavaScriptSerializer().Deserialize<Dictionary<string,object>>(File.ReadAllText(Path.Combine(root,"install-settings.json"),Encoding.UTF8));
    string data=(string)config["data_directory"];Directory.CreateDirectory(data);
    string hash;using(var sha=SHA256.Create())hash=BitConverter.ToString(sha.ComputeHash(Encoding.UTF8.GetBytes(Path.GetFullPath(data).ToLowerInvariant()))).Replace("-","").Substring(0,24);
+   uint restoreMessage=RegisterWindowMessage("SceneForge.Desktop.Show."+hash);
    using(var mutex=new Mutex(false,"Local\\SceneForgeDesktop-"+hash)) {
     bool owned=false;try{owned=mutex.WaitOne(0);}catch(AbandonedMutexException){owned=true;}
-    if(!owned){foreach(var p in Process.GetProcessesByName("SceneForge")){try{if(p.Id!=Process.GetCurrentProcess().Id&&p.MainModule.FileName==Application.ExecutablePath){SetForegroundWindow(p.MainWindowHandle);break;}}catch{}}return 0;}
-    try{Application.Run(new DesktopWindow(root,data,config));}finally{mutex.ReleaseMutex();}
+    if(!owned){if(restoreMessage!=0)PostMessage(new IntPtr(0xffff),restoreMessage,IntPtr.Zero,IntPtr.Zero);foreach(var p in Process.GetProcessesByName("SceneForge")){try{if(p.Id!=Process.GetCurrentProcess().Id&&p.MainModule.FileName==Application.ExecutablePath){SetForegroundWindow(p.MainWindowHandle);break;}}catch{}}return 0;}
+    try{Application.Run(new DesktopWindow(root,data,config,restoreMessage));}finally{mutex.ReleaseMutex();}
    }
    return 0;
   }catch(Exception e){MessageBox.Show("Chưa mở được SceneForge.\n"+e.Message,"SceneForge",MessageBoxButtons.OK,MessageBoxIcon.Error);return 1;}
@@ -42,23 +45,51 @@ internal static class DesktopProgram {
 internal sealed class DesktopWindow:Form {
  readonly string root,data,logPath;readonly Dictionary<string,object> config;
  readonly JavaScriptSerializer json=new JavaScriptSerializer();readonly StartupSplash message=new StartupSplash();
- Process backend;OwnedProcessJob job;WebView2 view;StreamWriter log;readonly object logLock=new object();bool closing,allowClose,closeRequested;TaskCompletionSource<bool> closeSaved;
- public DesktopWindow(string root,string data,Dictionary<string,object> config){
-  this.root=root;this.data=data;this.config=config;logPath=Path.Combine(data,"desktop-startup.log");
+ Process backend;OwnedProcessJob job;WebView2 view;StreamWriter log;readonly object logLock=new object();bool closing,allowClose,closeRequested,startupStarted,notifiedTray;TaskCompletionSource<bool> closeSaved;
+ NotifyIcon tray;ContextMenuStrip trayMenu;readonly uint restoreMessage;FormWindowState restoreState=FormWindowState.Normal;string backendUrl;
+ public DesktopWindow(string root,string data,Dictionary<string,object> config,uint restoreMessage){
+  this.root=root;this.data=data;this.config=config;this.restoreMessage=restoreMessage;logPath=Path.Combine(data,"desktop-startup.log");
   Text="SceneForge";Width=1440;Height=960;MinimumSize=new System.Drawing.Size(1000,680);StartPosition=FormStartPosition.CenterScreen;
   ShowIcon=true;ShowInTaskbar=true;
   BackColor=System.Drawing.Color.FromArgb(16,19,24);ForeColor=System.Drawing.Color.White;
   try{string icon=Path.Combine(root,"app","dist","web-demo","icons","SceneForge.ico");if(File.Exists(icon))Icon=new System.Drawing.Icon(icon);else Icon=System.Drawing.Icon.ExtractAssociatedIcon(Application.ExecutablePath);}catch{}
   message.Dock=DockStyle.Fill;message.Font=new System.Drawing.Font("Segoe UI",13);message.Text="Đang mở SceneForge…";Controls.Add(message);
-  Shown+=async(s,e)=>await StartApplication();FormClosing+=async(s,e)=>{if(allowClose)return;e.Cancel=true;await RequestClose();};FormClosed+=(s,e)=>Stop();
+  InitializeTray();Shown+=async(s,e)=>await StartApplication();FormClosing+=async(s,e)=>{if(allowClose)return;e.Cancel=true;if(e.CloseReason==CloseReason.UserClosing&&!closeRequested&&tray!=null&&tray.Visible){HideToTray();return;}await RequestClose();};FormClosed+=(s,e)=>Stop();
+ }
+ void InitializeTray(){
+  try{
+   trayMenu=new ContextMenuStrip();
+   trayMenu.Items.Add("Mở SceneForge",null,(s,e)=>RestoreFromTray());
+   trayMenu.Items.Add(new ToolStripSeparator());
+   trayMenu.Items.Add("Thoát hoàn toàn",null,async(s,e)=>{RestoreFromTray();await RequestClose();});
+   tray=new NotifyIcon{Icon=Icon??System.Drawing.SystemIcons.Application,Text="SceneForge · đang chạy",ContextMenuStrip=trayMenu,Visible=true};
+   tray.DoubleClick+=(s,e)=>RestoreFromTray();
+  }catch(Exception e){WriteLog("Tray unavailable: "+e.Message);if(tray!=null){tray.Dispose();tray=null;}if(trayMenu!=null){trayMenu.Dispose();trayMenu=null;}}
+ }
+ void HideToTray(){
+  if(closing||closeRequested)return;
+  if(WindowState!=FormWindowState.Minimized)restoreState=WindowState;
+  ShowInTaskbar=false;Hide();
+  // Retain the WebView, its queue promises and the owned backend process/job.
+  try{State("background",backendUrl);}catch(Exception e){WriteLog(e.Message);}
+  if(!notifiedTray&&tray!=null){notifiedTray=true;tray.BalloonTipTitle="SceneForge vẫn đang chạy";tray.BalloonTipText="Ảnh và video tiếp tục xử lý. Nhấp đúp biểu tượng để mở; chọn Thoát hoàn toàn để dừng.";try{tray.ShowBalloonTip(4000);}catch{}}
+ }
+ void RestoreFromTray(){
+  if(closing||allowClose||IsDisposed)return;
+  ShowInTaskbar=true;Show();WindowState=restoreState;Activate();DesktopProgram.SetForegroundWindow(Handle);
+  try{State(backendUrl==null?"starting":"ready",backendUrl);}catch(Exception e){WriteLog(e.Message);}
+ }
+ protected override void WndProc(ref Message message){
+  if(restoreMessage!=0&&message.Msg==(int)restoreMessage){RestoreFromTray();return;}base.WndProc(ref message);
  }
  void WriteLog(string text){lock(logLock){if(log!=null){log.WriteLine(text);log.Flush();}}}
  void State(string phase,string url=null){
-  var state=new Dictionary<string,object>{{"pid",Process.GetCurrentProcess().Id},{"window",Handle.ToInt64()},{"phase",phase},{"console",false},{"app_version","2026.11.11.46110"},{"backend_pid",backend==null?0:backend.Id}};
+  var state=new Dictionary<string,object>{{"pid",Process.GetCurrentProcess().Id},{"window",Handle.ToInt64()},{"phase",phase},{"console",false},{"app_version","2026.11.26.46172"},{"backend_pid",backend==null?0:backend.Id}};
   if(url!=null)state["url"]=url;
   File.WriteAllText(Path.Combine(data,"desktop-state.json"),json.Serialize(state),new UTF8Encoding(false));
  }
  async Task StartApplication(){
+  if(startupStarted)return;startupStarted=true;
   try{
    log=new StreamWriter(logPath,false,new UTF8Encoding(false));State("starting");
    bool missingRuntime=false;try{CoreWebView2Environment.GetAvailableBrowserVersionString();}
@@ -94,8 +125,8 @@ internal sealed class DesktopWindow:Form {
    }
    if(closing)return;if(url==null)throw new IOException("Phần xử lý chưa sẵn sàng. Nhật ký: "+logPath);
    message.Stage=1;message.Text="Đang chuẩn bị cửa sổ…";
-   var options=new CoreWebView2EnvironmentOptions();string debug=Environment.GetEnvironmentVariable("SCENEFORGE_DESKTOP_TEST_PORT");
-   int debugPort;if(Int32.TryParse(debug,out debugPort)&&debugPort>=1024&&debugPort<=65535)options.AdditionalBrowserArguments="--remote-debugging-port="+debugPort;
+   var options=new CoreWebView2EnvironmentOptions();options.AdditionalBrowserArguments="--disable-background-timer-throttling --disable-renderer-backgrounding --disable-backgrounding-occluded-windows";string debug=Environment.GetEnvironmentVariable("SCENEFORGE_DESKTOP_TEST_PORT");
+   int debugPort;if(Int32.TryParse(debug,out debugPort)&&debugPort>=1024&&debugPort<=65535)options.AdditionalBrowserArguments+=" --remote-debugging-port="+debugPort;
    var environment=await CoreWebView2Environment.CreateAsync(null,Path.Combine(data,"desktop-profile"),options);
    if(closing)return;view=new WebView2{Dock=DockStyle.Fill,DefaultBackgroundColor=BackColor};Controls.Add(view);message.BringToFront();
    await view.EnsureCoreWebView2Async(environment);
@@ -106,7 +137,7 @@ internal sealed class DesktopWindow:Form {
    view.CoreWebView2.WebMessageReceived+=(s,e)=>{try{var value=json.Deserialize<Dictionary<string,object>>(e.WebMessageAsJson);if(value.ContainsKey("type")&&(string)value["type"]=="sf-desktop-flush"&&closeSaved!=null)closeSaved.TrySetResult(value.ContainsKey("ok")&&(bool)value["ok"]);}catch{}};
    view.CoreWebView2.NavigationCompleted+=(s,e)=>{if(closing)return;if(e.IsSuccess){if(view.CoreWebView2.Source.StartsWith(url,StringComparison.OrdinalIgnoreCase)){message.Visible=false;view.BringToFront();}}else{message.Text="Chưa mở được giao diện.\n"+e.WebErrorStatus+"\nNhật ký: "+logPath;message.Visible=true;message.BringToFront();}};
    message.Stage=2;message.Text="Đang mở không gian sáng tạo…";
-   view.CoreWebView2.Navigate(url);State("ready",url);
+   view.CoreWebView2.Navigate(url);backendUrl=url;State(Visible?"ready":"background",url);
   }catch(Exception e){
    if(closing)return;WriteLog(e.ToString());State("error");message.Text="Chưa mở được SceneForge.\n"+e.Message+"\n\nNhật ký: "+logPath;
    if(view!=null){Controls.Remove(view);view.Dispose();view=null;}message.Visible=true;message.BringToFront();StopBackend();
@@ -128,7 +159,7 @@ internal sealed class DesktopWindow:Form {
  }
  void OpenExternal(string uri){Uri parsed;if(Uri.TryCreate(uri,UriKind.Absolute,out parsed)&&(parsed.Scheme=="https"||parsed.Scheme=="http"))Process.Start(new ProcessStartInfo(uri){UseShellExecute=true});}
  void StopBackend(){if(job!=null){job.Dispose();job=null;}if(backend!=null){try{if(!backend.HasExited)backend.Kill();}catch{}}}
- void Stop(){closing=true;StopBackend();lock(logLock){if(log!=null){log.Dispose();log=null;}}}
+ void Stop(){closing=true;if(tray!=null){tray.Visible=false;tray.Dispose();tray=null;}if(trayMenu!=null){trayMenu.Dispose();trayMenu=null;}StopBackend();lock(logLock){if(log!=null){log.Dispose();log=null;}}}
 }
 internal sealed class OwnedProcessJob:IDisposable {
  [StructLayout(LayoutKind.Sequential)] struct BasicLimits {public long PerProcessUserTimeLimit,PerJobUserTimeLimit;public uint LimitFlags;public UIntPtr MinimumWorkingSetSize,MaximumWorkingSetSize;public uint ActiveProcessLimit;public UIntPtr Affinity;public uint PriorityClass,SchedulingClass;}
