@@ -120,7 +120,7 @@ async def main():
     await page.locator('[data-studio-upload="background"]').set_input_files({'name':'interior.png','mimeType':'image/png','buffer':png})
     await page.wait_for_function("project.scenes[0].frameReferenceChoices.background.images?.length===1")
     await page.wait_for_function("!SFFrameImages.isRunning()")
-    await page.evaluate("""async()=>{const [s,other]=project.scenes;const refs=await SFPromptPipeline.generationRefs(s,null,true);if(refs.length!==3)throw Error('Wrong attachment count '+refs.length);if(refsFor(s).includes('person')||!refsFor(s).includes('background'))throw Error('Wrong roles');if(other.frameReferenceChoices)throw Error('Leaked scene override');if(!SFFrameImages.prompt(s).includes('Replace only the selected environment/background using '+SFPromptPipeline.imageBindings(s).find(b=>b.role==='background').code))throw Error('Prompt missed background');}""")
+    await page.evaluate("""async()=>{const [s,other]=project.scenes;const refs=await SFPromptPipeline.generationRefs(s,null,true);if(refs.length!==3)throw Error('Wrong attachment count '+refs.length);if(refsFor(s).includes('person')||!refsFor(s).includes('background'))throw Error('Wrong roles');if(other.frameReferenceChoices)throw Error('Leaked scene override');if(!SFFrameImages.prompt(s).includes('ENVIRONMENT is active:'))throw Error('Prompt missed background');}""")
     await page.click('[data-studio="tab"][data-tab="prompt"]')
     await page.wait_for_function("document.querySelector('#studioEnglish').offsetParent!==null")
     assert await page.locator('#studioEnglish').input_value()
@@ -191,7 +191,7 @@ async def main():
      if await page.evaluate('project.scenes[0].frames.length===2||window.runError'):break
      await asyncio.sleep(.25)
     assert not await page.evaluate('window.runError'),await page.evaluate('window.runError')
-    assert await page.evaluate("SFPromptContract.orderedImages(sceneReference(project.scenes[0],'product').images)[0].id==='primary-blue'&&project.cloudJobs.at(-1).referenceManifest.find(r=>r.role==='product').id==='primary-blue'&&project.scenes[0].frames.at(-1).referenceManifest.find(r=>r.role==='product').id==='primary-blue'")
+    assert await page.evaluate("SFPromptContract.orderedImages(sceneReference(project.scenes[0],'product').images)[0].id==='primary-blue'&&project.cloudJobs.at(-1).referenceManifest.find(r=>r.role==='product').imageId==='primary-blue'&&project.scenes[0].frames.at(-1).referenceManifest.find(r=>r.role==='product').imageId==='primary-blue'")
     assert await page.evaluate("project.scenes[0].frames.length===2&&project.cloudJobs.at(-1).requestedOutput.ratio==='16:9'")
     await page.evaluate("SFMediaNodes.open('frame',project.scenes[0].id)")
     await page.wait_for_function("document.querySelector('#studioOutputNotice')?.textContent.includes('1920 × 1080')")

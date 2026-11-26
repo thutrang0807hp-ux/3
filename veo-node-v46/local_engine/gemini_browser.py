@@ -71,7 +71,7 @@ class GeminiBrowser:
             row={**existing,'id':aid,'service':'gemini_chat','name':existing.get('name','Gemini · Chrome/Edge'),'enabled':True,'active':existing.get('active',False),'state':'ready','session_verified':True,'transport':'browser','browser_route':route,'models':[],'priority':existing.get('priority',len(rows)),'checked_at':time.time()}
             self.vault.put('accounts',row);self.routes[route]['bound']=True;self.routes[route]['auto_verified']=True;self.save()
             active=next((r for r in rows if r.get('active')and r.get('enabled')and r.get('session_verified')and r.get('state')in ('ready','active')and r.get('transport')=='browser'and self.available(r.get('browser_route'))and self.routes.get(r.get('browser_route'),{}).get('installation_id')),None)
-            if not active:self.service.pool.select({'mode':'selected','account_id':aid})
+            if not active and not any(r.get('active')and r.get('enabled')and r.get('session_verified')and r.get('transport')=='native'for r in rows):self.service.pool.select({'mode':'selected','account_id':aid})
             self.auto_errors.pop(route,None)
         except asyncio.CancelledError:raise
         except Exception:self.auto_errors[route]='Mở Gemini trong Chrome/Edge và đăng nhập để tiện ích tự kết nối.'

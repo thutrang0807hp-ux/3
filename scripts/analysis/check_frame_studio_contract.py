@@ -19,8 +19,12 @@ assert "if(kind==='image')return processFrameImage"in html
 assert "j.frameStudioVersion!==164"in html
 assert (ROOT/'scripts/ui/frame_settings.js').read_text() in html
 assert (ROOT/'scripts/ui/frame_universal_v60.js').read_text() in html
-for path in ['scripts/ui/frame_studio_node.js','veo-node-v46/local_engine/gemini_chat.py','veo-node-v46/scripts/browser-extension/frame-studio-tab.js']:
+for path in ['scripts/ui/frame_studio_node.js','veo-node-v46/scripts/browser-extension/frame-studio-tab.js']:
  actual=(ROOT/path).read_bytes()
  if path=='scripts/ui/frame_studio_node.js':actual=actual.replace("const choice=(s,k)=>s.frameReferenceChoices?.[k]?.mode||(s.referenceRoleOverrides?.[k]===false?'keep':'shared');".encode(),"const choice=(s,k)=>s.frameReferenceChoices?.[k]?.mode||'shared';".encode()).replace("esc(k==='person'?'Người · gồm tay / nail':refNames[k])+'</b>".encode(),"esc(refNames[k])+'</b>".encode())
  assert actual==subprocess.check_output(['git','show','6405507:'+path],cwd=ROOT),path+' changed outside reviewed scope'
 print('PASS exact upstream generator (export removed only), exact upstream image decoder, upgraded edit recipe with unchanged reference packing, one new image owner and legacy importer exclusion')
+
+current=(ROOT/'veo-node-v46/local_engine/gemini_chat.py').read_text()
+old=subprocess.check_output(['git','show','272bb28:veo-node-v46/local_engine/gemini_chat.py'],cwd=ROOT,text=True)
+assert current[current.index('    async def browser_generate('):current.index('    async def receive_image(')]==old[old.index('    async def browser_generate('):old.index('    async def receive_image(')]

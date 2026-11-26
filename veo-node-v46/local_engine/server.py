@@ -257,6 +257,9 @@ async def check_account(body:dict):
 async def remove_account(body:dict):
  a=account(body.get('id'))
  from .browser_profiles import profiles
+ if a['service']=='gemini_chat'and a.get('transport')=='native':
+  if a['id']in GEMINI_CHAT.phases.values()or GEMINI_CHAT.lock(a['id']).locked():raise HTTPException(409,'Đợi lượt Gemini đang chạy xong trước khi gỡ tài khoản.')
+  await GEMINI_CHAT.native.close_account(a['id'])
  profiles(VAULT,DATA).ensure_idle(a['id'])
  if a['service']in ('grok','chatgpt','meta'):WEB_IMAGES.remove(a['id'])
  if a['service']=='flow':await FLOW_ACCOUNTS.remove(a['id'])
