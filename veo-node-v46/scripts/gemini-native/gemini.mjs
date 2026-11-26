@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { readFile, stat, writeFile, mkdir, rename } from "node:fs/promises";
+import { readFile, stat, writeFile } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
 import { chromium } from "playwright-core";
 
@@ -171,8 +171,6 @@ async function saveResult(context, page, answer, image, output) {
   await writeFile(output, bytes, {flag:"wx"});
 }
 
-// SceneForge additions: attachments and durable receive-only receipts.
-let sceneForgePhase = "connect";
 async function attachReferences(page, refs = []) {
   if (!refs.length) return;
   if (refs.length > 8) throw new Error("Tối đa 8 ảnh nguồn / tham chiếu.");
@@ -191,34 +189,6 @@ async function attachReferences(page, refs = []) {
     return previews.length >= n || Array.from({length:n},(_,i)=>labels.some(t=>t.includes(`SceneForge-reference-${i+1}`))).every(Boolean);
   }, files.length, {timeout:45000});
 }
-async function saveReceipt(request, page, context, state) {
-  if (!request.receipt) return;
-  const session=await context.newCDPSession(page);
-  let target;
-  try { target=(await session.send("Target.getTargetInfo")).targetInfo.targetId; }
-  finally { await session.detach(); }
-  await writeFile(request.receipt+".tmp",JSON.stringify({request_id:request.request_id,target,kind:request.action,answer:await page.locator(responses).count(),...state}));
-  await rename(request.receipt+".tmp",request.receipt);
-}
-async function receiveExisting(context, request) {
-  const turn=JSON.parse(await readFile(request.receipt,"utf8"));
-  if (turn.request_id !== request.request_id || turn.kind !== "image") throw new Error("Không có lượt ảnh tương ứng; không tự tạo lại.");
-  let page;
-  for (const candidate of context.pages()) {
-    const session=await context.newCDPSession(candidate);
-    try { if ((await session.send("Target.getTargetInfo")).targetInfo.targetId===turn.target) page=candidate; }
-    finally { await session.detach(); }
-    if (page) break;
-  }
-  if (!page || new URL(page.url()).origin !== gemini) throw new Error("Tab xử lý của lượt cũ không còn; không tự tạo lại.");
-  sceneForgePhase="wait_image";
-  const answer=page.locator(responses).nth(turn.answer);
-  const image=await waitForImage(answer);
-  sceneForgePhase="download_image";
-  await saveResult(context,page,answer,image,request.output);
-  await page.goto("about:blank", {timeout:5000,waitUntil:"commit"}).catch(()=>{});
-  return {saved:true};
-}
 
 async function run(port, request) {
   const browser = await chromium.connectOverCDP("http://127.0.0.1:" + port, {timeout:12000});
@@ -230,9 +200,7 @@ async function run(port, request) {
     }
     const context = browser.contexts()[0];
     if (!context) throw new Error("Không tìm thấy hồ sơ Chrome của app.");
-    if (request.action === "receive") return await receiveExisting(context, request);
-    const page = context.pages().find(item => item.url() === "about:blank") || await context.newPage();
-    let completed=false, submitted=false;
+    const page = context.pages().find(item => item.url() === "about:blank");
     if (!page) throw new Error("Không tìm thấy tab xử lý nền. Hãy thoát app và mở lại.");
     try {
       await page.goto(gemini + "/app", {waitUntil:"domcontentloaded", timeout:30000});
@@ -241,16 +209,11 @@ async function run(port, request) {
       if (!cookies.some(({name}) => name === "__Secure-1PSID")) {
         throw new Error("Chưa thấy phiên Google đã đăng nhập trong hồ sơ Gemini của app.");
       }
-      sceneForgePhase="editor";
       const editor = await editorFor(page);
-      if (request.action === "verify") { completed=true; return {signedIn:true}; }
-      sceneForgePhase="attach_references";
-      await attachReferences(page,request.references);
+      if (request.action === "verify") return {signedIn:true};
+      await attachReferences(page, request.references);
       if (request.action === "text") {
-        await saveReceipt(request,page,context,{accepted:null});submitted=true;
-        sceneForgePhase="send_text";
-        const answer=await submit(page,editor,request.prompt);
-        const result={text:await waitForText(page,answer)};completed=true;return result;
+        return {text:await waitForText(page,await submit(page,editor,request.prompt))};
       }
       if (request.action === "prompt") {
         const instruction = "Viết lại mô tả dưới đây thành một prompt tạo ảnh chi tiết. Giữ nguyên ngôn ngữ, " +
@@ -258,16 +221,12 @@ async function run(port, request) {
         return {text: await waitForText(page, await submit(page, editor, instruction))};
       }
       if (request.action !== "image") throw new Error("Yêu cầu Gemini không hợp lệ.");
-      sceneForgePhase="send_prompt";
-      await saveReceipt(request,page,context,{accepted:null});submitted=true;
       const answer = await submit(page, editor, imageInstruction(request.prompt));
-      sceneForgePhase="wait_image";
       const image = await waitForImage(answer);
-      sceneForgePhase="download_image";
       await saveResult(context, page, answer, image, request.output);
-      completed=true;return {saved:true};
+      return {saved:true};
     } finally {
-      if (completed || !submitted) await page.goto("about:blank", {timeout:5000, waitUntil:"commit"}).catch(() => {});
+      await page.goto("about:blank", {timeout:5000, waitUntil:"commit"}).catch(() => {});
     }
   } finally {
     await browser.close().catch(() => {});
@@ -281,7 +240,7 @@ async function main() {
     process.stdout.write(JSON.stringify({result:await run(port, request)}));
   } catch (error) {
     const message = error.name === "TimeoutError" ? "Hết thời gian chờ Gemini." : error.message;
-    process.stdout.write(JSON.stringify({error:message.split("\n")[0].slice(0,300),phase:sceneForgePhase,error_type:error.name}));
+    process.stdout.write(JSON.stringify({error:message.split("\n")[0].slice(0,300)}));
     process.exitCode = 1;
   }
 }

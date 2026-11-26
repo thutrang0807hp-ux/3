@@ -9,11 +9,11 @@ def main():
  assert json.loads((modules/'playwright-core/package.json').read_text())['version']=='1.62.1'
  with zipfile.ZipFile(out,'w',zipfile.ZIP_DEFLATED,compresslevel=9)as z:
   with zipfile.ZipFile(node)as n:
-   for name in ('node.exe','LICENSE'):z.writestr(name if name=='node.exe'else'NODE-LICENSE.txt',n.read('node-v22.23.5-win-x64/'+name))
+   for name in ('node.exe','LICENSE'):z.writestr('runtime/'+(name if name=='node.exe'else'NODE-LICENSE.txt'),n.read('node-v22.23.5-win-x64/'+name))
   for f in sorted(runtime.iterdir()):
-   if f.is_file():z.write(f,f.name)
+   if f.is_file():z.write(f,'repo_bridge.py'if f.name=='upstream-browser-bridge.py'else'runtime/'+f.name)
   for f in sorted(modules.rglob('*')):
-   if f.is_file():z.write(f,'node_modules/'+str(f.relative_to(modules)))
+   if f.is_file():z.write(f,'runtime/node_modules/'+str(f.relative_to(modules)))
  meta={'sha256':sha(out.read_bytes()),'node':'22.23.5','node_archive_sha256':sha(node.read_bytes()),'playwright_core':'1.62.1','upstream_repository':'https://github.com/thutrang0807hp-ux/test-gemoni-chat','upstream_commit':'75f43c9','upstream_gemini_sha256':sha((runtime/'upstream-gemini.mjs').read_bytes()),'adapter_sha256':sha((runtime/'gemini.mjs').read_bytes())}
  out.with_suffix('.json').write_text(json.dumps(meta,indent=2));print('Packaged',out.stat().st_size,meta['sha256'])
 if __name__=='__main__':main()

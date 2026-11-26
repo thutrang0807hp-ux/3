@@ -421,16 +421,20 @@ class GeminiChat(MuseProvider):
         metadata = self.ledger.metadata(rid)
         if metadata.get('native_request'):
             record['transport']='native'
+            if metadata.get('native_engine')=='repository_direct'and record.get('state')in ('unknown','failed'):
+                detail=metadata.get('provider_message')
+                record['message']='Bộ kết nối gốc: '+(detail[:300]if isinstance(detail,str)and detail else 'chưa trả tệp ảnh về app.')+' App không tự gửi tạo lại.'
             phase=metadata.get('phase')
-            labels={'connect':'kết nối Chrome riêng','editor':'mở ô chat Gemini','send_text':'gửi văn bản','receive_result':'nhận kết quả lượt cũ','open_profile':'mở hồ sơ Gemini','attach_references':'đính kèm ảnh tham chiếu','fill_prompt':'điền prompt','send_prompt':'gửi prompt','wait_image':'nhận diện ảnh kết quả','download_image':'tải ảnh kết quả'}
+            labels={'repository_request':'chạy bộ kết nối gốc của repo','connect':'kết nối Chrome riêng','editor':'mở ô chat Gemini','send_text':'gửi văn bản','receive_result':'nhận kết quả lượt cũ','open_profile':'mở hồ sơ Gemini','attach_references':'đính kèm ảnh tham chiếu','fill_prompt':'điền prompt','send_prompt':'gửi prompt','wait_image':'nhận diện ảnh kết quả','download_image':'tải ảnh kết quả'}
             if phase in labels and record.get('state')in ('unknown','failed'):
                 record['native_phase']=phase
                 record['message']=(record.get('message')or'Chưa nhận xong ảnh.')+' Bước gặp lỗi: '+labels[phase]+'.'
 
         if metadata.get('browser_request'):
             record['transport']='browser'
-        if (metadata.get('browser_request') and record.get('state') in ('unknown','failed')) or metadata.get('native_request') or metadata.get('last_error_code') == 'GEMINI_IMAGE_DOWNLOAD_ERROR' or metadata.get('image_result_available'):
+        if (metadata.get('browser_request') and record.get('state') in ('unknown','failed')) or (metadata.get('native_request')and metadata.get('native_engine')!='repository_direct') or metadata.get('last_error_code') == 'GEMINI_IMAGE_DOWNLOAD_ERROR' or metadata.get('image_result_available'):
             record['can_receive_image'] = record.get('state') != 'done'
+        if metadata.get('native_engine')=='repository_direct':record['can_receive_image']=record.get('state')!='done'and self.native.paths(rid)[1].is_file()
         if metadata.get('receive_active') and rid in self.tasks and record.get('state') != 'done':
             record.update(state='downloading', phase='receiving_existing_image',message='Đang nhận lại ảnh của lượt cũ; không gửi tạo mới.')
             record.pop('code',None);record.pop('native_phase',None)
@@ -488,7 +492,7 @@ class GeminiChat(MuseProvider):
                         self.vault.set_secret('gemini-image-result:' + rid, {'request_id':rid,'account_id':aid,'image_result':response['image_result']})
                         self.ledger.set_metadata(rid, {'account_id':aid,'image_result_available':True})
                     if not response.get('ok'):
-                        self.ledger.set_metadata(rid,{'last_error_code':response.get('code')or response.get('reason')or'UNKNOWN',**{key:response.get(key) for key in ('phase','error_type','http_status')}})
+                        self.ledger.set_metadata(rid,{'last_error_code':response.get('code')or response.get('reason')or'UNKNOWN',**{key:response.get(key) for key in ('phase','error_type','http_status','provider_message')}})
                     if safe_rejection(response):
                         dispatched = False
                         self.pool.limit(aid, response['reason'])
@@ -544,7 +548,7 @@ class GeminiChat(MuseProvider):
 
     async def native_generate(self,rid,aid,payload,output):
         safe={k:v for k,v in payload.items()if k not in {'prompt','references','browser_receive'}}
-        self.ledger.set_metadata(rid,{'native_request':True,'account_id':aid,'native_payload':safe})
+        self.ledger.set_metadata(rid,{'native_request':True,'native_engine':'repository_direct','account_id':aid,'native_payload':safe})
         return await self.native.generate(rid,aid,payload,output)
 
     async def browser_generate(self,rid,aid,payload,output):
@@ -594,6 +598,8 @@ class GeminiChat(MuseProvider):
             if self.tasks.get(rid) is task:
                 self.tasks.pop(rid, None)
         meta = self.ledger.metadata(rid)
+        if meta.get('native_engine')=='repository_direct'and not self.native.paths(rid)[1].is_file():
+            raise HTTPException(409,'Bộ kết nối gốc chưa trả tệp ảnh để nhận lại. App không tự gửi tạo ảnh mới.')
         if meta.get('native_request'):
             aid=meta['account_id'];payload={**meta['native_payload'],'browser_receive':True}
             self.ledger.set_metadata(rid,{'receive_active':True});self.phases[rid]=aid
@@ -651,7 +657,7 @@ class GeminiChat(MuseProvider):
                     self.vault.set_secret('gemini-image-result:' + rid, pointer)
                 if not response.get('ok'):
                     self.ledger.set_metadata(rid, {'last_error_code':response.get('code')or response.get('reason')or'UNKNOWN',
-                        **{key:response.get(key) for key in ('phase','error_type','http_status')}})
+                        **{key:response.get(key) for key in ('phase','error_type','http_status','provider_message')}})
                     return
                 if not output.is_file() or not 0 < output.stat().st_size <= 24 * 1024**2:
                     raise ValueError('invalid recovered image size')

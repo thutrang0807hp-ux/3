@@ -26,7 +26,8 @@ async def main():
   from local_engine.browser_profiles import profiles
   data=root/'data';data.mkdir();(data/'ledger').mkdir();v=Vault();s=install_gemini_chat(FastAPI(),v,data,RequestLedger(data/'ledger'));m=profiles(v,data)
   aid='gchat-account-node';v.put('accounts',{'id':aid,'service':'gemini_chat','name':'Native Node fixture','transport':'native','enabled':True,'active':True,'session_verified':True,'state':'ready','models':[]})
-  e=m.reserve('gemini_chat',aid);m.settings(e,executable='/usr/bin/chromium');m.bind(e,aid);s.select({'account_id':aid,'mode':'selected'})
+  chrome=root/'test-chrome';chrome.write_text('#!/bin/sh\nexec /usr/bin/chromium --no-sandbox "$@"\n');chrome.chmod(0o755)
+  e=m.reserve('gemini_chat',aid);m.settings(e,executable=str(chrome));m.bind(e,aid);s.select({'account_id':aid,'mode':'selected'})
   async def forbidden(*args):raise AssertionError('SDK/extension should not run')
   s.runner=forbidden
   images={}
@@ -48,7 +49,7 @@ document.querySelector('button').onclick=async()=>{const prompt=document.querySe
     else:await r.abort()
    await ctx.route('**/*',route);await ctx.add_cookies([{'name':'__Secure-1PSID','value':'fixture','domain':'.google.com','path':'/','secure':True}]);await s.native.verify(aid)
    aid2='gchat-account-node-second';v.put('accounts',{'id':aid2,'service':'gemini_chat','name':'Second Node fixture','transport':'native','enabled':True,'active':False,'session_verified':True,'state':'ready','models':[]})
-   e2=m.reserve('gemini_chat',aid2);m.settings(e2,executable='/usr/bin/chromium');m.bind(e2,aid2)
+   e2=m.reserve('gemini_chat',aid2);m.settings(e2,executable=str(chrome));m.bind(e2,aid2)
    row2=await s.native.context(aid2);inspector2=await pw.chromium.connect_over_cdp('http://127.0.0.1:'+str(row2['port']));ctx2=inspector2.contexts[0]
    await ctx2.route('**/*',route);await ctx2.add_cookies([{'name':'__Secure-1PSID','value':'fixture2','domain':'.google.com','path':'/','secure':True}]);await s.native.verify(aid2)
    s.select({'mode':'balanced','account_id':aid})
@@ -72,10 +73,17 @@ document.querySelector('button').onclick=async()=>{const prompt=document.querySe
      result=await wait(rid);assert result['state']=='done'and result['result']['account_id']==aid,result;assert (s.root/result['result']['file']).read_bytes()==images[name]
     bad=await submit('FAIL');result=await wait(bad);assert result['state']=='unknown',result
     after=await submit('AFTER');result=await wait(after);assert result['state']=='done',result;assert (s.root/result['result']['file']).read_bytes()==images['AFTER']
-    for page in ctx.pages:
-     if page.url.startswith('https://gemini.google.com/')and await page.evaluate('window.turnName')=='FAIL':await page.evaluate('window.blockDownload=false')
-    count=len(sent);receiving=await s.receive_image(bad);assert receiving['state']=='downloading',receiving;result=await wait(bad);assert result['state']=='done',result;assert len(sent)==count,'receive resent prompt';assert (s.root/result['result']['file']).read_bytes()==images['FAIL']
+    count=len(sent)
+    try:await s.receive_image(bad);raise AssertionError('Receive should not resubmit a failed upstream turn')
+    except Exception as exc:
+     from fastapi import HTTPException
+     assert isinstance(exc,HTTPException)and exc.status_code==409,exc
+    assert len(sent)==count
+    s.native.paths(bad)[1].write_bytes(images['FAIL'])  # Simulate completed file awaiting a failed import.
+    receiving=await s.receive_image(bad);assert receiving['state']=='downloading'
+    result=await wait(bad);assert result['state']=='done'and len(sent)==count,result
+    assert (s.root/result['result']['file']).read_bytes()==images['FAIL']
     assert not list(s.native.receipts.iterdir()),'successful receipts/cache should be retired'
-    print('PASS original Node/CDP: ordinary browser closed, parallel separate-account A/B exact images, >20k prompt+2 exact refs, failed download retained, next job succeeds, receive targets failed job without resending, no extension/SDK, successful caches retired')
+    print('PASS original Node/CDP: ordinary browser closed, parallel separate-account A/B exact images, >20k prompt+2 exact refs, failed download retained, next job succeeds, failed turn follows upstream cleanup, no automatic retry, no extension/SDK, successful caches retired')
    finally:await inspector.close();await inspector2.close();await s.close()
 asyncio.run(main())

@@ -9,7 +9,17 @@ for name in ['imageSource','imageInstruction','editorFor','submit','waitForText'
 assert 'chromium.connectOverCDP("http://127.0.0.1:" + port' in adapter
 meta=json.loads((ROOT/'veo-node-v46/vendor/gemini-native-node.json').read_text());data=(ROOT/'veo-node-v46/vendor/gemini-native-node.zip').read_bytes();assert hashlib.sha256(data).hexdigest()==meta['sha256']
 with zipfile.ZipFile(ROOT/'veo-node-v46/vendor/gemini-native-node.zip')as z:
- assert z.read('gemini.mjs').decode()==adapter
- assert z.read('upstream-gemini.mjs').decode()==original
- assert json.loads(z.read('node_modules/playwright-core/package.json'))['version']=='1.62.1'
+ assert z.read('runtime/gemini.mjs').decode()==adapter
+ assert z.read('runtime/upstream-gemini.mjs').decode()==original
+ assert json.loads(z.read('runtime/node_modules/playwright-core/package.json'))['version']=='1.62.1'
 print('PASS exact original send/read/download functions, Node/CDP, playwright-core 1.62.1 and runtime checksum')
+
+# Entire run() path equals upstream after removing exactly the two allowed insertions.
+extra='      await attachReferences(page, request.references);\n      if (request.action === "text") {\n        return {text:await waitForText(page,await submit(page,editor,request.prompt))};\n      }\n'
+def runpart(text):return text[text.index('async function run('):text.index('async function main(')]
+assert runpart(adapter).replace(extra,'')==runpart(original)
+with zipfile.ZipFile(ROOT/'veo-node-v46/vendor/gemini-native-node.zip')as z:
+ assert z.read('repo_bridge.py')==(folder/'upstream-browser-bridge.py').read_bytes()
+print('PASS whole upstream run/start/request/create_image path retained, with only reference attachment and raw-text insertion')
+
+assert hashlib.sha256((folder/'upstream-browser-bridge.py').read_bytes()).hexdigest()=='a861ddfc4ec841fcbac0adccde9b779bece38caa2ee3327e57bbaf40a71592fa'
