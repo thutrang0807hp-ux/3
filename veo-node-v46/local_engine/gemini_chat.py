@@ -425,7 +425,13 @@ class GeminiChat(MuseProvider):
                 detail=metadata.get('provider_message')
                 record['message']='Bộ kết nối gốc: '+(detail[:300]if isinstance(detail,str)and detail else 'chưa trả tệp ảnh về app.')+' App không tự gửi tạo lại.'
             phase=metadata.get('phase')
-            labels={'repository_request':'chạy bộ kết nối gốc của repo','connect':'kết nối Chrome riêng','editor':'mở ô chat Gemini','send_text':'gửi văn bản','receive_result':'nhận kết quả lượt cũ','open_profile':'mở hồ sơ Gemini','attach_references':'đính kèm ảnh tham chiếu','fill_prompt':'điền prompt','send_prompt':'gửi prompt','wait_image':'nhận diện ảnh kết quả','download_image':'tải ảnh kết quả'}
+            labels={'repository_request':'chạy bộ kết nối gốc của repo','prepare_profile':'chuẩn bị hồ sơ','connect_browser':'kết nối Chrome riêng','open_gemini':'mở trang Gemini','check_session':'kiểm tra đăng nhập','find_editor':'tìm ô nhập Gemini','select_image_mode':'chọn công cụ tạo ảnh','fill_and_click_send':'điền prompt và bấm gửi','confirm_submission':'xác nhận lượt mới','image_received':'đã nhận tệp ảnh','connect':'kết nối Chrome riêng','editor':'mở ô chat Gemini','send_text':'gửi văn bản','receive_result':'nhận kết quả lượt cũ','open_profile':'mở hồ sơ Gemini','attach_references':'đính kèm ảnh tham chiếu','fill_prompt':'điền prompt','send_prompt':'gửi prompt','wait_image':'nhận diện ảnh kết quả','download_image':'tải ảnh kết quả'}
+            trace=self.native.trace(rid)
+            if trace:
+                record['native_trace']=trace
+                if record.get('state')not in ('done','unknown','failed'):
+                    record['message']='Đang xử lý: '+labels.get(trace['stage'],trace['stage'])+'.'
+                phase=trace['stage']
             if phase in labels and record.get('state')in ('unknown','failed'):
                 record['native_phase']=phase
                 record['message']=(record.get('message')or'Chưa nhận xong ảnh.')+' Bước gặp lỗi: '+labels[phase]+'.'

@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync, renameSync } from "node:fs";
 import { readFile, stat, writeFile } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
 import { chromium } from "playwright-core";
@@ -171,6 +171,13 @@ async function saveResult(context, page, answer, image, output) {
   await writeFile(output, bytes, {flag:"wx"});
 }
 
+// Diagnostic state only: never persist prompt, references, cookies or signed URLs.
+let tracePath=null,currentStage='starting';
+function trace(stage,details={}){
+ currentStage=stage;
+ if(!tracePath)return;
+ try{writeFileSync(tracePath+'.tmp',JSON.stringify({stage,at:Date.now(),...details}));renameSync(tracePath+'.tmp',tracePath);}catch{}
+}
 // SceneForge's existing sender; only the receiver/download path comes from this repo.
 const sceneSend = new Function('return ('+readFileSync(new URL('./scene-send.js',import.meta.url),'utf8')+')')();
 async function prepareImageMode(page){
@@ -187,16 +194,20 @@ async function prepareImageMode(page){
  await item.click({timeout:5000});
 }
 async function sendKnownFrame(page,request){
- if(request.action==='image'){try{await prepareImageMode(page);}catch(error){throw new Error('Chưa chọn được chế độ Tạo ảnh; chưa gửi prompt: '+error.message.split('\n')[0]);}}
+ if(request.action==='image'){trace('select_image_mode');try{await prepareImageMode(page);}catch(error){throw new Error('Chưa chọn được chế độ Tạo ảnh; chưa gửi prompt: '+error.message.split('\n')[0]);}}
+ trace('attach_references');
  const result=await page.evaluate(sceneSend,{...request,kind:request.action==='image'?'image':'text'});
  if(!result?.selector)throw new Error(result?.code||'Không đính kèm được ảnh của cảnh.');
+ trace('find_editor');
  const editor=await editorFor(page);
  const message=request.action==='image'?'Hãy tạo một ảnh theo đúng prompt này. Tỷ lệ ảnh: '+(request.ratio||'9:16')+'\n\n'+request.prompt:request.prompt;
  try {
   // The upstream submit uses real browser fill/click, not HTMLElement.click().
+  trace('fill_and_click_send');
   await submit(page,editor,message);
  }catch(error){throw new Error('Chưa hoàn tất thao tác gửi Gemini: '+error.message.split('\n')[0]);}
  try {
+  trace('confirm_submission');
   await page.waitForFunction(({selector,before})=>!!document.querySelector(selector)||document.querySelectorAll('user-query,.user-query,[data-message-role="user"]').length>before,{selector:result.selector,before:result.userQueries},{timeout:30000});
  }catch{throw new Error('Chưa xác nhận Gemini nhận lượt mới sau khi bấm gửi. App không tự gửi lại.');}
  return page.locator(result.selector).last();
@@ -224,6 +235,7 @@ async function receiveSceneImage(page,answer){
 }
 
 async function run(port, request) {
+  trace('connect_browser');
   const browser = await chromium.connectOverCDP("http://127.0.0.1:" + port, {timeout:12000});
   try {
     if (request.action === "shutdown") {
@@ -236,12 +248,15 @@ async function run(port, request) {
     const page = context.pages().find(item => item.url() === "about:blank");
     if (!page) throw new Error("Không tìm thấy tab xử lý nền. Hãy thoát app và mở lại.");
     try {
+      trace('open_gemini');
       await page.goto(gemini + "/app", {waitUntil:"domcontentloaded", timeout:30000});
       if (new URL(page.url()).origin !== gemini) throw new Error("Hãy hoàn tất đăng nhập bằng nút Đăng nhập Gemini.");
+      trace('check_session');
       const cookies = await context.cookies(gemini + "/app");
       if (!cookies.some(({name}) => name === "__Secure-1PSID")) {
         throw new Error("Chưa thấy phiên Google đã đăng nhập trong hồ sơ Gemini của app.");
       }
+      trace('find_editor');
       const editor = await editorFor(page);
       if (request.action === "verify") return {signedIn:true};
       if(request.action === "text")return {text:await waitForText(page,await sendKnownFrame(page,request))};
@@ -252,8 +267,11 @@ async function run(port, request) {
       }
       if (request.action !== "image") throw new Error("Yêu cầu Gemini không hợp lệ.");
       const answer = await sendKnownFrame(page,request);
+      trace('wait_image');
       const image = await receiveSceneImage(page,answer);
+      trace('download_image');
       await saveResult(context, page, answer, image, request.output);
+      trace('image_received');
       return {saved:true};
     } finally {
       await page.goto("about:blank", {timeout:5000, waitUntil:"commit"}).catch(() => {});
@@ -266,10 +284,12 @@ async function run(port, request) {
 async function main() {
   try {
     const {port, request} = JSON.parse(readFileSync(0, "utf8"));
+    tracePath=request.trace_path||null;
     if (!Number.isInteger(port) || port < 1024 || port > 65535) throw new Error("Chrome chưa sẵn sàng.");
     process.stdout.write(JSON.stringify({result:await run(port, request)}));
   } catch (error) {
-    const message = error.name === "TimeoutError" ? "Hết thời gian chờ Gemini." : error.message;
+    const message=('['+currentStage+'] '+error.message.split('\n')[0]).replace(/https?:\/\/[^\s]+/g,'[địa chỉ ẩn]');
+    trace(currentStage,{failed:true,error_type:error.name});
     process.stdout.write(JSON.stringify({error:message.split("\n")[0].slice(0,300)}));
     process.exitCode = 1;
   }

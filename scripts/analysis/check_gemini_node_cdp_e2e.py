@@ -33,7 +33,7 @@ async def main():
   images={}
   for name,color in [('A','blue'),('B','red'),('FAIL','green'),('AFTER','yellow')]:
    b=io.BytesIO();Image.new('RGB',(360,640),color).save(b,'PNG');images[name]=b.getvalue()
-  encoded={k:base64.b64encode(b).decode()for k,b in images.items()};sent=[]
+  encoded={k:base64.b64encode(b).decode()for k,b in images.items()};sent=[];fail_page=False
   fixture='''<meta charset="UTF-8"><rich-textarea><div contenteditable="true" role="textbox">STALE UNSENT DRAFT</div></rich-textarea><input type="file" multiple><button class="send-button" aria-label="Send message">Send</button><button aria-label="Tools" id="tools">Tools</button><div role="menu" id="tools-menu" hidden><button role="menuitem" aria-label="Create images">Create images</button></div><script>
 document.querySelector('#tools').onclick=()=>{document.querySelector('#tools-menu').hidden=false};document.querySelector('#tools-menu button').onclick=()=>{window.imageMode=true;document.querySelector('#tools-menu').hidden=true};const images=IMAGES;const actualFetch=window.fetch.bind(window),actualCanvas=HTMLCanvasElement.prototype.toDataURL;
 window.fetch=(u,...args)=>{if(window.blockDownload&&String(u).startsWith('data:image'))throw Error('fixture download blocked');return actualFetch(u,...args)};
@@ -45,7 +45,9 @@ document.querySelector('button').onclick=async event=>{if(!event.isTrusted){wind
    inspector=await pw.chromium.connect_over_cdp('http://127.0.0.1:'+str(row['port']));ctx=inspector.contexts[0]
    async def route(r):
     if r.request.url.endswith('/fixture-record'):sent.append(json.loads(r.request.post_data));await r.fulfill(body='{}',content_type='application/json')
-    elif r.request.url.startswith('https://gemini.google.com/'):await r.fulfill(body=fixture,content_type='text/html')
+    elif r.request.url.startswith('https://gemini.google.com/'):
+     if fail_page:await r.abort('timedout')
+     else:await r.fulfill(body=fixture,content_type='text/html')
     else:await r.abort()
    await ctx.route('**/*',route);await ctx.add_cookies([{'name':'__Secure-1PSID','value':'fixture','domain':'.google.com','path':'/','secure':True}]);await s.native.verify(aid)
    aid2='gchat-account-node-second';v.put('accounts',{'id':aid2,'service':'gemini_chat','name':'Second Node fixture','transport':'native','enabled':True,'active':False,'session_verified':True,'state':'ready','models':[]})
@@ -85,7 +87,10 @@ document.querySelector('button').onclick=async event=>{if(!event.isTrusted){wind
     assert (s.root/result['result']['file']).read_bytes()==images['FAIL']
     only=await submit('TEXTONLY');result=await wait(only);assert result['state']=='unknown'and 'công cụ tạo ảnh không khả dụng'in result['message'],result
     count=len(sent);blocked=await submit('BLOCKED');result=await wait(blocked);assert result['state']=='unknown'and 'Chưa xác nhận Gemini nhận lượt mới'in result['message'],result;assert len(sent)==count
-    assert not list(s.native.receipts.iterdir()),'successful receipts/cache should be retired'
+    fail_page=True;before=len(sent);opening=await submit('GOTOFAIL');result=await wait(opening)
+    assert result['state']=='unknown'and result['native_trace']['stage']=='open_gemini',result
+    assert '[open_gemini]'in result['message']and len(sent)==before,result
+    assert not list(s.native.receipts.glob('*.image')),'successful image caches should be retired'
     print('PASS original Node/CDP: ordinary browser closed, parallel separate-account A/B exact images, >20k prompt+2 exact refs, failed download retained, next job succeeds, failed turn follows upstream cleanup, no automatic retry, no extension/SDK, successful caches retired')
    finally:await inspector.close();await inspector2.close();await s.close()
 asyncio.run(main())

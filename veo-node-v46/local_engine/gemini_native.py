@@ -49,9 +49,9 @@ class NativeGemini:
    cfg=manager.settings(entry)
    repo.discover_chrome=lambda:Path(cfg['executable'])
    class Workspace(repo.GeminiWorkspace):
-    references=();request_id='';request_ratio='9:16'
+    references=();request_id='';request_ratio='9:16';trace_path=None
     def request(self,action,**values):
-     if action in ('image','text'):values.update(references=list(self.references),request_id=self.request_id,ratio=self.request_ratio)
+     if action in ('image','text'):values.update(references=list(self.references),request_id=self.request_id,ratio=self.request_ratio,trace_path=self.trace_path)
      return super().request(action,**values)
    folder=Path(self.service.data)/'gemini-repo-workspaces'/aid;folder.mkdir(parents=True,exist_ok=True)
    workspace=Workspace(folder);workspace.profile=manager.path(entry['service'],entry['key'])
@@ -74,12 +74,18 @@ class NativeGemini:
  def paths(self,rid):
   self.service.valid_id(rid)
   return self.receipts/(rid+'.json'),self.receipts/(rid+'.image')
+ def trace(self,rid):
+  try:
+   value=json.loads(self.paths(rid)[0].read_text())
+   if not isinstance(value,dict)or value.get('stage')not in {'prepare_profile','starting','connect_browser','open_gemini','check_session','find_editor','select_image_mode','attach_references','fill_and_click_send','confirm_submission','wait_image','download_image','image_received'}:return None
+   return {k:value[k]for k in ('stage','at','failed','error_type')if k in value}
+  except (OSError,ValueError):return None
  def retire(self,rid):
   for path in self.paths(rid):
    try:path.unlink(missing_ok=True)
    except OSError:pass
  async def generate(self,rid,aid,payload,output):
-  _,cached=self.paths(rid);accepted=False;phase='open_profile'
+  trace_file,cached=self.paths(rid);accepted=False;phase='open_profile'
   try:
    if cached.is_file():
     accepted=True
@@ -89,9 +95,10 @@ class NativeGemini:
      image.verify()
     await asyncio.to_thread(shutil.copyfile,cached,output);return {'ok':True,'download_variant':'repo-original-cache'}
    if payload.get('browser_receive'):return {'ok':False,'accepted':None,'code':'GEMINI_NATIVE_RECEIPT_MISSING'}
+   trace_file.write_text(json.dumps({'stage':'prepare_profile'}))
    row=await self.context(aid);workspace=row['workspace'];accepted=None;phase='repository_request'
    def invoke():
-    workspace.references=payload.get('references',[]);workspace.request_id=rid;workspace.request_ratio=payload.get('ratio')or'9:16'
+    workspace.references=payload.get('references',[]);workspace.request_id=rid;workspace.request_ratio=payload.get('ratio')or'9:16';workspace.trace_path=str(trace_file)
     try:return workspace.create_image(payload['prompt'])if payload['kind']=='image'else workspace.request('text',prompt=payload['prompt'])
     finally:workspace.references=()
    if payload['kind']=='image':
@@ -102,6 +109,8 @@ class NativeGemini:
    result=await asyncio.to_thread(invoke)
    return {'ok':True,'text':result.get('text','')}
   except Exception as exc:
+   state=self.trace(rid)
+   if state:phase=state.get('stage',phase)
    if type(exc).__name__=='WorkspaceError'and str(exc)=='GEMINI_BROWSER_ATTACH_FAILED':
     return {'ok':False,'accepted':False,'code':'GEMINI_BROWSER_ATTACH_FAILED','phase':'attach_references','error_type':'WorkspaceError','provider_message':'Chưa đính kèm đủ ảnh tham chiếu; prompt chưa được gửi.'}
    return {'ok':False,'accepted':accepted,'code':'GEMINI_NATIVE_FAILED','phase':phase,'error_type':type(exc).__name__,**({'provider_message':str(exc).splitlines()[0][:300]}if type(exc).__name__=='WorkspaceError'else{})}
