@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "SceneForge · Kết nối phiên",
-  "version": "1.8.0",
+  "version": "1.8.1",
   "description": "Gửi prompt, ảnh tham khảo và nhận kết quả Gemini trực tiếp qua trình duyệt; giữ kết nối Flow.",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAnrjgH1MfWIhFfrSWDLy5MBi1BKP57s/6BVMXDxiFhB1wQb/LGcMNVbnGxBx3KLdSnO78JjanJddkZCttSIsd1liTRbclawKYgC2Ldq3IgeCkjGQPOwNuSnxTFp+bOVoVI0nulvsBRO9+DiAvbJoszhagQjiodSC2tIeOKoqFLr7ghudL+B15lmUwPsqQ3rCDYgXb5Y3SdwwIWeC8n3ApP6bTDlg729xuN/owSiFEsCUhCu5+Eq4xaj+JUDdXNFWKNfnlHwo6fPGGFOL4OmpUZOk70DL3y95xT5z0w92uqLU3mzHWGFF6ns35pE0eho9EZz8SOvrS3N5nYkI++z9O1wIDAQAB",
   "permissions": [

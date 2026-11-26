@@ -1,5 +1,6 @@
 /* Authenticated browser transport. Never export Google cookies to the app. */
 const geminiLoops=new Set();let geminiTurn=Promise.resolve();
+async function geminiCurrentLink(link){return ((await chrome.storage.local.get('geminiLinks')).geminiLinks||{})[link.id]||null;}
 async function geminiWire(link,path,body={}){
  const r=await fetch(link.base+'/local-api/browser-bridge/gemini-'+path,{method:'POST',credentials:'omit',redirect:'error',headers:{'Content-Type':'application/json','X-SceneForge-Bridge':'1'},body:JSON.stringify({id:link.id,key:link.browser_key,...body}),signal:AbortSignal.timeout(25000)});
  if(r.status===403){const saved=(await chrome.storage.local.get('geminiLinks')).geminiLinks||{};delete saved[link.id];await chrome.storage.local.set({geminiLinks:saved});throw Error('revoked');}
@@ -11,7 +12,8 @@ async function geminiTabJob(link,job){
  // A restarted worker never repeats a prompt whose send may already have occurred.
  if(prior?.started)return {ok:false,accepted:null,code:'GEMINI_BROWSER_FAILED',tab_id:prior.tabId};
  let tabId=link.tabId,created=false,recorded=false,receiveSingleTurn=false;
- const keepAlive=setInterval(()=>chrome.runtime.getPlatformInfo(()=>{}),20000);
+ let heartbeatBusy=false;
+ const keepAlive=setInterval(async()=>{chrome.runtime.getPlatformInfo(()=>{});if(heartbeatBusy)return;heartbeatBusy=true;try{const current=await geminiCurrentLink(link);if(current)await geminiWire(current,'poll',{hello:true});}catch{}finally{heartbeatBusy=false;}},20000);
  try{
   const paired=await chrome.tabs.get(link.tabId);const url=new URL(paired.url);
   if(url.origin!=='https://gemini.google.com')return {ok:false,accepted:false,code:'GEMINI_BROWSER_OFFLINE'};
@@ -50,29 +52,33 @@ async function geminiTabJob(link,job){
 }
 async function geminiDeliver(link,job,result){
  while(((await chrome.storage.local.get('geminiLinks')).geminiLinks||{})[link.id]){
-  try{await geminiWire(link,'result',{job_id:job.id,result});break;}catch(e){if(e.message==='revoked')return;await new Promise(r=>setTimeout(r,2000));}
+  try{link=await geminiCurrentLink(link);if(!link)return;await geminiWire(link,'result',{job_id:job.id,result});break;}catch(e){if(e.message==='revoked')return;await new Promise(r=>setTimeout(r,2000));}
  }
  const key='geminiJob:'+job.id;
  await chrome.storage.local.set({[key]:{started:true,tabId:result.tab_id,linkId:link.id,operation:job.request.operation,pending:false,...(!result.ok?{result}:{}),received:!!result.ok}});
  if(result.ok&&job.request.operation!=='identity')await chrome.tabs.remove(result.tab_id).catch(()=>{});
 }
 async function geminiLoop(link){
- if(geminiLoops.has(link.id))return;geminiLoops.add(link.id);
+ const routeId=link.id;if(geminiLoops.has(routeId))return;geminiLoops.add(routeId);
  try{
   const stored=await chrome.storage.local.get(null);
   for(const [key,row]of Object.entries(stored)){if(key.startsWith('geminiJob:')&&row.linkId===link.id&&row.pending&&row.result)await geminiDeliver(link,{id:key.slice(10),request:{operation:row.operation}},row.result);}
   while(((await chrome.storage.local.get('geminiLinks')).geminiLinks||{})[link.id]){
    try{
+    link=await geminiCurrentLink(link);if(!link)return;
     const packet=await geminiWire(link,'poll');if(!packet.job)continue;const job=packet.job;
-    const result=await (geminiTurn=geminiTurn.catch(()=>{}).then(()=>geminiTabJob(link,job)));
+    const result=await (geminiTurn=geminiTurn.catch(()=>{}).then(async()=>{const current=await geminiCurrentLink(link);return current?geminiTabJob(current,job):{ok:false,accepted:false,code:'GEMINI_BROWSER_OFFLINE'};}));
     await geminiDeliver(link,job,result);
    }catch(e){if(e.message==='revoked')return;await new Promise(r=>setTimeout(r,2500));}
   }
- }finally{geminiLoops.delete(link.id);}
+ }finally{geminiLoops.delete(routeId);}
 }
 async function geminiConnectLink(link){
  const tab=await chrome.tabs.get(link.tabId);const url=new URL(tab.url);if(url.origin!=='https://gemini.google.com')throw Error('tab');
- link.accountPath=url.pathname.match(/^\/u\/\d+/)?.[0]||'';
+ const previous=await geminiCurrentLink(link);
+ const accountPath=url.pathname.match(/^\/u\/\d+/)?.[0]||'';
+ if(previous?.accountPath!==undefined&&previous.accountPath!==accountPath)throw Error('account-changed');
+ link.accountPath=previous?.accountPath??accountPath;
  await geminiWire(link,'poll',{hello:true});const all=(await chrome.storage.local.get('geminiLinks')).geminiLinks||{};all[link.id]=link;await chrome.storage.local.set({geminiLinks:all});geminiLoop(link);return {ok:true};
 }
 chrome.runtime.onMessage.addListener((message,sender,respond)=>{

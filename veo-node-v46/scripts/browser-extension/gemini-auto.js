@@ -11,15 +11,16 @@ async function geminiAutoConnect(extraBase){
   for(const base of bases){
    try{
     const r=await fetch(base+'/local-api/browser-bridge/gemini-discover',{method:'POST',credentials:'omit',redirect:'error',headers:{'Content-Type':'application/json','X-SceneForge-Bridge':'1'},body:JSON.stringify({installation_id:cfg.installation_id,version:chrome.runtime.getManifest().version}),signal:AbortSignal.timeout(1500)});
-    if(!r.ok)continue;const reply=await r.json();if(reply.service!=='sceneforge-gemini-browser'||!reply.relay)continue;found=true;geminiAutoMessage=reply.ready?'Đã tự kết nối với SceneForge.':'Đã nhận app, đang kiểm tra tab Gemini…';
+    if(!r.ok)continue;const reply=await r.json();if(reply.service!=='sceneforge-gemini-browser'||!reply.relay)continue;found=true;geminiAutoMessage='Đã nhận app, đang kiểm tra tab Gemini…';
     const links=(await chrome.storage.local.get('geminiLinks')).geminiLinks||{};let link=links[reply.relay.id];let tab;
     if(link){try{tab=await chrome.tabs.get(link.tabId);if(!tab.url?.startsWith('https://gemini.google.com/'))tab=null;}catch{}}
     if(!tab&&cfg.pendingTabId){try{const candidate=await chrome.tabs.get(cfg.pendingTabId);if(candidate.url?.startsWith('https://gemini.google.com/'))tab=candidate;else{geminiAutoMessage='Đăng nhập Gemini trong tab trình duyệt đã mở.';continue;}}catch{delete cfg.pendingTabId;}}
-    if(!tab){const tabs=await chrome.tabs.query({url:'https://gemini.google.com/*'});tab=tabs.find(t=>t.active)||tabs[0];if(!tab){tab=await chrome.tabs.create({url:'https://gemini.google.com/app',active:false});cfg.pendingTabId=tab.id;await chrome.storage.local.set({geminiAuto:cfg});}}
+    if(!tab){const tabs=await chrome.tabs.query({url:'https://gemini.google.com/*'});const matching=tabs.filter(t=>link?.accountPath===undefined||(new URL(t.url).pathname.match(/^\/u\/\d+/)?.[0]||'')===link.accountPath);tab=matching.find(t=>t.active)||matching[0];if(!tab){tab=await chrome.tabs.create({url:'https://gemini.google.com'+(link?.accountPath||'')+'/app',active:false});cfg.pendingTabId=tab.id;await chrome.storage.local.set({geminiAuto:cfg});}}
     if(!tab.url?.startsWith('https://gemini.google.com/'))continue;
     link={...reply.relay,base,tabId:tab.id};
     await geminiConnectLink(link);
-   }catch{}
+    geminiAutoMessage=reply.ready?'Đã tự kết nối với SceneForge.':'Đã nối trình duyệt, đang xác minh Gemini…';
+   }catch(e){geminiAutoMessage=e.message==='account-changed'?'Tab Gemini đã đổi tài khoản. Mở lại đúng tài khoản đã kết nối.':'Chưa nối được tab Gemini với app. Đang thử kết nối lại.';}
   }
   if(!found)geminiAutoMessage='Chưa thấy SceneForge. Mở app để tiện ích tự nhận.';
  }finally{geminiDiscoverBusy=false;}

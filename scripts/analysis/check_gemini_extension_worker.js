@@ -21,5 +21,16 @@ vm.createContext(context);vm.runInContext(fs.readFileSync('veo-node-v46/scripts/
  await vm.runInContext('geminiLoop(link)',context);assert.equal(transfers,2);assert.equal(scripts,2);assert(!saved['geminiJob:gchat-original'].result);assert(!saved['geminiJob:recovery'].result);
  context.studioJob={id:'studio-job',request:{operation:'generate',kind:'image',engine:'frame-studio',prompt:'preserved prompt',references:[]}};
  const studio=await vm.runInContext('geminiTabJob(link,studioJob)',context);assert(studio.ok);assert.deepEqual(Array.from(fileLoads[0]),['studio-gemini-original.js','frame-studio-tab.js']);
+ // Reconnect while the old loop is waiting: dispatch must use the replacement tab.
+ delete tabs[1];tabs[2]={id:2,url:'https://gemini.google.com/u/1/app',windowId:2,status:'complete'};
+ saved.geminiLinks={route:{...link,tabId:2,accountPath:'/u/1'}};
+ let polls=0,reply;
+ context.fetch=async(url,opts)=>{const body=JSON.parse(opts.body);if(url.endsWith('gemini-result')){reply=body.result;delete saved.geminiLinks.route;}return{ok:true,status:200,json:async()=>url.endsWith('gemini-poll')&&++polls===1?{job:{id:'reconnected',request:job.request}}:{job:null}};};
+ await vm.runInContext('geminiLoop(link)',context);assert(reply.ok,'reconnected route must use the new tab');
+ saved.geminiLinks={route:{...link,tabId:2,accountPath:'/u/1'}};
+ tabs[3]={id:3,url:'https://gemini.google.com/u/2/app',windowId:2,status:'complete'};
+ context.wrongAccount={...link,tabId:3};
+ await assert.rejects(vm.runInContext('geminiConnectLink(wrongAccount)',context),/account-changed/);
+ assert.equal(saved.geminiLinks.route.tabId,2,'reconnect must preserve account binding');
  console.log('PASS real extension worker: correct browser/account URL, one dispatch, cached result reuse, interrupted send never replayed, receive uses original tab without creating/sending a new turn');
 })().catch(e=>{console.error(e);process.exitCode=1;});
