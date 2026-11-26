@@ -285,6 +285,8 @@ from .muse_provider import install_muse_provider
 MUSE_PROVIDER=install_muse_provider(app,VAULT,DATA,REQUESTS)
 from .gemini_chat import install_gemini_chat
 GEMINI_CHAT=install_gemini_chat(app,VAULT,DATA,REQUESTS)
+from .gemini_watermark import install_watermark
+install_watermark(app)
 from .web_images import install_web_images
 from .account_pool import AccountPool
 WEB_IMAGES=install_web_images(app,VAULT,DATA,REQUESTS)
