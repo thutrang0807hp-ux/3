@@ -33,11 +33,13 @@ async function processFrameImage(s,chat,{regenerate=false,receiveOnly=false,read
  const old=(project.cloudJobs||[]).filter(j=>j.sceneId===s.id&&j.kind==='image'&&!j.frameStudioVersion&&!['imported','failed','not_submitted','abandoned'].includes(j.state));
  if(old.length){if(!confirm('Tạo bằng node mới cho cảnh này? Lượt node cũ vẫn được giữ trong lịch sử và có thể đã dùng hạn mức.'))return {sceneId:s.id,cancelled:true};for(const j of old){j.previousState=j.state;j.state='abandoned';j.archivedBy='frame-studio-164';}}
  await prepareFrameDirect(s);ensure(s);
- if(s.framePromptVersion===170)SFUniversalFrame.validateForSend(s,imageFramePrompt(s));
+ if([170,174].includes(s.framePromptVersion))SFUniversalFrame.validateForSend(s,imageFramePrompt(s));
  const signature=await directSignature(s,'','image');if(!regenerate&&s.frames.some(f=>f.generationSignature===signature))return {sceneId:s.id,skipped:true};
  const output=SFFrameSettings.output(s),prompt=imageFramePrompt(s),references=await generationRefs(s,null,true),status=chat||await statusFor('gemini-chat');ensure(s);
  if(signature!==await directSignature(s,'','image'))throw Error('Cảnh đã đổi trước khi gửi.');
- const referenceManifest=[{code:'R1',role:'source',name:'Khung nguồn của cảnh'},...refsFor(s).flatMap(role=>SFPromptContract.orderedImages(sceneReference(s,role).images).map(im=>({role,id:im.id||'',name:im.name||'',primary:im.primary===true})))].map((im,i)=>({...im,code:'R'+(i+1)}));
+ const referenceManifest=SFUniversalFrame.assigned(s);
+ if(referenceManifest.length!==references.length)throw Error('Số ảnh gửi không khớp REFERENCE_BINDINGS; chưa gửi Gemini.');
+ if([170,174].includes(s.framePromptVersion))SFUniversalFrame.validateForSend(s,prompt);
  job={id:'gchat-'+uid(),provider:'gemini-chat',kind:'image',frameStudioVersion:164,sceneId:s.id,part:'',signature,prompt,referenceManifest,requestedOutput:output,state:'prepared',at:Date.now()};
  project.cloudJobs??=[];project.cloudJobs.push(job);await SFProviderReceipts.persistIntent(job,storeProject,parent.SceneForgeStorage);ensure(s);
  currentActivity={sceneId:s.id,stage:'image',startedAt:Date.now()};state().run.phase='Đang tạo ảnh · cảnh '+(s.index+1);render();

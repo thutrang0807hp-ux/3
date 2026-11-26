@@ -1,4 +1,4 @@
-"""Current frame owner sends V5.2 once, with current source/product bytes and no writer."""
+"""Historical entry point: verify the current V6.0 recipe still sends source/product once."""
 import functools,http.server,threading,io
 from pathlib import Path
 from PIL import Image
@@ -18,7 +18,7 @@ try:
    const s=sceneRecord(0,4,0,[image]);s.refsUsed=['product'];s.hasProduct=true;project.scenes=[s];const posts=[],replies={};
    workflowLocalRequest=async(path,body)=>{if(path.endsWith('/status'))return {installed:true,selection:{available:true,token:'v52'}};if(path==='gemini-chat/jobs'){posts.push(body);return replies[body.request_id]={state:'done',result:{mime_type:'image/jpeg',scene_id:s.id,room_id:project.id}};}if(path.startsWith('gemini-chat/jobs/'))return replies[path.split('/').at(-1)];return {};};
    await SFFrameImages.create([s]);if(posts.length!==1||posts[0].kind!=='image')throw Error('Writer/duplicate request');
-   const request=posts[0];if(!request.prompt.startsWith('# UNIVERSAL REFERENCE IMAGE EDIT V5.2'))throw Error('V5.2 not sent');if(request.references.length!==2)throw Error('Reference order/count changed');if(!request.prompt.includes('R2: replacement product (PRIMARY PRODUCT)'))throw Error('Primary not bound');if(!request.prompt.includes('No unnecessary desaturation or oversaturation.'))throw Error('V5.2 color constraints missing');if(s.frames.length!==1)throw Error('Result not imported');
+   const request=posts[0];if(!request.prompt.startsWith('# UNIVERSAL REFERENCE IMAGE EDIT V6.0'))throw Error('Current V6.0 not sent');if(request.references.length!==2)throw Error('Reference order/count changed');if(!request.prompt.includes('R2: PRODUCT; PRIMARY'))throw Error('Primary not bound');if(!request.prompt.includes('No unnecessary desaturation or oversaturation.'))throw Error('V5.2 color constraints missing');if(s.frames.length!==1)throw Error('Result not imported');
    await SFFrameImages.create([s]);if(posts.length!==1)throw Error('Matching result sent again');
    return {template:SFUniversalFrame.version,references:request.references.length,posts:posts.length,frames:s.frames.length};
   }''');assert not errors,errors;print('PASS',result);browser.close()

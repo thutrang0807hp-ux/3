@@ -1,0 +1,31 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert/strict');
+const source=fs.readFileSync('scripts/prompts/universal_reference_image_edit_v6_0.md','utf8'),html=fs.readFileSync('workflow.html','utf8');
+const refs=Object.fromEntries(['product','person','outfit','background'].map(k=>[k,{images:[],description:''}]));
+const cfg={request:'',keptRoles:[],personEdit:false,physicalFacts:'Net weight: 200 g',productDimensions:''};
+const c={project:{refs,promptPipeline:{records:{}}},SFFrameSettings:{reference:(_s,_k,r)=>r,input:()=>cfg,output:()=>({ratio:'9:16',width:1080,height:1920}),compact:()=>''},SFFrameIdentity:{binding:()=>null,config:()=>({outfit:'source'})},SFPromptContract:{orderedImages:images=>[...images].sort((a,b)=>Number(!!b.primary)-Number(!!a.primary))},SFPromptPipeline:{snapshot:()=>''},productFrameContext:()=>null};c.window=c;
+vm.createContext(c);
+const line=prefix=>html.split('\n').find(l=>l.startsWith(prefix));
+vm.runInContext(line('function sceneReference(')+'\n'+html.slice(html.indexOf('function refsFor('),html.indexOf('\nfunction sceneReferenceSignature'))+'\n'+line('function imageBindings('),c);c.SFPromptPipeline.imageBindings=c.imageBindings;
+vm.runInContext(fs.readFileSync('scripts/ui/frame_universal_v60.js','utf8'),c);const u=c.SFUniversalFrame;
+assert.equal(u.template,source);assert(source.endsWith('Return only the finished edited image.'));assert.equal(u.keys.length,30);
+const block=(text,key)=>text.split('## ['+key+']\n\n')[1]?.split('\n\n## [')[0]?.trim();
+for(let mask=0;mask<16;mask++){
+ const s={refsUsed:[],id:'combo-'+mask};['person','outfit','product','background'].forEach((k,i)=>{refs[k].images=(mask&(1<<i))?[{id:k,primary:true}]:[];refs[k].description=refs[k].images.length?'Only '+k+' details':'';});
+ const p=u.render(s);u.validateForSend(s,p);assert(p.startsWith('# UNIVERSAL REFERENCE IMAGE EDIT V6.0\n# MULTI-ROLE REPLACEMENT SYSTEM'));assert(!p.includes('V5.2'));assert(!p.includes('IMAGE EDIT CONTRACT'));
+ for(const key of u.keys)if(!['REFERENCE_BINDINGS','SCENE_ACTION','PRODUCT_FACTS','CONTINUITY_LOCK','OUTPUT_FORMAT'].includes(key))assert.equal(block(p,key),block(source,key),'modified source block '+key);
+ assert.equal(u.assigned(s).length,1+[...Array(4)].filter((_,i)=>mask&(1<<i)).length);
+ assert(p.includes(mask&8?'ENVIRONMENT is active:':'ENVIRONMENT is inactive:'));
+ assert.throws(()=>u.validateForSend(s,p.slice(0,-60)),/V6.0/);
+}
+refs.person={images:[{id:'a-side',personId:'a'},{id:'b-main',personId:'b',primary:true},{id:'a-main',personId:'a',primary:true}],people:[{id:'a',description:'woman on the left; hands with pink nail art'},{id:'b',description:'man on the right'}]};
+refs.outfit={images:[{id:'coat',personId:'b'}],description:'coat for the man on the right'};refs.product={images:[],description:''};refs.background={images:[],description:''};
+const s={id:'multi',refsUsed:[],referencePeople:['a','b']},p=u.render(s),b=u.assigned(s);
+assert.equal(b.find(x=>x.imageId==='a-main').primary,true);assert.equal(b.find(x=>x.imageId==='a-side').primary,false);assert.equal(b.find(x=>x.imageId==='a-side').group,'person:a');assert.equal(b.find(x=>x.imageId==='b-main').group,'person:b');assert.equal(b.find(x=>x.imageId==='coat').personId,'b');assert(p.includes('hands with pink nail art'));assert(p.includes('Nail shape, length, color and nail design.'));assert(p.includes('man on the right'));assert(p.includes('SECONDARY'));
+s.frameReferenceChoices={person:{mode:'keep'}};assert(!u.context(s).active.has('PERSON'));
+assert.throws(()=>u.validateForSend(s,u.render(s)+'\n{{UNFILLED}}'),/biến chưa điền/);
+assert.throws(()=>u.validateForSend(s,u.render(s).replace('Do not invent unsupported construction details.','')) ,/thiếu nội dung/);
+assert.throws(()=>u.validateForSend(s,u.render(s).replace('R2: CLOTHING','R2: PRODUCT')),/bindings/);
+assert(u.isCanonical(fs.readFileSync('scripts/prompts/universal_reference_image_edit_v5_2.md','utf8')));
+const oldPrompt='# UNIVERSAL REFERENCE IMAGE EDIT V5.2\nEXACT_ALREADY_SUBMITTED';c.project.cloudJobs=[{sceneId:'pending',kind:'image',frameStudioVersion:164,state:'submitted',prompt:oldPrompt}];assert.equal(u.current({id:'pending',framePromptVersion:170}),oldPrompt);
+fs.mkdirSync('diagnostics/v60-prompt-audit',{recursive:true});fs.writeFileSync('diagnostics/v60-prompt-audit/multi-person-prompt.txt',p);
+console.log('PASS V6 exact source, all 16 role combinations, 30 complete blocks, no V5 concatenation/placeholders, per-person primary/secondary, garment owner, nails, selected environment lighting, unselected roles, truncated prompt rejected');

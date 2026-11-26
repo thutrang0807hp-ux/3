@@ -23,7 +23,7 @@
   for(const line of text.split(/\n|[;；]/)){const m=line.trim().match(/^(?:NET\s*[:：]?\s*)?(\d+(?:[.,]\d+)?\s*(kg|mg|g|ml|cl|l))\s*$/i);if(m)add(/^(ml|cl|l)$/i.test(m[2])?'Capacity':'Net weight',m[1]);}
   return [...new Set(rows)].join('; ');
  }
- function physicalFacts(s){return [169,170].includes(s.framePromptVersion)?cleanSpecs(project.productScript?.brief?.facts||project.refs.product?.description||''):legacyPhysicalFacts(s);}
+ function physicalFacts(s){return [169,170,174].includes(s.framePromptVersion)?cleanSpecs(project.productScript?.brief?.facts||project.refs.product?.description||''):legacyPhysicalFacts(s);}
  const flat=v=>String(v||'').replace(/\s+/g,' ').trim();
  function compact(s,lang='en'){
   const cfg=input(s),o=output(s),bindings=SFPromptPipeline.imageBindings(s),codes=role=>bindings.filter(b=>b.role===role).map(b=>b.code),products=codes('product'),people=codes('person'),outfits=codes('outfit'),backgrounds=codes('background');
@@ -52,7 +52,7 @@
   }
   return rows.map(([k,v])=>k+': '+flat(v)).join('\n');
  }
- function input(s){const c=applied(s),result={output:s.frameOutput||c?.output||project.frameOutputDefault||null,request:s.frameUseCommon===false?'':c?.request||'',productDimensions:c?.productDimensions||'',productPrimary:c?.productPrimary||'',productViews:c?.productViews===true,personEdit:s.frameUseCommon!==false&&c?.personEdit===true,keptRoles:Object.entries(s.frameReferenceChoices||{}).filter(([,v])=>v.mode==='keep').map(([k])=>k),enabled:s.frameEditPolicy===166};if(s.frameProductFactsVersion===168)result.physicalFacts=physicalFacts(s);if([169,170].includes(s.framePromptVersion))result.promptVersion=s.framePromptVersion;return result;}
+ function input(s){const c=applied(s),result={output:s.frameOutput||c?.output||project.frameOutputDefault||null,request:s.frameUseCommon===false?'':c?.request||'',productDimensions:c?.productDimensions||'',productPrimary:c?.productPrimary||'',productViews:c?.productViews===true,personEdit:s.frameUseCommon!==false&&c?.personEdit===true,keptRoles:Object.entries(s.frameReferenceChoices||{}).filter(([,v])=>v.mode==='keep').map(([k])=>k),enabled:s.frameEditPolicy===166};if(s.frameProductFactsVersion===168)result.physicalFacts=physicalFacts(s);if([169,170,174].includes(s.framePromptVersion))result.promptVersion=s.framePromptVersion;return result;}
  function reference(s,k,ref){
   if(k!=='product')return ref;
   const c=applied(s),primary=c?.productPrimary,custom=s.frameReferenceChoices?.product?.mode==='custom';
@@ -90,6 +90,6 @@
   const vi=['YÊU CẦU ẢNH CUỐI: '+o.width+' × '+o.height+' px · '+o.ratio+'. Đổi khung theo tỉ lệ đã chọn, không kéo méo người hoặc sản phẩm.',product?'Sản phẩm theo ảnh tham chiếu chính: thay toàn bộ hình dáng, nắp, tỉ lệ, màu, chất liệu và nhãn; không giữ vỏ sản phẩm gốc, không chỉ đổi chữ/màu. Ảnh quảng cáo chỉ lấy sản phẩm, bỏ tay và bối cảnh trong ảnh tham chiếu.':'Giữ sản phẩm gốc.',config.productDimensions?'Kích thước sản phẩm thật: '+config.productDimensions:'',product&&config.physicalFacts?'Thông số lấy từ Kịch bản: '+config.physicalFacts+' · Khối lượng/dung tích không suy ra số cm. Giữ thiết kế, màu và chữ theo ảnh chính, không biến thông số thành chữ mới trên nhãn.':'',config.personEdit?'Chỉ đổi phần người đang xuất hiện: cảnh có tay chỉ đổi tay, giữ cách cầm, không thêm cả người.':'',config.request?'Yêu cầu chung: '+config.request:'',s.promptRevision?.image?'Yêu cầu riêng: '+s.promptRevision.image:'',keep.length?'Giữ nguyên theo lựa chọn riêng: '+keep.join(', '):''].filter(Boolean).join('\n\n');
   return base+'\n\n'+(lang==='vi'?vi:en);
  }
- const before=imageFramePrompt;imageFramePrompt=(s,lang='en')=>s.framePromptVersion===170?SFUniversalFrame.current(s,lang):compose(s,before(s,lang),lang);
+ const before=imageFramePrompt;imageFramePrompt=(s,lang='en')=>[170,174].includes(s.framePromptVersion)?SFUniversalFrame.current(s,lang):compose(s,before(s,lang),lang);
  window.SFFrameSettings={output,input,physicalFacts,cleanSpecs,compact,reference,applied,compose,defaults};
 })();

@@ -1,0 +1,586 @@
+# UNIVERSAL REFERENCE IMAGE EDIT V6.0
+# MULTI-ROLE REPLACEMENT SYSTEM
+
+## [TASK]
+
+Create ONE seamless, photorealistic edited image using the original source scene and all explicitly assigned replacement references.
+
+This is a controlled multi-role image replacement task, not an unrestricted creative redesign.
+
+Support independent or simultaneous replacement of people, clothing, products and environments.
+
+The final image must look as if all selected elements were physically present together when the photograph was taken.
+
+## [REFERENCE_BINDINGS]
+
+R1: SOURCE; original action, composition and unselected identities/designs. Lighting authority only if ENVIRONMENT is inactive.
+R2: PERSON; PRIMARY; group=person:b; target=source person 2; identify by the corresponding person description, otherwise use left-to-right source order; role description: man on the right.
+R3: PERSON; PRIMARY; group=person:a; target=source person 1; identify by the corresponding person description, otherwise use left-to-right source order; role description: woman on the left; hands with pink nail art.
+R4: PERSON; SECONDARY; group=person:a; target=source person 1; identify by the corresponding person description, otherwise use left-to-right source order; role description: woman on the left; hands with pink nail art.
+R5: CLOTHING; PRIMARY; group=outfit:b; target=source person 2; identify by the corresponding person description, otherwise use left-to-right source order; role description: coat for the man on the right.
+Active replacement roles: PERSON, CLOTHING. All other identities/designs are preserved.
+Group IDs identify separate identities. Multiple images in one PERSON group show the same person; secondary images never override that group’s primary. Target descriptions and scene-specific assignments take precedence over positional defaults. Do not merge people or add bodies; a hands-only scene remains hands-only.
+ENVIRONMENT is inactive: preserve R1 environment and use its lighting.
+
+R1 is the original source scene reference.
+
+Each additional reference is authoritative only for its explicitly assigned replacement role and target instance.
+
+Supported reference roles:
+
+- PERSON
+- CLOTHING
+- PRODUCT
+- ENVIRONMENT
+- CONTINUITY
+
+Use only references attached to the current request.
+
+Do not infer replacement roles solely from objects or people appearing inside reference images.
+
+## [DYNAMIC_REPLACEMENT_CONTROL]
+
+Determine which replacement roles are explicitly active in the current request.
+
+Replace only the selected roles and assigned target instances.
+
+Preserve the identity, design and appearance of all unselected roles.
+
+When multiple roles are selected, perform all requested replacements together.
+
+An unselected role must not be replaced merely because it appears inside another reference image.
+
+Allow necessary changes in lighting, perspective, occlusion and physical interaction without unnecessarily changing unselected identities or designs.
+
+## [REFERENCE_ROLE_ISOLATION]
+
+Keep each reference role independent.
+
+PERSON references define personal identity and relevant visible physical characteristics.
+
+CLOTHING references define garment design, construction, color, texture and material.
+
+PRODUCT references define product identity, geometry, branding, lettering, colors and material.
+
+ENVIRONMENT references define location, spatial structure, architecture, background, furniture, environmental objects and lighting characteristics.
+
+CONTINUITY references support consistency between related frames.
+
+Do not transfer unrelated backgrounds, people, clothing, products or accessories between reference roles.
+
+## [PRIORITY_ORDER]
+
+Apply authority according to the relevant visual attribute:
+
+1. Explicit role and target assignments determine what must be replaced.
+2. Primary role references determine replacement identity and appearance.
+3. Verified physical dimensions determine real-world scale.
+4. Scene-specific instructions determine requested actions and changes.
+5. R1 determines the intended action, framing, camera composition and unselected elements.
+6. The final environment determines lighting, reflections and spatial integration.
+7. Continuity references support consistency without overriding primary role references.
+
+When an environment replacement is selected, the new environment overrides conflicting background and lighting characteristics from R1.
+
+When a person, clothing or product replacement is selected, its assigned reference overrides the corresponding original appearance.
+
+Preserve the source composition wherever physically compatible with the selected replacements.
+
+## [VISUAL_ANALYSIS]
+
+Before generating the image, internally examine R1 and all assigned references.
+
+Identify:
+
+- Active replacement roles and target instances.
+- Visible personal characteristics and body regions.
+- Garment construction and material behavior.
+- Product geometry, proportions, branding and materials.
+- Environmental layout and spatial relationships.
+- Camera angle, perspective and framing.
+- Physical scale cues and interaction requirements.
+- Lighting direction, intensity, color and reflections.
+- Elements that must remain unchanged.
+
+Distinguish intrinsic visual characteristics from temporary lighting effects, reflections and advertising enhancements.
+
+Use this analysis to guide the edit.
+
+Do not output the analysis.
+
+## [PERSON_IDENTITY_LOCK]
+
+Apply only when a PERSON replacement is selected.
+
+Preserve the assigned person's recognizable visible appearance and identity according to the supplied references.
+
+Maintain relevant visible characteristics, including:
+
+- Facial structure and facial features.
+- Skin tone and natural skin texture.
+- Hair color, hairstyle and visible hair characteristics.
+- Relevant body proportions.
+- Hand shape and visible hand characteristics.
+- Nail shape, length, color and nail design.
+- Distinctive visible personal features.
+
+Preserve only characteristics supported by the references.
+
+Adapt the person naturally to the requested action, pose and camera composition.
+
+Do not artificially beautify, reshape or standardize the person's appearance.
+
+Do not transfer unrelated clothing or backgrounds from PERSON references.
+
+When no PERSON replacement is selected, preserve the original person's identity and appearance.
+
+## [MULTI_PERSON_BINDING]
+
+When multiple people are present, maintain independent identity bindings for each assigned person.
+
+Use only references associated with the corresponding person.
+
+Do not exchange, merge or blend identities between different people.
+
+When multiple images belong to the same person, combine consistent visible characteristics from those references.
+
+If a primary identity reference is designated, prioritize it for identity-defining features.
+
+Use secondary references to support additional visible angles and characteristics.
+
+Preserve the original identity of any person without an active replacement assignment.
+
+Do not add or remove people unless explicitly requested.
+
+## [PARTIAL_BODY_HAND_LOCK]
+
+Adapt person replacement to the body regions actually visible in the intended composition.
+
+For hand-only or partial-body scenes, prioritize the relevant visible reference characteristics.
+
+Preserve supported details such as:
+
+- Skin appearance.
+- Hand proportions.
+- Finger shape.
+- Nail length and shape.
+- Nail polish and nail art.
+- Visible personal markings.
+
+Maintain natural anatomy, finger articulation and realistic physical interaction.
+
+Do not introduce a face, full body or additional body regions when they are not required by the source composition or scene instructions.
+
+Do not invent unseen identity details.
+
+## [CLOTHING_LOCK]
+
+Apply only when a CLOTHING replacement is selected.
+
+Preserve the assigned garment's actual:
+
+- Design and silhouette.
+- Color and pattern.
+- Fabric and material.
+- Seams, stitching and construction.
+- Collar, cuffs, sleeves and visible components.
+- Logos and authentic decorative details.
+
+Adapt the garment naturally to the person's body, pose and movement.
+
+Maintain realistic folds, tension, draping, thickness and fabric behavior.
+
+Do not transfer the clothing reference person's identity or background.
+
+Do not redesign or unnecessarily alter the garment.
+
+When no CLOTHING replacement is selected, preserve the original clothing design and appearance while allowing necessary physical adaptation.
+
+## [PRODUCT_IDENTITY_LOCK]
+
+Apply only when a PRODUCT replacement is selected.
+
+Completely replace the assigned original product with the actual referenced product.
+
+Preserve the correct brand, model, variant, packaging design and distinctive visual characteristics.
+
+Do not retain conflicting features from the original product.
+
+Do not redesign, beautify, simplify or substitute the referenced product.
+
+Ignore unrelated advertising graphics, backgrounds and promotional elements surrounding the reference product.
+
+When no PRODUCT replacement is selected, preserve the original product identity and design.
+
+## [GEOMETRY_LOCK]
+
+Preserve the selected product's actual:
+
+- Silhouette and outline.
+- Height-to-width ratio.
+- Relative component proportions.
+- Caps, lids, handles, buttons and functional components.
+- Thickness, seams, edges and openings.
+- Visible structural construction.
+
+Do not stretch, compress or reshape the replacement product to fit the original object's silhouette.
+
+Do not invent unsupported construction details.
+
+Preserve actual geometry while allowing natural perspective and orientation changes.
+
+## [LABEL_TEXT_LOCK]
+
+Preserve authentic visible product lettering, including:
+
+- Brand name and logo.
+- Product name and variant.
+- Readable numbers, units and symbols.
+- Typography, text color and alignment.
+- Label position, layout and relative size.
+
+Keep readable text faithful to the primary product reference.
+
+Do not translate, rewrite, replace or invent packaging text.
+
+Do not fabricate illegible or hidden lettering.
+
+Allow natural perspective, curvature and occlusion without redesigning the label.
+
+Do not enlarge the product or unnaturally rotate it solely to improve label readability.
+
+## [COLOR_MATERIAL_LOCK]
+
+Preserve the replacement product's intrinsic hue, color saturation, color gradients, material identity and surface finish.
+
+Maintain recognizable product color characteristics and the original relationships between dark and bright color regions.
+
+Preserve actual material properties, including transparency, translucency, opacity, reflectivity, roughness, gloss and texture, according to the current product reference.
+
+Allow physically realistic changes in brightness, shading, white balance and reflections caused by the final environment.
+
+Avoid unnecessary desaturation, washed-out colors, unintended gray color shifts or loss of distinctive color gradients.
+
+Preserve the material's natural depth, richness and characteristic highlight behavior without artificially enhancing it.
+
+Do not copy artificial studio lighting or exaggerate saturation to reproduce an advertising reference.
+
+Balance faithful product color reproduction with natural photographic integration.
+
+The product must remain visually recognizable and color-accurate without appearing artificially enhanced or pasted into the scene.
+
+Apply color and material preservation according to the current product reference only.
+
+Do not impose a universal saturation, contrast, gloss, brightness or color enhancement across different products.
+
+Do not make naturally muted, pastel, matte, transparent or neutral-colored products more saturated, glossy or contrast-rich than their actual reference characteristics.
+
+## [PHYSICAL_SCALE]
+
+Use verified physical dimensions when available and applicable to the selected product variant.
+
+Otherwise, estimate a conservative, physically plausible scale using product category, reference proportions and surrounding objects.
+
+Weight and capacity alone do not establish exact physical dimensions.
+
+Maintain believable size relationships between products, hands, faces, bodies, furniture and environmental objects.
+
+Do not inherit the original object's size as a mandatory constraint.
+
+Do not enlarge the replacement product for advertising emphasis or label readability.
+
+Maintain physically plausible human proportions and environmental dimensions.
+
+## [PHYSICAL_INTERACTION]
+
+Adapt physical interaction to the actual geometry of the selected elements.
+
+Maintain realistic grip, finger placement, body contact, surface support, occlusion and contact shadows.
+
+For handheld products, ensure natural anatomy and believable weight support.
+
+For wearable products, ensure realistic fit and material behavior.
+
+For products placed on surfaces, ensure stable placement and correct contact.
+
+For operated products, preserve physically plausible interaction with their actual functional components.
+
+Make necessary local pose adjustments without unnecessarily changing the intended action.
+
+Avoid floating objects, intersecting geometry and unnatural gaps.
+
+## [ENVIRONMENT_REPLACEMENT]
+
+Apply only when an ENVIRONMENT replacement is selected.
+
+Replace the original environment with the assigned environment reference.
+
+Preserve the new environment's recognizable:
+
+- Location and spatial structure.
+- Architecture and interior design.
+- Furniture and relevant environmental objects.
+- Materials, textures and colors.
+- Background details and atmosphere.
+- Lighting characteristics.
+
+Adapt the camera perspective and subject placement naturally to the new environment.
+
+Preserve the source scene's intended action and framing wherever physically compatible.
+
+Do not retain conflicting background elements from the original environment.
+
+Do not transfer unrelated people, clothing or foreground products from the environment reference.
+
+Do not unnecessarily redesign the referenced environment.
+
+When no ENVIRONMENT replacement is selected, preserve the original environment.
+
+## [ENVIRONMENT_SPATIAL_LOCK]
+
+Maintain coherent spatial relationships within the final environment.
+
+Preserve realistic architectural geometry, object placement, depth, perspective and environmental proportions.
+
+Ensure that people and products occupy physically plausible positions within the environment.
+
+Adapt foreground placement and background perspective consistently.
+
+Do not use the environment reference as a flat decorative backdrop when realistic spatial integration is required.
+
+Avoid impossible architecture, inconsistent vanishing points and conflicting spatial layouts.
+
+## [LIGHTING_MATCH]
+
+Determine the final environment before applying lighting.
+
+If an ENVIRONMENT replacement is selected, use the assigned environment as the primary lighting authority.
+
+Otherwise, use the original source environment.
+
+Relight all relevant people, clothing, products and objects consistently within the final environment.
+
+Match:
+
+- Light direction and intensity.
+- Light softness and color temperature.
+- Exposure and white balance.
+- Highlight behavior and shadow density.
+- Environmental reflections and ambient light.
+- Contact shadows and reflected light.
+
+Do not transfer artificial studio lighting from isolated person, clothing or product references.
+
+Preserve intrinsic colors, material properties and personal appearance while allowing physically realistic illumination changes.
+
+Avoid unnecessary global color enhancement.
+
+All visible elements must appear illuminated by the same coherent environment.
+
+## [CAMERA_PERSPECTIVE]
+
+Preserve the original source camera direction, viewing angle, framing and photographic perspective wherever physically compatible.
+
+Adapt the camera naturally when required by the selected environment or requested action.
+
+Orient all replacement elements consistently within the final scene.
+
+Match depth of field, focus, sharpness and photographic texture.
+
+Do not force a front-facing advertising view when it conflicts with the intended camera angle.
+
+Do not distort people, products or environmental structures to reproduce the original framing exactly.
+
+## [SCENE_LOCK]
+
+Preserve the original scene's intended action, composition, visual storytelling and unselected elements.
+
+Apply scene preservation conditionally according to the active replacement roles.
+
+If PERSON is selected, allow the assigned person to change.
+
+If CLOTHING is selected, allow the assigned clothing to change.
+
+If PRODUCT is selected, allow the assigned product to change.
+
+If ENVIRONMENT is selected, allow the environment and its associated lighting to change.
+
+Preserve all unselected identities, designs and relevant objects.
+
+Modify only selected elements and other areas necessary for realistic integration.
+
+Do not unnecessarily regenerate unrelated scene elements.
+
+## [SCENE_ACTION]
+
+person requested description: Người: woman on the left; hands with pink nail art; Người: man on the right
+outfit requested description: coat for the man on the right
+For conflicting action instructions, scene-specific instructions take precedence over shared instructions, subject to the reference authority in PRIORITY_ORDER.
+
+Follow the requested scene-specific action.
+
+Preserve the original action when no new action is explicitly requested.
+
+Adapt pose, grip, body placement and interaction to the actual geometry of the selected references and final environment.
+
+Change the product's opened, closed, assembled or operating state only when required by the requested action.
+
+Do not invent unsupported mechanisms or functional components.
+
+If the original action is physically incompatible with the selected replacements, make the minimum necessary adaptation while preserving the intended meaning of the scene.
+
+## [PRODUCT_FACTS]
+
+No applicable verified product dimensions supplied. Never infer exact dimensions from weight or capacity.
+
+Treat supplied product information as factual context.
+
+Use only information applicable to the selected product variant.
+
+Use verified physical dimensions when available.
+
+Do not convert weight or capacity into invented exact dimensions.
+
+Do not print brief information, specifications or marketing claims onto the product unless they belong to its authentic packaging.
+
+## [CONTINUITY_LOCK]
+
+No continuity reference is attached.
+
+When continuity references are supplied, maintain consistency across related frames.
+
+Preserve consistent:
+
+- Assigned personal identities.
+- Visible hand and nail characteristics.
+- Clothing design and material.
+- Product identity and geometry.
+- Relative physical scale.
+- Relevant environmental characteristics.
+
+The primary role reference always takes precedence over a conflicting continuity reference.
+
+Allow natural changes in pose, perspective, lighting and occlusion between scenes.
+
+## [MULTI_ROLE_INTEGRATION]
+
+Integrate all selected replacement roles into one physically coherent photographic scene.
+
+Maintain consistent perspective, relative scale, depth, occlusion, anatomy, physical contact and environmental reflections.
+
+Ensure that people, clothing, products and the environment interact naturally.
+
+Do not treat replacement elements as independently illuminated or independently positioned layers.
+
+Allow necessary local pose and placement adjustments to accommodate the actual geometry of selected references.
+
+Preserve the intended action and visual storytelling of the original scene.
+
+The final image must look like one authentic photograph, not a combination of independently generated elements.
+
+## [IMAGE_CLEANUP]
+
+Remove source subtitles, promotional overlays, interface elements, screenshot borders and unrelated graphics.
+
+Preserve authentic lettering printed on physical products, clothing and environmental objects.
+
+Do not add captions, watermarks or decorative elements.
+
+## [IMAGE_QUALITY]
+
+Produce a clean, naturally detailed photographic still suitable for HD video production.
+
+Maintain realistic materials, natural skin texture, coherent anatomy, clean edges and scene-consistent focus.
+
+Match the intended photographic character of the scene.
+
+Prioritize reference accuracy and photographic realism over artificial visual enhancement.
+
+Preserve natural visual imperfections consistent with real photography.
+
+Do not artificially beautify people or products.
+
+Do not transform a natural scene into a studio advertisement unless explicitly requested.
+
+## [OUTPUT_FORMAT]
+
+Aspect ratio: 9:16
+
+Target delivery resolution: 1080 x 1920 pixels
+
+Create ONE unified photographic image.
+
+Recompose or extend the outer canvas naturally when necessary.
+
+Do not stretch subjects, distort product geometry or unintentionally crop essential objects.
+
+## [NEGATIVE_CONSTRAINTS]
+
+No incorrect personal identity.
+
+No identity mixing between different people.
+
+No unnecessary facial or body modifications.
+
+No invented visible body regions.
+
+No unnatural hands, fingers or anatomy.
+
+No incorrect clothing design or material.
+
+No incorrect product variant.
+
+No inherited conflicting original product design.
+
+No altered branding or invented lettering.
+
+No distorted geometry or exaggerated product size.
+
+No incorrect colors or materials.
+
+No unnecessary desaturation or oversaturation.
+
+No washed-out product colors or artificial color enhancement.
+
+No unsupported gloss, reflections or material changes.
+
+No unintended original background retention when environment replacement is selected.
+
+No unnecessary environment replacement when it is not selected.
+
+No inconsistent perspective or impossible spatial relationships.
+
+No unnatural grip or physical interaction.
+
+No floating objects or incorrect contact shadows.
+
+No pasted appearance or mismatched lighting.
+
+No artificial glow, excessive sharpening, waxy skin or CGI appearance.
+
+No collage, comparison, inset, split screen or contact sheet.
+
+## [FINAL_VALIDATION]
+
+Before returning the image, internally check:
+
+- All explicitly selected replacement roles are applied.
+- Each replacement is assigned to the correct target instance.
+- All unselected identities and designs are preserved.
+- Personal identities and visible physical characteristics are consistent.
+- Hands, nails and anatomy are natural.
+- Clothing design and materials are accurate.
+- Product identity and variant are correct.
+- Product geometry and proportions are faithful.
+- Logo and visible lettering are preserved.
+- Intrinsic colors, gradients and materials are accurate.
+- Physical scale and interaction are believable.
+- The selected environment is correctly represented.
+- Spatial relationships and perspective are coherent.
+- All elements share consistent final-environment lighting.
+- The intended scene action is preserved.
+- The output composition matches the requested format.
+
+Resolve visible inconsistencies where possible before finalizing.
+
+Return only the finished edited image.
