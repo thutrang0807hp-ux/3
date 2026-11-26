@@ -35,7 +35,7 @@
   const bindingText=bindings.map(b=>b.code+': '+(roleNames[b.role]||b.role)+(b===product[0]?' (PRIMARY PRODUCT)':'')+(b===person[0]?' (PRIMARY PERSON)':'')+(b.role==='person'&&clothingFromPerson?'; also assigned clothing by the selected clothing-from-person setting':'')+(b.role==='appearance'?'; matching roles: '+(b.matchingRoles||[]).join(', '):'')).join('\n');
   const bindingNotes=[];
   if(product.length>1)bindingNotes.push(product.slice(1).map(b=>b.code).join(', ')+' are supplementary product views of the same variant only; never merge competing variants.');
-  if(person.length)bindingNotes.push('Use person references only for parts already visible in R1; never insert a face or full person into a hands-only shot.');
+  if(person.length)bindingNotes.push('Use person references for the appearance of body parts already visible in R1, including hand shape, skin tone, nail shape, length, color and nail art when shown in the reference. Keep the source grip and pose, adjusting contact only as needed. Never insert a face or full person into a hands-only shot.');
   if(!background.length&&backgroundText)bindingNotes.push('Background is selected for the text-directed change described in SCENE_ACTION; no separate background image is attached.');
   if(background.length)bindingNotes.push('Background is selected for replacement using '+background.map(b=>b.code).join(', ')+'. Preserve R1 camera viewpoint; scene preservation applies to unselected regions.');
   const facts=[];
