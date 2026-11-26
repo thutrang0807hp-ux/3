@@ -20,12 +20,12 @@ legacy=(ROOT/'veo-node-v46/scripts/browser-extension/frame-studio-tab.js').read_
 legacy_send=(ROOT/'veo-node-v46/scripts/browser-extension/studio-gemini-original.js').read_text()
 attach=legacy[legacy.index(' const refs=request.references||[];'):legacy.index(' window.SFStudioTurn={id:request.request_id};')]
 assert attach in sender
-assert legacy_send[legacy_send.index('    async function sendMessage('):legacy_send.index('\n    if (refine)')] in sender
-assert 'const answer = await sendKnownFrame(page,request);' in adapter
-assert 'const image = await waitForImage(answer);' in adapter
+assert 'send.click()' not in sender and 'document.execCommand' not in sender
+assert 'await submit(page,editor,message);' in adapter
+assert 'const image = await receiveSceneImage(page,answer);' in adapter
 assert 'await saveResult(context, page, answer, image, request.output);' in adapter
 with zipfile.ZipFile(ROOT/'veo-node-v46/vendor/gemini-native-node.zip')as z:
  assert z.read('repo_bridge.py')==(folder/'upstream-browser-bridge.py').read_bytes()
  assert z.read('runtime/scene-send.js').decode()==sender
 assert hashlib.sha256((folder/'upstream-browser-bridge.py').read_bytes()).hexdigest()=='a861ddfc4ec841fcbac0adccde9b779bece38caa2ee3327e57bbaf40a71592fa'
-print('PASS previous exact attachment/DOM-send blocks restored; original repo image wait/download functions retained')
+print('PASS previous exact attachment block retained; upstream trusted fill/click used; original repo image wait/download functions retained')

@@ -35,29 +35,8 @@ async function sendSceneForgeFrame(request){
    }
 
  }catch{return {ok:false,accepted:false,code:'GEMINI_BROWSER_ATTACH_FAILED'};}
-    async function sendMessage(message) {
-      const input = await until(editor, 20000);
-      if (!input) throw new Error("Không thấy ô chat Gemini. Hãy kiểm tra bạn đã đăng nhập Gemini Chat trên Chrome.");
-      const previousMessages = new Set(assistantMessages());
-      input.focus();
-      if (!document.execCommand("insertText", false, message)) {
-        input.textContent = message;
-        input.dispatchEvent(new InputEvent("input", {bubbles: true, inputType: "insertText", data: message}));
-      }
-      const send = await until(() => findButton(
-        "button.send-button, button[aria-label], button[title]", /^(send( message| prompt)?|gửi( tin nhắn| lời nhắc)?)$/i
-      ), 8000);
-      if (!send) throw new Error("Gemini đã đổi giao diện hoặc chưa cho phép gửi prompt.");
-      send.click();
-      return () => assistantMessages().filter(node => !previousMessages.has(node)).at(-1);
-    }
-
- const message=request.kind==='image'?'Hãy tạo một ảnh theo đúng prompt này. Tỷ lệ ảnh: '+(request.ratio||'9:16')+'\n\n'+request.prompt:request.prompt;
  const prior=request.request_id;
  for(const node of assistantMessages())node.setAttribute('data-sceneforge-prior',prior);
- const latest=await sendMessage(message);
- const answer=await until(latest,90000);
- if(!answer)throw new Error('Đã gửi nhưng chưa thấy phản hồi mới của lượt này.');
  const selector=':is(model-response,.model-response-text):not(:is(model-response,.model-response-text) :is(model-response,.model-response-text)):not([data-sceneforge-prior="'+prior+'"] )';
- return {selector};
+ return {selector,userQueries:document.querySelectorAll('user-query,.user-query,[data-message-role="user"]').length};
 }

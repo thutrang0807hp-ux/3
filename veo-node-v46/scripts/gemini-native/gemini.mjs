@@ -173,10 +173,54 @@ async function saveResult(context, page, answer, image, output) {
 
 // SceneForge's existing sender; only the receiver/download path comes from this repo.
 const sceneSend = new Function('return ('+readFileSync(new URL('./scene-send.js',import.meta.url),'utf8')+')')();
+async function prepareImageMode(page){
+ const tools=page.getByRole('button',{name:/^(tools|công cụ)$/i}).first();
+ if(!await tools.isVisible())return;
+ await tools.click({timeout:5000});
+ const menu=page.getByRole('menu').or(page.getByRole('listbox')).last();
+ try{await menu.waitFor({state:'visible',timeout:1500});}catch{await page.keyboard.press('Escape');return;}
+ const name=/^(create images?|tạo (hình )?ảnh)(\b|\s|$)/i;
+ const item=menu.getByRole('menuitem',{name}).or(menu.getByRole('menuitemradio',{name})).or(menu.getByRole('option',{name})).or(menu.getByRole('button',{name})).first();
+ if(!await item.isVisible()){await page.keyboard.press('Escape');return;}
+ if(!await item.isEnabled()){await page.keyboard.press('Escape');throw new Error('Gemini đang khóa công cụ Tạo ảnh cho phiên này; chưa gửi prompt.');}
+ if(await item.getAttribute('aria-checked')==='true'||await item.getAttribute('aria-pressed')==='true'){await page.keyboard.press('Escape');return;}
+ await item.click({timeout:5000});
+}
 async function sendKnownFrame(page,request){
+ if(request.action==='image'){try{await prepareImageMode(page);}catch(error){throw new Error('Chưa chọn được chế độ Tạo ảnh; chưa gửi prompt: '+error.message.split('\n')[0]);}}
  const result=await page.evaluate(sceneSend,{...request,kind:request.action==='image'?'image':'text'});
- if(!result?.selector)throw new Error(result?.code||'Không gửi được ảnh và prompt của cảnh.');
+ if(!result?.selector)throw new Error(result?.code||'Không đính kèm được ảnh của cảnh.');
+ const editor=await editorFor(page);
+ const message=request.action==='image'?'Hãy tạo một ảnh theo đúng prompt này. Tỷ lệ ảnh: '+(request.ratio||'9:16')+'\n\n'+request.prompt:request.prompt;
+ try {
+  // The upstream submit uses real browser fill/click, not HTMLElement.click().
+  await submit(page,editor,message);
+ }catch(error){throw new Error('Chưa hoàn tất thao tác gửi Gemini: '+error.message.split('\n')[0]);}
+ try {
+  await page.waitForFunction(({selector,before})=>!!document.querySelector(selector)||document.querySelectorAll('user-query,.user-query,[data-message-role="user"]').length>before,{selector:result.selector,before:result.userQueries},{timeout:30000});
+ }catch{throw new Error('Chưa xác nhận Gemini nhận lượt mới sau khi bấm gửi. App không tự gửi lại.');}
  return page.locator(result.selector).last();
+}
+async function receiveSceneImage(page,answer){
+ let finished=false;
+ const rejectTextOnly=(async()=>{
+  let last='',changed=Date.now();
+  while(!finished){
+   try {
+    const status=await answer.evaluate(node=>({text:node.innerText||'',images:[...node.querySelectorAll('img')].filter(i=>i.complete&&i.naturalWidth>=256&&i.naturalHeight>=256).length,pending:!!node.querySelector('generated-image,generated-image-container,single-image,image-generation')}),null,{timeout:1000});
+    if(status.text!==last){last=status.text;changed=Date.now();}
+    const busy=await page.getByRole('button',{name:/^(stop|dừng|ngừng)(\b|\s)/i}).first().isVisible();
+    const unavailable=/công cụ tạo ảnh (?:không|chưa) khả dụng|không thể trực tiếp tạo hoặc xuất tệp hình ảnh|image generation (?:is )?(?:not available|unavailable)|cannot (?:directly )?(?:create|generate|export) images/iu.test(last);
+    const promptOnly=/(?:dưới đây|here is|here's)[\s\S]{0,200}(?:prompt|mô tả chi tiết)|^prompt tạo ảnh/im.test(last);
+    if(!busy&&!status.images&&Date.now()-changed>2000&&(unavailable||(!status.pending&&promptOnly))){
+     throw Object.assign(new Error(unavailable?'Gemini báo công cụ tạo ảnh không khả dụng ở lượt này; chỉ có văn bản, không có ảnh để tải.':'Gemini đang trả prompt bằng văn bản, chưa có ảnh kết quả để tải.'),{sceneTextOnly:true});
+    }
+   }catch(error){if(error.sceneTextOnly)throw error;if(finished)return;}
+   await new Promise(resolve=>setTimeout(resolve,350));
+  }
+ })();
+ try{return await Promise.race([waitForImage(answer),rejectTextOnly]);}
+ finally{finished=true;}
 }
 
 async function run(port, request) {
@@ -208,7 +252,7 @@ async function run(port, request) {
       }
       if (request.action !== "image") throw new Error("Yêu cầu Gemini không hợp lệ.");
       const answer = await sendKnownFrame(page,request);
-      const image = await waitForImage(answer);
+      const image = await receiveSceneImage(page,answer);
       await saveResult(context, page, answer, image, request.output);
       return {saved:true};
     } finally {
