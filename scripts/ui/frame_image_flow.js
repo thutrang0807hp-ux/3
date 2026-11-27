@@ -55,3 +55,27 @@ async function processFrameImage(s,chat,{regenerate=false,receiveOnly=false,read
  catch(error){jobPostFailure(job,error);await storeProject();throw error;}
  return receiveFrameJob(s,job);
 }
+
+async function approveStudioImage(s){
+ if(running||preparing||approvalBusy)throw Error('Đợi thao tác hiện tại trước khi duyệt ảnh.');
+ const owner=project,f=s.frames.find(frame=>frame.id===s.frameSelectionId)||s.frames.at(-1),file=f?.asset&&assets.get(f.asset);
+ if(!f||!file)throw Error('Thiếu file ảnh kết quả gốc. Nhập lại ảnh trước khi duyệt để tạo video; không dùng ảnh xem trước.');
+ if(!['image/png','image/jpeg','image/webp'].includes(file.type||f.mime))throw Error('Ảnh đầu video cần PNG, JPEG hoặc WebP.');
+ preparing=true;
+ try{
+  const bitmap=await createImageBitmap(file);const width=bitmap.width,height=bitmap.height;bitmap.close();
+  if(!width||!height)throw Error('Không đọc được ảnh đầu video.');
+  const sha256=[...new Uint8Array(await crypto.subtle.digest('SHA-256',await file.arrayBuffer()))].map(value=>value.toString(16).padStart(2,'0')).join('');
+  if(project!==owner||!project.scenes.includes(s)||!s.frames.includes(f)||assets.get(f.asset)!==file||(s.frameSelectionId&&s.frameSelectionId!==f.id))throw Error('Ảnh hoặc cảnh đã đổi; chưa duyệt lựa chọn cũ.');
+  if(f.sha256&&f.sha256!==sha256)throw Error('File ảnh đã đổi; nhập lại ảnh gốc trước khi duyệt.');
+  if(s.approvedFrame&&s.approvedFrame!==f.id)s.chosen={};
+  project.approvalCleanupPending=(project.approvalCleanupPending||[]).filter(item=>item.sceneId!==s.id||item.kind!=='frame');
+  Object.assign(f,{width,height,sha256,status:'approved'});s.frameSelectionId=f.id;
+  s.manualFrameApproval={frameId:f.id,asset:f.asset,sha256,at:Date.now()};
+  s.manualFrameApproval.stamp=SFMediaNodes.frameStamp(s);
+  s.localReviewedKey=s.localReviewKey;delete s.framePromptChanged;delete s.frameInputsChanged;delete s.frameCheckIssue;delete s.frameActionError;
+  s.approvedFrame=f.id;
+  if(!frameApproved(s))throw Error('Chưa ghi nhận được ảnh đã duyệt; lựa chọn được giữ để rà lại.');
+  await storeProject();return {sceneId:s.id,frameId:f.id,approved:true};
+ }finally{preparing=false;render();}
+}

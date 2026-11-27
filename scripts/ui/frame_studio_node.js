@@ -78,7 +78,7 @@
   if(a==='restore-prompt'){const previous=s.framePromptBackups?.pop();if(!previous)return;if(q('#studioEnglish'))q('#studioEnglish').dataset.dirty='false';s.framePromptOverride=previous.text;s.frameManualInput=SFPromptPipeline.snapshot(s,'image');invalidateFrame(s);await storeProject();return refresh();}
   if(a==='save-prompt'){await savePrompt(s);return refresh();}
   if(a==='version'){const f=s.frames.find(f=>f.id===b.dataset.version);if(f){s.frameSelectionId=f.id;await storeProject();}return refresh();}
-  if(a==='approve'){s.frameSelectionId??=s.frames.at(-1)?.id;closeModal();return approvalApprove('frame',[{s,part:null}],true);}
+  if(a==='approve'){await SFFrameImages.approve(s);closeModal();toast('Đã duyệt ảnh đã chọn. Có thể tạo video từ ảnh này.');return;}
   if(a==='receive')return SFFrameImages.receive(s);
   if(a==='optimize'){await savePrompt(s);await SFFrameImages.optimize(s);return refresh();}
   if(a==='fresh')return SFFrameImages.retry(s);

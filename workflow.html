@@ -1440,11 +1440,11 @@ const batchRenderBefore=render;render=function(){batchRenderBefore();const body=
 // Latest successful generation is the visible candidate for each prompt slot.
 let approvalBusy=false,approvalTimer=null;
 function latestVersion(s,kind,part){const rows=(kind==='frame'?s.frames:s.clips.filter(v=>v.part===part));return rows.at(-1)||null;}
-frameV3=function(s){return latestVersion(s,'frame')||s.sourceFrame||null;};
-displayFrame=function(s){const f=latestVersion(s,'frame');return f?.image||(f?.asset?mediaUrl(f.asset):null)||(s.sourceFrame?.asset?mediaUrl(s.sourceFrame.asset):s.sourceFrame?.image)||s.cpu?.evidence_frames?.[0]||s.thumbs?.[0]||project.source?.poster;};
+frameV3=function(s){return s.frames.find(f=>f.id===s.frameSelectionId&&s.manualFrameApproval?.frameId===f.id)||latestVersion(s,'frame')||s.sourceFrame||null;};
+displayFrame=function(s){const f=frameV3(s);if(f?.asset&&assets.has(f.asset)&&s.manualFrameApproval?.frameId===f.id)return mediaUrl(f.asset);return f?.image||(f?.asset?mediaUrl(f.asset):null)||(s.sourceFrame?.asset?mediaUrl(s.sourceFrame.asset):s.sourceFrame?.image)||s.cpu?.evidence_frames?.[0]||s.thumbs?.[0]||project.source?.poster;};
 chosenClip=function(s,part){return latestVersion(s,'clip',part);};
 const approvalFrameApprovedBefore=frameApproved;
-frameApproved=function(s){const f=latestVersion(s,'frame');return(!f||s.approvedFrame===f.id)&&approvalFrameApprovedBefore(s);};
+frameApproved=function(s){const f=frameV3(s);return(!f||s.approvedFrame===f.id)&&approvalFrameApprovedBefore(s);};
 function approvalTaskState(s,kind,part){const job=(project.cloudJobs||[]).filter(j=>j.sceneId===s.id&&j.kind===(kind==='frame'?'image':'video')&&(kind==='frame'||j.part===part)).at(-1);if(!job)return null;if(['prepared','preparing','submitted','queued','running','downloading'].includes(job.state))return{state:'running',why:'Đang tạo bản mới'};if(['failed','invalid','not_submitted'].includes(job.state))return{state:'error',why:job.error||'Lượt tạo mới nhất lỗi · tạo lại'};if(['unknown','missing','stale'].includes(job.state))return{state:'review',why:'Lượt mới nhất cần đối soát'};return null;}
 function clipTimingInfo(clip,slot){
  const required=Number(slot?.generationDuration||slot?.duration),actual=clip?.duration,gap=required-actual;
@@ -1461,7 +1461,7 @@ const approvalOpenBefore=g6Open;
 g6Open=function(kind,id,version=null,part=null){const s=sceneBy(id);if(!s)return;part=kind==='clip'?(part||s.clips.find(c=>c.id===version)?.part||clipParts(s)[0]?.id):null;const v=latestVersion(s,kind,part);if(kind==='frame')s.frameSelectionId=v?.id||'source';approvalOpenBefore(kind,id,v?.id);g6Inspect.part=part;$('#modal .g6VersionChoices')?.previousElementSibling?.remove();$('#modal .g6VersionChoices')?.remove();const note=$('#modal .g6Note');if(note)note.textContent='Bản tạo mới nhất · chưa ưng thì tạo lại · duyệt sẽ tự dọn bản cũ.';const button=$('#modal [data-g6-choose-clip]');if(button)button.textContent='✓ Duyệt clip này';const status=$('#modal .g6Status');if(status){const r=g6State(s,kind,part);status.textContent=r.why;}const regenerate=$('#modal [data-g6-prepare]');if(regenerate){delete regenerate.dataset.g6Prepare;regenerate.dataset.approvalRegenerate=JSON.stringify({kind,id,part});regenerate.textContent='↻ Tạo lại bản mới';}const review=$('#modal [data-review-clip]');if(review)review.textContent='Xem kiểm tra clip';};
 g6Step=function(n){if(!g6Inspect)return;const slots=approvalSlots(g6Inspect.kind),i=slots.findIndex(x=>x.s.id===g6Inspect.id&&x.part===(g6Inspect.part||null)),next=slots[(i+n+slots.length)%slots.length];if(next)g6Open(g6Inspect.kind,next.s.id,null,next.part);};
 function approvalSetPending(targets){project.approvalCleanupPending??=[];for(const target of targets){project.approvalCleanupPending=project.approvalCleanupPending.filter(t=>!(t.sceneId===target.sceneId&&t.kind===target.kind&&t.part===target.part));project.approvalCleanupPending.push(target);}}
-async function approvalRunCleanup(){if(approvalBusy||!project.approvalCleanupPending?.length)return;const host=parent!==window&&parent.SceneForgeStorageActions;if(!host?.approveVersions){toast('Đã duyệt trong bản xem thử; xóa file cũ cần bộ chạy cục bộ.');return;}project.approvalCleanupPending=project.approvalCleanupPending.filter(t=>{const s=sceneBy(t.sceneId),v=s&&latestVersion(s,t.kind,t.part);return v?.id===t.keepId&&(t.kind==='frame'?frameApproved(s):s.receivedClipIds?.includes(v.id));});if(!project.approvalCleanupPending.length){await storeProject();return;}approvalBusy=true;document.body.inert=true;try{await storeProject();const result=await host.approveVersions(project.id,clone(project.approvalCleanupPending));await loadSaved(clone(result.workflow));await storeProject();toast('Đã duyệt bản mới nhất · đã dọn '+Math.round(result.freed_bytes/1024)+' KB bản cũ'+(result.protected_files?' · giữ file còn đang dùng':''));}catch(error){toast('Đã lưu lựa chọn duyệt; chưa dọn bản cũ: '+error.message);clearTimeout(approvalTimer);if(parent.SceneForgeStorage?.state.active)approvalTimer=setTimeout(()=>approvalRunCleanup(),15000);}finally{approvalBusy=false;document.body.inert=false;render();}}
+async function approvalRunCleanup(){if(approvalBusy||!project.approvalCleanupPending?.length)return;const host=parent!==window&&parent.SceneForgeStorageActions;if(!host?.approveVersions){toast('Đã duyệt trong bản xem thử; xóa file cũ cần bộ chạy cục bộ.');return;}project.approvalCleanupPending=project.approvalCleanupPending.filter(t=>{const s=sceneBy(t.sceneId),v=s&&latestVersion(s,t.kind,t.part);return v?.id===t.keepId&&(t.kind==='frame'?frameApproved(s)&&s.approvedFrame===t.keepId:s.receivedClipIds?.includes(v.id));});if(!project.approvalCleanupPending.length){await storeProject();return;}approvalBusy=true;document.body.inert=true;try{await storeProject();const result=await host.approveVersions(project.id,clone(project.approvalCleanupPending));await loadSaved(clone(result.workflow));await storeProject();toast('Đã duyệt bản mới nhất · đã dọn '+Math.round(result.freed_bytes/1024)+' KB bản cũ'+(result.protected_files?' · giữ file còn đang dùng':''));}catch(error){toast('Đã lưu lựa chọn duyệt; chưa dọn bản cũ: '+error.message);clearTimeout(approvalTimer);if(parent.SceneForgeStorage?.state.active)approvalTimer=setTimeout(()=>approvalRunCleanup(),15000);}finally{approvalBusy=false;document.body.inert=false;render();}}
 async function approvalApprove(kind,slots,manual=false){if(approvalBusy)return;const targets=[];for(const {s,part}of slots){if(g6State(s,kind,part).state!=='ready'&&!(manual&&kind==='frame'&&g6State(s,kind,part).state==='waiting'))continue;const v=latestVersion(s,kind,part);if(kind==='frame'){s.frameSelectionId=v?.id||'source';approve(s);if(v&&frameApproved(s))targets.push({sceneId:s.id,kind,part:null,keepId:v.id});}else if(v){s.chosen[part]=v.id;v.reviewDecision={...v.reviewDecision,status:'accepted',at:Date.now()};s.receivedClipIds=[...(s.receivedClipIds||[]).filter(id=>s.clips.find(c=>c.id===id)?.part!==part),v.id];s.receivedAt=Date.now();targets.push({sceneId:s.id,kind,part,keepId:v.id});}}approvalSetPending(targets);await storeProject();render();if(targets.length)await approvalRunCleanup();else toast('Chưa có bản đạt để duyệt.');}
 g6ApproveFrames=()=>approvalApprove('frame',approvalSlots('frame'));
 actions['g6-ready-run']=async()=>{await g6ApproveFrames();if(shellRoomId)shellQueueTasks(project.scenes.filter(frameApproved));else actions['review-run']();};
@@ -2094,7 +2094,7 @@ function prompt(s,k,p){return k==='frame'?imageFramePrompt(s):makePrompt(s,clipP
 const framePromptBefore=imageFramePrompt;imageFramePrompt=function(s,lang='en'){return typeof s.framePromptOverride==='string'?s.framePromptOverride:framePromptBefore(s,lang);};
 const videoPromptBefore=makePrompt;makePrompt=function(s,p=null){const part=p||clipParts(s)[0];if(speechForPart(s,part).pending)return videoPromptBefore(s,part);return typeof s.videoPromptOverrides?.[part.id]==='string'?s.videoPromptOverrides[part.id]:videoPromptBefore(s,part);};
 function frameStamp(s){const f=frameV3(s);return JSON.stringify([f?.id||'source',f?.sha256||f?.asset||project.source?.asset||'',s.expectedLabel||'',refsFor(s).map(k=>[k,sceneReference(s,k).description,sceneReference(s,k).images.map(i=>[i.id,i.key])]),imageFramePrompt(s)]);}
-const qualityBefore=frameQualityValid;frameQualityValid=function(s){return qualityBefore(s)||!!(s.manualFrameApproval&&s.manualFrameApproval.stamp===frameStamp(s));};
+const qualityBefore=frameQualityValid;frameQualityValid=function(s){const f=frameV3(s),manual=s.manualFrameApproval;return qualityBefore(s)||!!(manual&&manual.stamp===frameStamp(s)&&(!manual.frameId||(manual.frameId===f?.id&&manual.asset===f.asset&&manual.sha256===f.sha256&&assets.has(f.asset))));};
 const frameApprovalBefore=frameApproved;frameApproved=function(s){return [s.framePromptChanged,s.frameInputsChanged].includes(latest(s,'frame')?.id||'source')?false:frameApprovalBefore(s);};
 const clipStateBefore=approvalClipState;approvalClipState=function(s,p){const c=latest(s,'clip',p);return c&&s.videoPromptChanged?.[p]===c.id?{state:'review',why:'Prompt đã đổi · cần clip khớp nội dung mới'}:clipStateBefore(s,p);};
 const stateBefore=g6State;g6State=function(s,k,p){return k==='frame'&&[s.framePromptChanged,s.frameInputsChanged].includes(latest(s,k)?.id||'source')?{state:'review',why:'Prompt khung đã đổi · cần rà hoặc tạo lại'}:stateBefore(s,k,p);};
@@ -2440,6 +2440,30 @@ async function processFrameImage(s,chat,{regenerate=false,receiveOnly=false,read
  return receiveFrameJob(s,job);
 }
 
+async function approveStudioImage(s){
+ if(running||preparing||approvalBusy)throw Error('Đợi thao tác hiện tại trước khi duyệt ảnh.');
+ const owner=project,f=s.frames.find(frame=>frame.id===s.frameSelectionId)||s.frames.at(-1),file=f?.asset&&assets.get(f.asset);
+ if(!f||!file)throw Error('Thiếu file ảnh kết quả gốc. Nhập lại ảnh trước khi duyệt để tạo video; không dùng ảnh xem trước.');
+ if(!['image/png','image/jpeg','image/webp'].includes(file.type||f.mime))throw Error('Ảnh đầu video cần PNG, JPEG hoặc WebP.');
+ preparing=true;
+ try{
+  const bitmap=await createImageBitmap(file);const width=bitmap.width,height=bitmap.height;bitmap.close();
+  if(!width||!height)throw Error('Không đọc được ảnh đầu video.');
+  const sha256=[...new Uint8Array(await crypto.subtle.digest('SHA-256',await file.arrayBuffer()))].map(value=>value.toString(16).padStart(2,'0')).join('');
+  if(project!==owner||!project.scenes.includes(s)||!s.frames.includes(f)||assets.get(f.asset)!==file||(s.frameSelectionId&&s.frameSelectionId!==f.id))throw Error('Ảnh hoặc cảnh đã đổi; chưa duyệt lựa chọn cũ.');
+  if(f.sha256&&f.sha256!==sha256)throw Error('File ảnh đã đổi; nhập lại ảnh gốc trước khi duyệt.');
+  if(s.approvedFrame&&s.approvedFrame!==f.id)s.chosen={};
+  project.approvalCleanupPending=(project.approvalCleanupPending||[]).filter(item=>item.sceneId!==s.id||item.kind!=='frame');
+  Object.assign(f,{width,height,sha256,status:'approved'});s.frameSelectionId=f.id;
+  s.manualFrameApproval={frameId:f.id,asset:f.asset,sha256,at:Date.now()};
+  s.manualFrameApproval.stamp=SFMediaNodes.frameStamp(s);
+  s.localReviewedKey=s.localReviewKey;delete s.framePromptChanged;delete s.frameInputsChanged;delete s.frameCheckIssue;delete s.frameActionError;
+  s.approvedFrame=f.id;
+  if(!frameApproved(s))throw Error('Chưa ghi nhận được ảnh đã duyệt; lựa chọn được giữ để rà lại.');
+  await storeProject();return {sceneId:s.id,frameId:f.id,approved:true};
+ }finally{preparing=false;render();}
+}
+
 /* Local image-edit recipe: no text-generation request and no video-prompt changes. */
 async function prepareFrameDirect(s){
  ensure(s);currentActivity={sceneId:s.id,stage:'frame-preparing',startedAt:Date.now()};SFFrameRefs.validate(s);
@@ -2554,7 +2578,7 @@ async function retryVideoWriting(){
   return {scene:s.index+1};
  }finally{origin=oldOrigin;stop=oldStop;preparing=false;render();}
 }
-window.SFFrameImages=Object.freeze({create:runImages,receive:receiveSceneImage,prepare:prepareImage,optimize:s=>SFPromptPipeline.rewriteImage(s),readPrompt:readImagePrompt,retry:retrySceneImage,restartAll:restartImagesAll,pause:stopActivity,isRunning:()=>running||preparing,job:studioJob,detachForEdit:detachStudioJobForEdit,prompt:s=>imageFramePrompt(s),runState:()=>state().run});
+window.SFFrameImages=Object.freeze({create:runImages,receive:receiveSceneImage,prepare:prepareImage,optimize:s=>SFPromptPipeline.rewriteImage(s),readPrompt:readImagePrompt,retry:retrySceneImage,restartAll:restartImagesAll,pause:stopActivity,isRunning:()=>running||preparing,job:studioJob,approve:approveStudioImage,detachForEdit:detachStudioJobForEdit,prompt:s=>imageFramePrompt(s),runState:()=>state().run});
 window.SFPromptPipeline={receiveSceneImage,retrySceneImage,prepareFrameDirect,run,activity:()=>currentActivity,isRunning:()=>running||preparing,pause:stopActivity,restartImagesAll,pack,write,snapshot,current,records:state,generationRefs,review,prepareImage,prepareVideo,imageBindings,runImages,rewriteImage,reviewText,rewriteVideo,retryableWriting,retryVideoWriting};
 })();
 </script><script id="simple-flow-panel">/* Compatibility for older toolbars: all Flow login belongs to Accounts. */
@@ -3711,7 +3735,7 @@ window.SFVeoNode={version:46,jobSchema:VERSION,slots,selected,refresh,sync,recei
   if(a==='restore-prompt'){const previous=s.framePromptBackups?.pop();if(!previous)return;if(q('#studioEnglish'))q('#studioEnglish').dataset.dirty='false';s.framePromptOverride=previous.text;s.frameManualInput=SFPromptPipeline.snapshot(s,'image');invalidateFrame(s);await storeProject();return refresh();}
   if(a==='save-prompt'){await savePrompt(s);return refresh();}
   if(a==='version'){const f=s.frames.find(f=>f.id===b.dataset.version);if(f){s.frameSelectionId=f.id;await storeProject();}return refresh();}
-  if(a==='approve'){s.frameSelectionId??=s.frames.at(-1)?.id;closeModal();return approvalApprove('frame',[{s,part:null}],true);}
+  if(a==='approve'){await SFFrameImages.approve(s);closeModal();toast('Đã duyệt ảnh đã chọn. Có thể tạo video từ ảnh này.');return;}
   if(a==='receive')return SFFrameImages.receive(s);
   if(a==='optimize'){await savePrompt(s);await SFFrameImages.optimize(s);return refresh();}
   if(a==='fresh')return SFFrameImages.retry(s);
