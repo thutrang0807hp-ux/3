@@ -1,0 +1,5 @@
+# SceneForge v46.183: local reference edits do not require receiving an old turn
+
+Reference-mode buttons and custom-image uploads can change scene inputs while an old receipt is unresolved and no local operation is active. Preserve superseded frame-studio receipts with previousState and archivedBy=reference-change; this is local history retirement, not a provider cancellation or new generation. Existing frames remain. Selection of the already active mode is a no-op. Old responses cannot re-enter studioImport after retirement. Other controls and active-operation guards remain.
+
+Tests click real production buttons in Chromium for unknown, done and queued receipts. Shared/keep/custom changes cause no image-job reads, receive calls or generation calls, retain existing frames and receipt IDs, and late done responses cannot overwrite the edited scene. Initial host project setup is supplied by the test fixture. Embedded sources match; installer payload UI/runtime and EXE checksum verified. Gemini transport and prompt rules are unchanged from .182. Native Windows installer execution is not tested here.

@@ -1,6 +1,14 @@
 /* Frame Studio: one image owner. Prompt recipe/reference packing are deliberately unchanged. */
 function studioJob(s){return (project.cloudJobs||[]).filter(j=>j.frameStudioVersion===164&&j.sceneId===s.id&&j.kind==='image'&&j.state!=='abandoned').at(-1);}
+function detachStudioJobForEdit(s){
+ if(!project.scenes.includes(s))throw Error('Cảnh đã đổi.');
+ for(const job of project.cloudJobs||[]){
+  if(job.frameStudioVersion!==164||job.sceneId!==s.id||job.kind!=='image'||['imported','failed','not_submitted','abandoned','stale'].includes(job.state))continue;
+  job.previousState=job.state;job.state='abandoned';job.archivedBy='reference-change';job.archivedAt=Date.now();
+ }
+}
 async function studioImport(s,job,record){
+ if(job.archivedBy==='reference-change')return;
  ensure(s);if(s.frames.some(f=>f.requestId===job.id)){jobReadRecord(job,{state:'imported'});return;}
  if(record.state!=='done')return;
  if(record.result?.scene_id!==s.id||record.result?.room_id!==project.id)throw Error('Kết quả không thuộc cảnh này.');
@@ -12,12 +20,12 @@ async function studioImport(s,job,record){
  s.frameSelectionId=s.frames.at(-1).id;jobReadRecord(job,{state:'imported'});delete s.frameActionError;await storeProject();
 }
 async function receiveFrameJob(s,job,{requestReceive=false,readOnly=false}={}){
- ensure(s);if(job.state==='imported')return {sceneId:s.id,received:true,skipped:true};
+ ensure(s);if(job.archivedBy==='reference-change')return {sceneId:s.id,archived:true};if(job.state==='imported')return {sceneId:s.id,received:true,skipped:true};
  currentActivity={sceneId:s.id,stage:'image',startedAt:Date.now()};
  if(requestReceive&&job.state!=='done')await pipelineRequest('gemini-chat/jobs/'+job.id+'/receive',{});
  const started=Date.now();
  do{
-  const record=await pipelineRequest('gemini-chat/jobs/'+job.id);ensure(s);jobReadRecord(job,record);if(state().run?.state==='running')state().run.phase=(record.state==='downloading'?'Đang nhận ảnh':record.state==='done'?'Đang nhập ảnh':record.state==='queued'?'Đang chờ Gemini':'Đang tạo / chờ Gemini')+' · cảnh '+(s.index+1);await storeProject();
+  const record=await pipelineRequest('gemini-chat/jobs/'+job.id);ensure(s);if(job.archivedBy==='reference-change')return {sceneId:s.id,archived:true};jobReadRecord(job,record);if(state().run?.state==='running')state().run.phase=(record.state==='downloading'?'Đang nhận ảnh':record.state==='done'?'Đang nhập ảnh':record.state==='queued'?'Đang chờ Gemini':'Đang tạo / chờ Gemini')+' · cảnh '+(s.index+1);await storeProject();
   if(record.state==='done'){await studioImport(s,job,record);return {sceneId:s.id,requestId:job.id,received:true};}
   if(readOnly)return {sceneId:s.id,pending:true};
   if(!['prepared','preparing','submitted','queued','running','downloading'].includes(record.state))throw Error(record.message||'Chưa nhận được ảnh. Giữ lượt hiện tại; có thể bấm Nhận ảnh, chưa tạo thêm.');
