@@ -1,0 +1,9 @@
+# Tự ghép lời vào prompt video · .189
+
+App tự chia lời mới thành các đoạn liên tiếp theo thời gian giao nhau của từng clip, rồi ghép vào prompt đầy đủ cùng ảnh đã duyệt, chuyển động, máy quay và thời lượng. Không yêu cầu xác nhận lời mỗi cảnh hoặc gọi Gemini trước khi tạo video.
+
+Lời sửa riêng và lựa chọn không có lời vẫn được giữ. Mục Lời thoại cho phép sửa tùy chọn hoặc Dùng lời tự động. Không thay đổi kịch bản nguồn. Phân bổ thời gian là ước lượng theo từ, chưa phải căn chỉnh âm thanh thực tế; cần nghe lại clip.
+
+Điều kiện ảnh đã duyệt, tài khoản sẵn sàng và kiểm tra lượt cũ vẫn được áp dụng. Đã kiểm thử giao diện Chromium với API giả lập: hai cảnh gửi đúng ảnh/prompt, không lặp nguyên câu; kiểm thử giữ đủ từ, sửa lời, im lặng và trở lại tự động. Chưa chạy trình cập nhật Windows hoặc tạo video Flow thật.
+
+Thoát hẳn SceneForge, chạy gói cập nhật và chọn thư mục có SceneForge.exe, rồi mở lại app. Gói gộp dành cho bản .62 trở lên.
