@@ -1,0 +1,9 @@
+# SceneForge v46.184 — whole-script product adaptation
+
+Scope is AI viết lời theo sản phẩm (`adapt_product`), not the separate script composer. The new instruction builds one coherent spoken argument before distributing it into source IDs; it treats ASR fragments as time beats, allows a sentence to continue across IDs, retains confident selling language, and moves factual caveats out of speech. No generation/timing-quality guarantee is claimed. Existing immutable source IDs/timestamps and nonempty per-line output contract remain; no silent-row fallback or automatic retiming is introduced. Extremely short source intervals can still require timeline review.
+
+The review adds a read-only continuous speech preview, updated live when individual draft rows change. Labels say Nhịp rather than Câu. Existing inline request-status/recovery behavior is preserved and synced back to its source module.
+
+New submissions explicitly send adaptation_version=2. Missing version selects the exact prior instruction, preserving request-envelope fingerprints for existing receipts. Version is excluded from the local content signature, so upgrading alone does not invalidate a prior review. New instruction is applied only on a new explicit write request; saved results are retained.
+
+Validation: backend product/source separation, strict ID/order/timing, old/new instruction selection, provider routing and read-only recovery. Production UI with mocked AI verifies prefilling, continuous preview and live updates, manual review/apply, immutable originals/translations/timestamps, existing clips and data retention, stale-input rejection, changed product and pending request handling. No live writing-quality test or Windows installer execution claimed. Packaged EXE UI/backend/runtime payload equality and SHA-256 checked; Gemini media runtime unchanged.

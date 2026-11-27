@@ -8,7 +8,10 @@ async def main():
  try:
   async with async_playwright()as pw:
    browser=await pw.chromium.launch(executable_path='/usr/bin/chromium',args=['--no-sandbox']);page=await browser.new_page(viewport={'width':1440,'height':1050});errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
-   await page.goto('http://127.0.0.1:'+str(server.server_port)+'/workflow.html?mode=reference');await page.wait_for_function('window.SFProductScript&&window.SFPromptPipeline&&typeof project!=="undefined"&&project',timeout=5000)
+   html=(ROOT/'workflow.html').read_text().replace('<script id="frame-studio-node">','<script>if(!project)project=blankProject();</script><script id="frame-studio-node">')
+   async def host_fixture(route):await route.fulfill(body=html,content_type='text/html')
+   await page.route('**/workflow.html*',host_fixture)
+   await page.goto('http://127.0.0.1:' +str(server.server_port)+'/workflow.html?mode=reference');await page.wait_for_function('window.SFProductScript&&window.SFPromptPipeline&&typeof project!=="undefined"&&project',timeout=5000)
    await page.evaluate('''async()=>{
     project=blankProject();project.id='product-script-ui';project.source={asset:'source',duration:8,name:'reference.mp4'};
     project.script=[{id:'line-a',start:0,end:4,original:'Sản phẩm mẫu chữa bệnh, giá 999 nghìn',translation:'Bản dịch sát mẫu',newText:'Lời tôi đang sửa',faceTalking:true},{id:'line-b',start:4,end:8,original:'Đặt ngay',translation:'Đặt ngay',newText:'Lời cuối cũ'}];
@@ -31,9 +34,11 @@ async def main():
    await page.locator('[data-product-script-field=offer]').fill('150 nghìn')
    await page.locator('[data-product-script-field=avoid]').fill('Không nói chữa bệnh')
    await page.locator('[data-product-script=write]').last.click();await expect(page.locator('#productScriptApply')).to_be_visible()
-   payload=await page.evaluate('sent[0]');assert payload['product']['offer']=='150 nghìn'and payload['product']['facts']=='Cotton, màu xanh';assert '999' in payload['reference_lines'][0]['original']
+   payload=await page.evaluate('sent[0]');assert payload['adaptation_version']==2;assert payload['product']['offer']=='150 nghìn'and payload['product']['facts']=='Cotton, màu xanh';assert '999' in payload['reference_lines'][0]['original']
    assert await page.evaluate('project.script[0].newText')=='Lời tôi đang sửa'
+   await expect(page.locator('#productScriptContinuous')).to_have_value('Áo cotton màu xanh của bạn. Giá 150 nghìn, xem thêm nhé.')
    await page.locator('[data-product-script-draft="0"]').fill('Áo cotton xanh, lời tôi đã rà.')
+   await expect(page.locator('#productScriptContinuous')).to_have_value('Áo cotton xanh, lời tôi đã rà. Giá 150 nghìn, xem thêm nhé.')
    await page.screenshot(path='/tmp/sceneforge-product-script-review-v125.png')
    await page.locator('#productScriptApply').click()
    data=await page.evaluate('async()=>({script:project.script,scene:project.scenes[0],saved:await readProject(project.id)})')
@@ -80,6 +85,7 @@ async def main():
    await page.screenshot(path='/tmp/sceneforge-product-script-brief-v125.png')
    # The real shell bridge supplies the selected product on first open and reuse.
    bridge=await browser.new_page();bridge.on('pageerror',lambda e:errors.append(str(e)))
+   await bridge.route('**/workflow.html*',host_fixture)
    await bridge.goto('http://127.0.0.1:'+str(server.server_port)+'/workflow.html?room=product-bridge&mode=reference')
    await bridge.wait_for_function('window.SceneForgeWorkflow&&window.SFProductScript&&typeof project!=="undefined"&&project')
    seeded=await bridge.evaluate('''async()=>{await SceneForgeWorkflow.openRoom({id:'product-bridge',name:'Hosted sample',product:{id:'host-product',name:'Sản phẩm từ ngăn',refs:{product:{description:'Thông số đã lưu'}}},refs:project.refs});return SFProductScript.brief()}''')
