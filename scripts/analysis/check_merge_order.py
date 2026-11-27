@@ -12,6 +12,8 @@ try:
   subprocess.run(['ffmpeg','-v','error','-f','lavfi','-i','sine=frequency=440:sample_rate=24000','-t','16',str(wav)],check=True)
   with sync_playwright() as p:
    browser=p.chromium.launch(executable_path='/usr/bin/chromium',headless=True,args=['--no-sandbox']);page=browser.new_page(viewport={'width':1450,'height':1000});errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
+   html=(ROOT/'workflow.html').read_text().replace('<script id="frame-studio-node">','<script>if(!project)project=blankProject();</script><script id="frame-studio-node">')
+   page.route('**/workflow.html*',lambda route:route.fulfill(body=html,content_type='text/html'))
    page.goto(f'http://127.0.0.1:{server.server_port}/workflow.html?mode=reference');page.wait_for_function('!!window.SFMergeOrder')
    result=page.evaluate('''async({mp4,red,wav})=>{
     project=blankProject();project.id='order-test';window.persisted=null;window.saveCalls=0;storeProject=async()=>{persisted=structuredClone(project);saveCalls++};
