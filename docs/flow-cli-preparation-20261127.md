@@ -1,0 +1,9 @@
+# Flow CLI preparation .192
+
+User report flow-e3f8de5c-74b5-4ce4-aa0d-a7868991f9d1 failed/opening: missing RPC metadata, no CLI discovery or provider task. This differs from earlier email metadata timeout.
+
+CLI mode now selects the project through BackgroundFlowSession.ensure_project (Flow UI / saved project URL), rather than ensure_native_project's private RPC bootstrap. The CLI receipt path validates source hashes, settings, selected account/project and readiness locally; it no longer invokes NativeProjectSession.warmup. Original CLI still uploads the approved image once and generates r2v/i2v. Native non-CLI generation retains its existing RPC behavior. Ambiguous/non-ready saved project mappings block instead of silently creating another project.
+
+Checks: actual SimpleFlow.restore chooses the UI path, preparation/receipt tests reject changed image/project with no native warmup/upload, submit/run/ledger/duplicate dispatch fixtures pass. Chromium fixture checks owned-session attach without mandatory email and UI project creation/reuse. Provider is simulated; live Google and Windows execution remain unverified. This removes the exact RPC preflight that threw the reported error, not a promise of successful provider generation.
+
+Exit SceneForge fully, run cumulative update, select directory containing SceneForge.exe, reopen and try one new clip. .62 onward supported. Previous failed/unknown requests are retained and not automatically replayed. A browser window can be visible during preparation.

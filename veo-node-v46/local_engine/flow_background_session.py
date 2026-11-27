@@ -53,6 +53,7 @@ class BackgroundFlowSession(FlowUiSession):
   def save(value):
    rows=vault.secret('flow-background-projects')or{};rows[key]={'account_id':aid,'room_id':room,**value};vault.set_secret('flow-background-projects',rows)
   record=stored()
+  if record and (record.get('state')!='ready' or record.get('account_id')!=aid or record.get('room_id')!=room):raise SessionUnavailable('Ánh xạ dự án chưa rõ hoặc không khớp phòng/tài khoản; chưa tạo dự án khác.')
   if record and record.get('state')=='ready':
    if not PROJECT.fullmatch(str(record.get('url',''))):raise SessionUnavailable('Địa chỉ dự án Flow đã lưu không hợp lệ. Chưa gửi video.')
    await self.page.goto(record['url'],wait_until='domcontentloaded',timeout=60000)

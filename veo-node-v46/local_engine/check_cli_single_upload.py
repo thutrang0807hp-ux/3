@@ -17,7 +17,7 @@ async def main():
   payload=dict(prepared_request_id=report['request_id'],room_id='room',scene_id='scene',part='a',account_id='account',prompt=prompt)
   with patch('local_engine.flow_native_pipeline.NativeProjectSession',return_value=native):
    await prepare_inputs(service,report,raw,'image/png',prompt,DEFAULTS,service.assert_ready,upload_reference=False)
-   native.warmup.assert_awaited_once_with(PROJECT);native.upload.assert_not_called()
+   native.warmup.assert_not_called();native.upload.assert_not_called()
    assert report['upload_attempted'] is False and report['delivered'] is False
    assert report['preparation_method']=='cli_reference_pipeline' and report['project_id']==PROJECT
    assert 'uploaded_media_id' not in report and 'uploaded_media_source_sha256' not in report

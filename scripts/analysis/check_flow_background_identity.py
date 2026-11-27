@@ -46,6 +46,14 @@ async def main():
   assert s.email=='selected@example.com'
   assert await s.assert_ready()
   assert not s.require_page_identity
+  projects={}
+  vault=SimpleNamespace(secret=lambda key:projects.get(key),set_secret=lambda key,value:projects.update({key:value}))
+  await page.evaluate("()=>{const button=document.createElement('button');button.textContent='New project';button.onclick=()=>location.href='https://flow.google.com/project/11111111-1111-4111-8111-111111111111';document.body.replaceChildren(button);}")
+  await s.ensure_project(vault,'account','room')
+  assert page.url.endswith('11111111-1111-4111-8111-111111111111')
+  await page.goto('https://flow.google.com/')
+  await s.ensure_project(vault,'account','room')
+  assert page.url.endswith('11111111-1111-4111-8111-111111111111')
   await browser.close()
  print('PASS actual attach without email metadata; live/global and bootstrap identity, wrong/ambiguous accounts/switches rejected; legacy strict verification preserved; Chromium fixtures, no Google calls')
 asyncio.run(main())

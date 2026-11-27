@@ -179,7 +179,7 @@ class SimpleFlow:
     session,binding=await self.account_bridge.attach(self.pinned_account)
     self.account_session=session;self.pinned_binding=binding;self.page=session.page;self.context=session.page.context
     if getattr(session,'background',False):
-     if getattr(self,'native_pipeline_enabled',False):
+     if getattr(self,'native_pipeline_enabled',False) and not getattr(self,'cli_driver_enabled',False):
       from .flow_native_pipeline import ensure_native_project,NativePipelineStopped
       async def check_native():await self.account_bridge.check(session,binding)
       try:await ensure_native_project(session,self.vault,self.pinned_account,self.pinned_room,check_native)

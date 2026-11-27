@@ -254,10 +254,9 @@ async def prepare_inputs(service, report, raw, mime, prompt, settings, check, *,
             on_persist()
     try:
         native = NativeProjectSession(service.page, check)
-        report.update(phase='native_session', message='Đang kiểm tra phiên và chuẩn bị workspace RPC; chưa gửi tạo.')
+        report.update(phase='cli_inputs' if not upload_reference else 'native_session', message='Đang kiểm tra ảnh, prompt và dự án cho CLI; chưa gửi tạo.' if not upload_reference else 'Đang kiểm tra phiên và chuẩn bị workspace RPC; chưa gửi tạo.')
         if on_phase:on_phase('native_session',report['message'])
         persist()
-        await native.warmup(project)
         if not upload_reference:
             await check()
             report.update(preparation_method='cli_reference_pipeline', project_id=project, settings_evidence='validated_cli_arguments',
@@ -267,6 +266,7 @@ async def prepare_inputs(service, report, raw, mime, prompt, settings, check, *,
             service.prepare_report = report
             persist()
             return
+        await native.warmup(project)
         report.update(phase='native_upload', message='Đang upload ảnh trực tiếp để nhận ID; chưa gửi tạo.')
         if on_phase:on_phase('native_upload',report['message'])
         persist()
