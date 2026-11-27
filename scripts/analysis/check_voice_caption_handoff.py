@@ -21,6 +21,9 @@ try:
    project.script=[{id:'l1',start:0,end:3,original:'Câu mẫu',newText:'Lời đọc thực tế'}];
    project.voiceOver={mode:'separate',origin:'vieneu',assetId:'voice-file',fileName:'voice.wav',duration:8,appliedSpeed:1,speedWanted:1,clipSound:'mute',segments:[{id:'l1',start:1.2,end:6.4}],spokenRows:[{id:'l1',text:'Lời đọc thực tế'}],versions:[]};project.merge.audioChanged=true;render();
   }''')
+  # Authored script rows must not inherit ASR suspicion filtering or short source-window limits.
+  checked=frame.evaluate('''()=>{const old=project.script;project.script=[{id:'a',newText:'Mức giá đang để là 267k, chốt ngay một hũ cho xe đi',speechReview:{status:'suspect'},start:0,end:.2},{id:'b',newText:'để mỗi chuyến đi đều',speechReview:{status:'suspect'},start:.2,end:1},{id:'c',newText:'thư giãn và dễ chịu hơn.',start:1,end:1.2},{id:'d',newText:'  ',translation:'Bản dịch không rỗng',original:'Gốc'}];const rows=SFAudioNodes.scriptRows();project.script=old;return rows;}''')
+  assert len(checked)==4 and checked[2]['text']=='thư giãn và dễ chịu hơn.' and checked[3]['text']=='Bản dịch không rỗng',checked
   cues=frame.evaluate('SFAudioNodes.currentCues()');assert cues==[{'start':1.2,'end':6.4,'text':'Lời đọc thực tế','manual':False}],cues
   # Speed-adjusted real segments replace automatic timings; source script stays unchanged.
   frame.evaluate("project.voiceOver.appliedSpeed=project.voiceOver.speedWanted=2;project.voiceOver.duration=4;project.voiceOver.segments=[{id:'l1',start:.6,end:3.2}];project.merge.audioChanged=true")
@@ -42,6 +45,16 @@ try:
   page.evaluate('window.rejectTransfer=true');frame.locator('[data-nd=handoff]').click()
   frame.wait_for_function("document.querySelector('#node-merge .ndError')?.textContent.includes('Fixture import failed')")
   assert page.evaluate('received.length')==2
+  # Exercise the real TTS button and payload. An incomplete provider result must not replace old audio.
+  frame.evaluate('''async()=>{window.ttsRequests=[];project.script=[{id:'x',start:0,end:.2,newText:'Câu đã sửa vẫn phải được đọc.',speechReview:{status:'suspect'}},{id:'y',start:.2,end:1,newText:'để mỗi chuyến đi đều'},{id:'z',start:1,end:1.2,newText:'thư giãn và dễ chịu hơn.'}];project.voiceOver.preset='fixture';workflowLocalRequest=async(path,body)=>{if(path==='tts/status')return {model_ready:true,voices:[{id:'fixture',name:'Fixture'}]};if(path==='tts'){ttsRequests.push(structuredClone(body));return {duration:1,segments:[]};}return {};};await SFAudioNodes.refresh();render();const n=document.querySelector('#node-voice-over');view.z=1;view.x=30-n.offsetLeft;view.y=50-n.offsetTop;applyView();}''')
+  frame.locator('[data-an=generate]').click()
+  frame.wait_for_function("document.querySelector('#node-voice-over .anError')?.textContent.includes('thiếu dòng')")
+  sent=frame.evaluate('ttsRequests[0].beats');assert len(sent)==3 and sent[-1]['text']=='thư giãn và dễ chịu hơn.' and sent[0]['id']=='x',sent
+  assert frame.evaluate('project.voiceOver.assetId')=='voice-file','incomplete result replaced existing audio'
+  frame.evaluate("project.voiceOver.duration=project.voiceOver.baseDuration=24;project.voiceOver.appliedSpeed=project.voiceOver.speedWanted=1;render()")
+  frame.locator('[data-an=fit-voice]').click();frame.wait_for_function("document.querySelector('#node-voice-over .anError')?.textContent.includes('Không thể đọc đủ')")
+  page.once('dialog',lambda dialog:dialog.dismiss());frame.locator('[data-an=accept-length]').click()
+  assert frame.evaluate('project.audioNodes.acceptedVoiceLength||null') is None,'cancelled trim consent was accepted'
   assert not errors,errors
   browser.close();print('PASS: TTS segment timing, speed, actual voice/clip/caption handoff, manual edit protection, visible preparation/import errors.')
 finally:server.shutdown()
