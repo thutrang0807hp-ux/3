@@ -34,7 +34,7 @@ def validate(body):
   key=row.get('asset')
   if not isinstance(key,str) or not re.fullmatch(r'[a-zA-Z0-9_-]{1,80}',key):raise ValueError('Mã tư liệu không hợp lệ.')
   r['asset']=key;r['track']=str(row.get('track',''))[:80]
-  for k,d,lo,hi in [('start',0,0,600),('duration',1,.02,600),('mediaIn',0,0,36000),('speed',1,.25,3),('opacity',1,0,1),('scale',1,.1,4),('rotation',0,-360,360),('x',0,-100,100),('y',0,-100,100),('volume',1,0,20),('fadeIn',0,0,600),('fadeOut',0,0,600),('transitionDuration',.5,.01,5)]:r[k]=number(row,k,d,lo,hi)
+  for k,d,lo,hi in [('start',0,0,600),('duration',1,.02,600),('mediaIn',0,0,36000),('mediaDuration',36000,.02,36000),('speed',1,.25,3),('opacity',1,0,1),('scale',1,.1,4),('rotation',0,-360,360),('x',0,-100,100),('y',0,-100,100),('volume',1,0,20),('fadeIn',0,0,600),('fadeOut',0,0,600),('transitionDuration',.5,.01,5)]:r[k]=number(row,k,d,lo,hi)
   r['transition']=row.get('transition','none')
   if r['transition'] not in ('none','fade','dissolve','slide','wipe'):raise ValueError('Chuyển cảnh chưa được hỗ trợ bởi FFmpeg.')
   r['transitionAudio']=row.get('transitionAudio','paired');r['transitionHandles']=row.get('transitionHandles','source')
@@ -87,9 +87,9 @@ def graph(model,metas):
   begin=r['start']-pre;length=r['duration']+pre+post;source=r['mediaIn']-pre*r['speed'];pad=max(0,-source/r['speed'])
   # Retain a hidden guard frame past the enabled interval so EOF cannot drop
   # the last visible frame. Keep EOF repetition off for finite base timelines.
-  chain=[f'trim=start={max(0,source)}',f'setpts=(PTS-STARTPTS)/{r["speed"]}',f'fps={fps}',f'tpad=start_mode=clone:start_duration={pad}:stop_mode=clone:stop_duration={length}',f'trim=duration={length+1/fps}']
+  chain=[f'trim=start={max(0,source)}:duration={r["mediaDuration"]}',f'setpts=(PTS-STARTPTS)/{r["speed"]}',f'fps={fps}',f'tpad=start_mode=clone:start_duration={pad}:stop_mode=clone:stop_duration={length}',f'trim=duration={length+1/fps}']
   if r.get('transitionHandles')=='hold':
-   chain=[f'trim=start={r["mediaIn"]}:duration={r["duration"]*r["speed"]}',f'setpts=(PTS-STARTPTS)/{r["speed"]}',f'fps={fps}',f'tpad=start_mode=clone:start_duration={pre}:stop_mode=clone:stop_duration={length+1/fps}',f'trim=duration={length+1/fps}']
+   chain=[f'trim=start={r["mediaIn"]}:duration={min(r["duration"]*r["speed"],r["mediaDuration"])}',f'setpts=(PTS-STARTPTS)/{r["speed"]}',f'fps={fps}',f'tpad=start_mode=clone:start_duration={pre}:stop_mode=clone:stop_duration={length+1/fps}',f'trim=duration={length+1/fps}']
   fit='increase' if r['fit']=='cover' else 'decrease'
   chain+=[f'scale={w}:{h}:force_original_aspect_ratio={fit}:force_divisible_by=2', 'setsar=1','format=rgba']
   if r['fit']=='cover':chain+=[f'crop={w}:{h}']
@@ -119,7 +119,7 @@ def graph(model,metas):
   filters.append(f"[{base}][v{n}]overlay=x='{x}':y='{y}':enable='gte(t,{begin-1e-7})*lt(t,{begin+length-1e-7})':eof_action=pass:repeatlast=0:format=auto[b{n}]");base=f'b{n}'
  for n,r in enumerate(rows):
   if r['kind']not in ('audio','video')or r['muted']or not r['volume']or not any(s.get('codec_type')=='audio'for s in metas[r['asset']].get('streams',[])):continue
-  chain=[f'atrim=start={r["mediaIn"]}:duration={r["duration"]*r["speed"]}','asetpts=PTS-STARTPTS','aresample=48000']
+  chain=[f'atrim=start={r["mediaIn"]}:duration={min(r["duration"]*r["speed"],r["mediaDuration"])}','asetpts=PTS-STARTPTS','aresample=48000']
   speed=r['speed']
   if r['preservePitch']:
    while speed<.5:chain+=['atempo=0.5'];speed/=.5

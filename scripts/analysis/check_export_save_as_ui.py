@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from pathlib import Path
 from playwright.async_api import async_playwright,expect
 async def main():
- html=Path('workflow.html').read_text();voice=base64.b64encode(Path('/workspace/3/docs/voice-cpu-real.wav').read_bytes()).decode()
+ html=Path('workflow.html').read_text().replace('<script id="frame-studio-node">','<script>if(!project)project=blankProject();</script><script id="frame-studio-node">');voice=base64.b64encode(Path('/workspace/3/docs/voice-cpu-real.wav').read_bytes()).decode()
  with tempfile.TemporaryDirectory() as tmp:
   file=Path(tmp)/'clip.mp4';subprocess.run(['ffmpeg','-v','error','-f','lavfi','-i','testsrc2=size=90x160:rate=24','-t','3','-c:v','libx264','-pix_fmt','yuv420p',str(file)],check=True);video=base64.b64encode(file.read_bytes()).decode()
   logo=Path(tmp)/'brand.png';im=Image.new('RGBA',(120,60),(0,0,0,0));ImageDraw.Draw(im).rectangle((12,6,107,53),fill=(229,123,35,255));im.save(logo)
@@ -18,6 +18,13 @@ async def main():
    for name in ['timeline_export.py','local_jobs.py','schema.py']:(runtime/name).write_bytes(archive.read('local_engine/'+name))
   patched=Path('local_engine/timeline_export.py');patched=patched if patched.is_file() else Path('/workspace/3/veo-node-v46/local_engine/timeline_export.py');(runtime/'timeline_export.py').write_bytes(patched.read_bytes());save_module=patched.with_name('export_save_as.py');(runtime/'export_save_as.py').write_bytes(save_module.read_bytes())
   sys.path.insert(0,tmp);renderer=importlib.import_module('runtime82.timeline_export');app=FastAPI();jobs=renderer.install_timeline_exports(app,Path(tmp));saver=importlib.import_module("runtime82.export_save_as")
+  # Simulate the real library bridge: capture removes the temporary MP4.
+  class LibraryBridge:
+   def __init__(self):self.files={};self.rooms=[]
+   def capture_export(self,job_id,room,path):
+    self.rooms.append(room);digest=hashlib.sha256(path.read_bytes()).hexdigest();saved=Path(tmp)/(digest+'.mp4');saved.write_bytes(path.read_bytes());path.unlink();self.files['export-'+job_id]=saved;return {'result_hash':digest}
+   def file(self,key):return self.files.get(key)
+  storage=LibraryBridge();jobs.storage=storage
   selected=Path(tmp)/'Thành phẩm đã chọn.mp4';selected.write_bytes(b'old destination')
   choices=[None,selected,Path(tmp)/'missing folder'/'denied.mp4'];dialog_calls=[];saver.powershell_path=lambda:'test-save-dialog'
   async def choose(name):dialog_calls.append(name);return choices.pop(0)
@@ -36,7 +43,7 @@ async def main():
     await r.fulfill(body=html,content_type='text/html')
    await page.add_init_script("""window.pickerMode='cancel';window.pickerCalls=[];window.savedHash=null;window.writerAborted=false;window.showSaveFilePicker=async options=>{pickerCalls.push({options,activated:navigator.userActivation.isActive});if(pickerMode==='cancel')throw new DOMException('cancelled','AbortError');return{name:'Bản đã đặt tên.mp4',async createWritable(){return{async write(blob){if(pickerMode==='write-error')throw Error('disk fixture');const bytes=await blob.arrayBuffer();savedHash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))).map(n=>n.toString(16).padStart(2,'0')).join('');},async close(){window.writerClosed=true;},async abort(){window.writerAborted=true;}}}}};""")
    await page.route('**/*',route);await page.goto('http://127.0.0.1:43891/workflow.html?mode=reference');await page.wait_for_function('!!window.SFAudioNodes&&!!window.SFReferenceNodes')
-   await page.evaluate('''async({video,voice,music})=>{project=blankProject();project.id='preview-controls';const image='data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';const blob=(data,name,type)=>new File([Uint8Array.from(atob(data),c=>c.charCodeAt(0))],name,{type});assets.set('clip',blob(video,'clip.mp4','video/mp4'));assets.set('voice',blob(voice,'voice.wav','audio/wav'));project.scenes=[0,1].map(i=>{const s=sceneRecord(i*3,(i+1)*3,i,[image]);s.approvedFrame='source';s.sourceFrame={id:'source',image,asset:'frame'};s.clipPlanning={mode:'legacy',continuity:false};s.clips=[{id:'c'+i,asset:'clip',part:'a',duration:3,version:1,frameId:'source',reviewDecision:{status:'accepted'}}];s.chosen={a:'c'+i};return s;});assets.set('music',blob(music,'music.wav','audio/wav'));project.merge.musicMode='selected';project.merge.musicAsset='music';project.merge.musicName='music.wav';project.merge.musicLibrary=[{asset:'music',name:'music.wav',duration:1}];project.merge.musicVolume=.2;project.voiceOver={mode:'separate',origin:'import',assetId:'voice',duration:5.44,clipSound:'mute',versions:[]};project.merge.captions=true;project.merge.captionWords=0;project.merge.captionDraft=[{start:0,end:3,text:'một hai ba bốn năm sáu',manual:true},{start:3,end:6,text:'bảy tám chín mười mười một',manual:true}];project.merge.captionDraftSignature=productionCaptionSignature();document.body.classList.add('compactWorkspaceFrame');render();await SFAudioNodes.refresh();window.originalPreviewData=JSON.stringify({scenes:project.scenes,cues:project.merge.captionDraft,voice:project.voiceOver});const n=document.querySelector('#node-captions');view.z=1;view.x=30-n.offsetLeft;view.y=50-n.offsetTop;applyView();}''',{'video':video,'voice':voice,'music':music})
+   await page.evaluate('''async({video,voice,music})=>{project=blankProject();project.id='preview-controls';const image='data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';const blob=(data,name,type)=>new File([Uint8Array.from(atob(data),c=>c.charCodeAt(0))],name,{type});assets.set('clip',blob(video,'clip.mp4','video/mp4'));assets.set('voice',blob(voice,'voice.wav','audio/wav'));project.scenes=[0,1].map(i=>{const s=sceneRecord(i*3,(i+1)*3,i,[image]);s.approvedFrame='source';s.sourceFrame={id:'source',image,asset:'frame'};s.clipPlanning={mode:'legacy',continuity:false};s.clips=[{id:'c'+i,asset:'clip',part:'a',duration:3,version:1,frameId:'source',reviewDecision:{status:'accepted'}}];s.chosen={a:'c'+i};return s;});assets.set('music',blob(music,'music.wav','audio/wav'));project.merge.musicMode='selected';project.merge.musicAsset='music';project.merge.musicName='music.wav';project.merge.musicLibrary=[{asset:'music',name:'music.wav',duration:1}];project.merge.musicVolume=.2;project.voiceOver={mode:'separate',origin:'import',assetId:'voice',duration:5.44,clipSound:'mute',versions:[]};project.merge.voiceLengthMode='trim';project.merge.captions=true;project.merge.captionWords=0;project.merge.captionDraft=[{start:0,end:3,text:'một hai ba bốn năm sáu',manual:true},{start:3,end:6,text:'bảy tám chín mười mười một',manual:true}];project.merge.captionDraftSignature=productionCaptionSignature();document.body.classList.add('compactWorkspaceFrame');render();await SFAudioNodes.refresh();window.originalPreviewData=JSON.stringify({scenes:project.scenes,cues:project.merge.captionDraft,voice:project.voiceOver});const n=document.querySelector('#node-captions');view.z=1;view.x=30-n.offsetLeft;view.y=50-n.offsetTop;applyView();}''',{'video':video,'voice':voice,'music':music})
    await page.locator('#node-captions [data-an=caption-preview]').click();dialog=page.locator('#anCaptionDialog');await expect(dialog).to_be_visible()
 
 
@@ -47,6 +54,8 @@ async def main():
    assert len(models)==1 and len(dialog_calls)==1 and await page.evaluate('SFAudioNodes.getState().captionPreview.exportReady')
    assert selected.read_bytes()==b'old destination' and not downloads
    await ensure_review_tab(page,'[data-cap-download]');await dialog.locator('[data-cap-download]').click();await expect(dialog.locator('[data-cap-export-status]')).to_contain_text(str(selected))
+   assert models[0].get('room_id') and storage.rooms==[models[0]['room_id']],models[0]
+   assert not (next(iter(jobs.values()))['dir']/'output.mp4').exists(),'fixture must remove temp output after capture'
    assert selected.read_bytes()!=b'old destination' and selected.read_bytes()[:4]!=b'old ' and len(models)==1 and not downloads
    digest=hashlib.sha256(selected.read_bytes()).hexdigest();meta=json.loads(subprocess.check_output(['ffprobe','-v','error','-show_streams','-of','json',str(selected)]));assert meta['streams'][0]['codec_name']=='h264'
    # Failed native save preserves the completed export, then offers an explicit browser picker.
@@ -81,6 +90,21 @@ async def main():
     else:raise AssertionError('expected write failure')
    finally:saver.shutil.copyfileobj=original_copy
    assert destination.read_bytes()==b'keep me' and not list(Path(tmp).glob('.SceneForge-*.tmp'))
-   await ensure_review_tab(page,'[data-cap-close]');await dialog.locator('[data-cap-close]').click();assert not errors,errors;await browser.close();await client.aclose()
+   await ensure_review_tab(page,'[data-cap-close]');await dialog.locator('[data-cap-close]').click()
+   # No extra mode click: default export keeps the entire 5.44s voice over a 0.4s trimmed source.
+   async def cancel_save(name):return None
+   saver.choose_windows_file=cancel_save
+   await page.evaluate("delete project.merge.voiceLengthMode;project.merge.musicMode='off';project.merge.captionDraft=[{start:4.5,end:5.44,text:'Đọc hết câu cuối',manual:true}];project.merge.captionDraftSignature=productionCaptionSignature();render();const n=document.querySelector('#node-captions');view.z=1;view.x=30-n.offsetLeft;view.y=50-n.offsetTop;applyView()")
+   await page.locator('#node-captions [data-an=caption-preview]').click();dialog=page.locator('#anCaptionDialog');await expect(dialog).to_be_visible()
+   assert abs((await page.evaluate('SFAudioNodes.getState().captionPreview.total'))-5.44)<.02
+   await ensure_review_tab(page,'[data-cap-export]');await dialog.locator('[data-cap-export]').click();await expect(dialog.locator('[data-cap-export-status]')).to_contain_text('Đã hủy chọn nơi lưu',timeout=60000)
+   model=models[-1];assert abs(model['duration']-5.44)<.04,model
+   videos=[r for r in model['clips'] if r['kind']=='video'];audios=[r for r in model['clips'] if r['kind']=='audio'];assert abs(videos[-1]['duration']-5.24)<.04 and abs(videos[-1]['mediaDuration']-.2)<.01,model
+   assert len(audios)==1 and abs(audios[0]['duration']-5.44)<.04 and audios[0].get('speed',1)==1,model
+   assert any(r['kind']=='image' and r['start']>=4.5 for r in model['clips']),model
+   final=storage.file('export-'+list(jobs)[-1]);probe=json.loads(subprocess.check_output(['ffprobe','-v','error','-show_format','-show_streams','-of','json',str(final)]));assert float(probe['format']['duration'])>=5.4 and any(r['codec_type']=='audio' for r in probe['streams']),probe
+   def gray(path,at):return subprocess.check_output(['ffmpeg','-v','error','-ss',str(at),'-i',str(path),'-frames:v','1','-vf','scale=32:32','-f','rawvideo','-pix_fmt','gray','-'])
+   held=gray(final,4);expected=gray(file,.16);assert sum(abs(a-b) for a,b in zip(held,expected))/len(held)<18,'extended tail did not hold the chosen cut frame'
+   await dialog.locator('[data-cap-close]').click();assert not errors,errors;await browser.close();await client.aclose()
  print('PASS real MP4 Save As with mocked native choice, Unicode path and overwrite; native/browser cancel, failed write and retry preserve one rendered file; picker has click activation; SHA matches; no automatic downloads; route rejects destination injection; failed copy preserves old file')
 if __name__=='__main__':asyncio.run(main())
