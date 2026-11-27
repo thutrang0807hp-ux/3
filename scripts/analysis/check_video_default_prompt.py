@@ -63,11 +63,35 @@ async def main():
   await expect(box).to_have_value(__import__('re').compile(r'AI_OPTIMIZED_ACTION'))
   gemini=[body for url,body in posts if url.endswith('/gemini-chat/jobs')];assert len(gemini)==1 and gemini[0]['kind']=='text'
   assert len([body for url,body in posts if url.endswith('/flow/simple/jobs')])==1
+  # A reviewed/manual full prompt stays visible even when speech timing later crosses a clip.
+  manual=await box.input_value();await page.evaluate("project.script[0].end=4;SFVeoNode.openClipDetail(SFVeoNode.slots()[0])")
+  await expect(box).to_have_value(manual);await expect(page.locator('#vnDetail [data-vn=create]')).to_be_disabled()
   # Speech crossing a clip boundary still needs an explicit split; never hide its error.
-  await page.evaluate("delete target.videoPromptOverrides;delete target.promptOwners?.video;project.veoNode.drafts={};project.script[0].end=4;SFVeoNode.openClipDetail(SFVeoNode.slots()[0])")
-  await expect(page.locator('#vnDetail [data-vn-create-reason]')).to_contain_text('Chia lời')
+  await page.evaluate("target.videoPromptOverrides={[clipParts(target)[0].id]:''};delete target.promptOwners?.video;project.veoNode.drafts={};project.script[0].end=4;SFVeoNode.openClipDetail(SFVeoNode.slots()[0])")
+  await expect(page.locator('#vnDetail [data-vn-create-reason]')).to_contain_text('Lời mới vắt qua')
   await expect(page.locator('#vnDetail [data-vn=create]')).to_be_disabled()
+  preview=await box.input_value()
+  for fragment in ['DIALOGUE_REVIEW_REQUIRED','1. VISUAL PROMPT','2. MOTION & SCRIPT','3. AUDIO GENERATED','DURATION: 2.80','Rotate the container slightly.','Sửa lời lần nữa']:
+   assert fragment in preview,(fragment,preview)
   assert len([body for url,body in posts if url.endswith('/flow/simple/jobs')])==1
+  refused=await page.evaluate('SFVeoNode.create(SFVeoNode.slots()[0],true).then(()=>null,e=>e.message)');assert 'Lời mới vắt qua'in refused
+  # Resolve only this clip's speech in-place; keep script and timings untouched.
+  original=await page.evaluate('JSON.stringify(project.script)')
+  await page.locator('#vnDetail [data-vn-dialogue-text]').fill('Phần lời đã rà cho clip một.')
+  await page.locator('#vnDetail [data-vn=save-dialogue]').click()
+  await expect(box).to_have_value(__import__('re').compile('Phần lời đã rà cho clip một.'))
+  assert 'DIALOGUE_REVIEW_REQUIRED'not in await box.input_value()
+  assert await page.evaluate('JSON.stringify(project.script)')==original
+  await expect(page.locator('#vnDetail [data-vn=create]')).to_be_enabled()
+  assert len([body for url,body in posts if url.endswith('/flow/simple/jobs')])==1,'speech save submitted video'
+  await page.evaluate('SFVeoNode.create(SFVeoNode.slots()[0],true)')
+  flow=[body for url,body in posts if url.endswith('/flow/simple/jobs')];assert len(flow)==2
+  assert 'Phần lời đã rà cho clip một.'in flow[-1]['prompt']and 'DIALOGUE_REVIEW_REQUIRED'not in flow[-1]['prompt']
+  # Explicitly silent clip remains a user choice; never drop speech implicitly.
+  await page.evaluate("project.cloudJobs=[];SFVeoNode.openClipDetail(SFVeoNode.slots()[0])")
+  await page.locator('#vnDetail [data-vn=no-dialogue]').click()
+  await expect(box).to_have_value(__import__('re').compile('No dialogue has been supplied for this clip.'))
+  assert await page.evaluate('JSON.stringify(project.script)')==original
   assert not errors,errors;await browser.close()
- print('PASS empty Gemini record -> visible default; exact new speech/motion/duration; approved image bytes + one Flow POST; no Gemini calls; live default updates; manual edits preserved/stale-blocked')
+ print('PASS full video prompt remains visible across speech boundaries; explicit speech review unlocks exact image+prompt Flow dispatch; manual text/script/timings preserved; no implicit writer or silent speech removal')
 asyncio.run(main())
