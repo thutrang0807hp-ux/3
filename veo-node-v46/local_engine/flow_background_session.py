@@ -16,9 +16,18 @@ async def launch_background(pw,profile):
  return context
 
 class BackgroundFlowSession(FlowUiSession):
+ identity_script=r"""() => {
+  const value=window.WIZ_global_data?.oPEP7c;
+  if(typeof value==='string' && value.includes('@'))return value;
+  const matches=[...document.querySelectorAll('script')].flatMap(node=>{
+   const found=[...node.textContent.matchAll(/"oPEP7c"\s*:\s*("(?:[^"\\]|\\.)*")/g)];
+   return found.flatMap(m=>{try{const email=JSON.parse(m[1]);return typeof email==='string'&&email.includes('@')?[email.trim().toLowerCase()]:[];}catch{return [];}});
+  });
+  const unique=[...new Set(matches)];return unique.length===1?unique[0]:'';
+ }"""
  background=True
  def __init__(self,data,profile_key,expected_email):
-  super().__init__(data,profile_key);self.expected_email=expected_email;self.owned_context=None
+  super().__init__(data,profile_key);self.expected_email=expected_email.strip().casefold();self.owned_context=None
  async def attach(self,playwright_factory):
   if not self.profile.is_dir():raise SessionUnavailable('Chưa tìm thấy profile đăng nhập web. Kiểm tra tài khoản đã chọn tại tab Tài khoản.')
   try:
@@ -32,7 +41,7 @@ class BackgroundFlowSession(FlowUiSession):
    while time.monotonic()<deadline:
     if urlsplit(self.page.url).hostname=='accounts.google.com':raise SessionUnavailable('Phiên nền cần đăng nhập/xác minh lại. Xử lý một lần tại tab Tài khoản; chưa gửi tạo video.')
     if not self.is_flow(self.page.url):raise SessionUnavailable('Phiên nền không còn ở Flow; chưa gửi tạo video.')
-    value=await self.page.evaluate("()=>String(window.WIZ_global_data?.oPEP7c||'')")
+    value=await self.page.evaluate(self.identity_script)
     if isinstance(value,str)and '@'in value:
      if value.strip().casefold()!=self.expected_email:raise SessionUnavailable('Tài khoản trong phiên nền không khớp tài khoản đang chọn. Đã dừng trước khi tạo video.')
      self.email=self.expected_email;await self.assert_ready();return

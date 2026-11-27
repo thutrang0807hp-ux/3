@@ -12,6 +12,7 @@ class SessionUnavailable(RuntimeError):pass
 class VerificationRequired(SessionUnavailable):pass
 
 class FlowUiSession:
+    identity_script=IDENTITY_SCRIPT
     def __init__(self,data,profile_key=None):
         from .google_login import flow_profile_path
         self.data=Path(data);self.profile_key=profile_key
@@ -31,7 +32,7 @@ class FlowUiSession:
             pages=[p for c in self.browser.contexts for p in c.pages if self.is_flow(p.url)]
             if len(pages)!=1:raise SessionUnavailable('Giữ một tab Flow trong cửa sổ riêng để chọn đúng project.')
             self.page=pages[0]
-            identity=await self.page.evaluate(IDENTITY_SCRIPT)
+            identity=await self.page.evaluate(self.identity_script)
             if not isinstance(identity,str)or '@'not in identity:raise SessionUnavailable('Đăng nhập trong tab Flow trước.')
             self.email=identity.strip().casefold()
             await self.assert_ready()
@@ -47,7 +48,7 @@ class FlowUiSession:
         if not self.browser or not self.browser.is_connected()or not self.page or self.page.is_closed():
             raise SessionUnavailable('Cửa sổ Flow đã đóng. Chưa gửi tác vụ mới.')
         if not self.is_flow(self.page.url):raise SessionUnavailable('Tab Flow đã chuyển trang. Chưa gửi tác vụ mới.')
-        identity=await self.page.evaluate(IDENTITY_SCRIPT)
+        identity=await self.page.evaluate(self.identity_script)
         if not isinstance(identity,str)or identity.strip().casefold()!=self.email:
             raise SessionUnavailable('Tài khoản trong tab đã đổi. Chưa gửi tác vụ mới.')
         # Pause for visible challenges. Never interact with or extract CAPTCHA data.

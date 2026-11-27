@@ -1,0 +1,9 @@
+# Flow background identity · .190
+
+Phiên nền trước đây chỉ đọc window.WIZ_global_data.oPEP7c. Đăng nhập đã có cách đọc dự phòng từ dữ liệu khởi tạo của trang; vì vậy trạng thái đã kiểm tra phiên và bước tạo có thể khác nhau khi biến toàn cục không được công bố.
+
+Phiên nền nay đọc thêm trường oPEP7c trong script dữ liệu trang khi biến toàn cục không có email, chỉ chấp nhận một danh tính duy nhất và phải khớp tài khoản đã chọn. Kiểm tra lại trước mỗi thao tác dùng cùng bộ đọc; vẫn từ chối tài khoản khác, phiên không có danh tính và xác minh Google. Không dùng trạng thái tài khoản đã lưu để thay cho xác minh trang thực tế.
+
+Đã kiểm thử Chromium với trang Flow giả lập: biến toàn cục, dữ liệu khởi tạo, thiếu danh tính, nhiều danh tính, sai tài khoản và đổi tài khoản. Chưa xác minh trên phiên Google của người dùng hoặc tạo video Flow thật. Gói giữ bản sửa prompt/lời thoại .189; chưa thay đổi đường gửi Flow hoặc model.
+
+Thoát hẳn SceneForge, chạy gói cập nhật và chọn thư mục có SceneForge.exe, sau đó mở lại. Dành cho bản .62 trở lên; giữ dự án, tài khoản và model.
