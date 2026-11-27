@@ -31,7 +31,11 @@ class CliProgress:
         event=value.get('event')
         if not isinstance(event,str):return
         if event=='migrated.dispatch':
-            if value.get('project_id')!=self.project:raise ProgressMismatch('CLI báo dự án khác lượt đã gửi; dừng theo dõi, không tự tạo lại.')
+            observed=value.get('project_id')
+            if self.project is None:
+                if not isinstance(observed,str) or not UUID.fullmatch(observed):return
+                self.project=observed
+            if observed!=self.project:raise ProgressMismatch('CLI báo dự án khác lượt đã gửi; dừng theo dõi, không tự tạo lại.')
             self.dispatched=True
             self.update('opening','CLI đang chuẩn bị đúng dự án Flow.',event=event)
         elif event in ('migrated.frame_uploaded','migrated.references_attached','migrated.frame_bound',

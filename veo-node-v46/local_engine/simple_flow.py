@@ -381,6 +381,11 @@ class SimpleFlow:
   reference=self.root/(rid+'.input'+ext)
   try:
    reference.write_bytes(raw)
+   if getattr(self,'cli_driver_enabled',False):
+    from .flow_gflow_cli import generate
+    self.ledger.set_metadata(rid,{'engine':'gflow-cli-direct','preparation_owner':'original_cli'})
+    await generate(self,rid,payload,reference,direct=True)
+    return
    background=bool(self.account_bridge and self.account_bridge.background)
    automatic_mode=background or self.ledger.metadata(rid).get('automatic')is True
    self.phase(rid,'opening','Đang mở phiên Flow nền từ tài khoản đã chọn.'if background else'Đang kiểm tra phiên Flow.')

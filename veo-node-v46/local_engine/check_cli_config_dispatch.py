@@ -1,4 +1,4 @@
-"""Real submit/prepare/receipt/CLI/ffprobe completion with local CLI and browser doubles."""
+"""Real submit/direct-CLI/ffprobe completion with local CLI and browser doubles."""
 import asyncio,base64,hashlib,io,json,sys,tempfile
 from pathlib import Path
 from types import SimpleNamespace
@@ -46,6 +46,7 @@ print(json.dumps(dict(command='video '+args[1],succeeded=True,media_id='22222222
   from contextlib import ExitStack
   from . import flow_cli_bundle
   with ExitStack() as stack:
+   if not bundled and not missing:stack.enter_context(patch.object(cli,'resolve_repo',return_value=(repo,'default',{'source':'fixture'})))
    if bundled:
     stack.enter_context(patch.object(flow_cli_bundle,'bundled_runtime',return_value=repo))
     stack.enter_context(patch.object(flow_cli_bundle,'prepare_profile',return_value=(repo/'data/profiles','default')))
@@ -69,14 +70,14 @@ print(json.dumps(dict(command='video '+args[1],succeeded=True,media_id='22222222
    record=service.lookup(body['request_id']);assert record['state']=='done',record
    assert record['result']['settings']==settings and record['result']['model']==model_id(settings)
    assert ledger.metadata(body['request_id'])['generation_settings']==settings
-   native.upload.assert_not_called()
+   native.upload.assert_not_called();native.warmup.assert_not_called();service.restore.assert_not_called()
    duplicate=await service.submit(body);assert duplicate['state']=='done'
    assert (repo/'calls').read_text().splitlines()==['generate']
    changed={**body,'settings':{**settings,'ratio':'9:16' if settings['ratio']=='16:9' else '16:9'}};changed['model']=model_id(changed['settings'])
    try:await service.submit(changed)
    except HTTPException as exc:assert exc.status_code==409
    else:raise AssertionError('Changed settings reused request ID')
-  print('PASS actual submit -> prepared snapshot -> CLI -> ffprobe -> done; early durable ID before exit, pinned settings, no duplicate:',settings)
+  print('PASS actual submit -> original CLI -> ffprobe -> done; early durable ID before exit, pinned settings, no duplicate:',settings)
 
 async def main():
  for mode,model,ratio in [('ingredients','fast','16:9'),('frames','quality','9:16')]:await scenario(dict(kind='video',mode=mode,model=model,ratio=ratio,outputs=1))

@@ -17,6 +17,15 @@ class ProgressTests(unittest.IsolatedAsyncioTestCase):
   for status,phase in [(2,'generating'),(3,'downloading'),(2,'downloading')]:
    monitor.observe(dict(event='migrated.status',status=status));self.assertEqual(meta['phase'],phase)
   self.assertEqual(meta['provider_task']['media_id'],MEDIA);self.assertEqual(meta['provider_task']['workflow_id'],WORKFLOW);self.assertNotIn('progress',meta)
+ def test_cli_owned_project_is_bound_once(self):
+  monitor,meta=fixture();monitor.project=None
+  monitor.observe(dict(event='migrated.dispatch',project_id='not-a-project'))
+  self.assertIsNone(monitor.project)
+  monitor.observe(dict(event='migrated.dispatch',project_id=PROJECT))
+  self.assertEqual(monitor.project,PROJECT)
+  monitor.observe(dict(event='migrated.submit_observed',media_id=MEDIA,status=6))
+  self.assertEqual(meta['provider_task']['project_id'],PROJECT)
+  with self.assertRaises(m.ProgressMismatch):monitor.observe(dict(event='migrated.dispatch',project_id=WORKFLOW))
  def test_wrong_project_stops_monitor(self):
   monitor,meta=fixture()
   with self.assertRaises(m.ProgressMismatch):monitor.observe(dict(event='migrated.dispatch',project_id='other'))

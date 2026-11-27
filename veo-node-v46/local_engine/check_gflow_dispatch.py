@@ -27,11 +27,12 @@ async def scenario(mode):
    room_id='room',scene_id='scene',part='part',confirm_send=True,
    native_pipeline=True,automatic=True,selection_token='selected-token')
   calls=[]
-  async def engine(actual,request,payload,reference):
+  async def engine(actual,request,payload,reference,*,direct=False):
+   assert direct is True
    assert actual is service and request==rid and reference.read_bytes()==raw
    assert ledger.metadata(rid)['engine']=='gflow-cli-direct'
    assert (payload['room_id'],payload['scene_id'],payload['part'],payload['account_id'])==('room','scene','part','selected')
-   assert order==['restore','prepare','validate'],order
+   assert order==[],order
    order.append('engine');calls.append(request)
    if mode=='before':raise SimpleStopped('fixture stopped before grant')
    service.sent=True
@@ -53,9 +54,9 @@ async def scenario(mode):
    row=service.lookup(rid);expected={'success':'done','before':'failed','after':'unknown'}[mode]
    assert row['state']==expected,row
    assert service.active is None and service.task.done()
-   service.restore.assert_awaited_once()
-   assert order==['restore','prepare','validate','engine'],order
-   assert ledger.metadata(rid)['native_inputs']['uploaded_media_id']=='uploaded-image'
+   service.restore.assert_not_called()
+   assert order==['engine'],order
+   assert 'native_inputs' not in ledger.metadata(rid)
    if mode=='success':assert row['provider_task']['media_id']=='video' and row['result']['scene_id']=='scene'
    again=await service.submit(body)
    assert again['state']==expected and calls==[rid],(again,calls)

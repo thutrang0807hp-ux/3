@@ -147,7 +147,9 @@ def command(repo, reference, prompt, project, output, profile='default', setting
     args=[str(python) if python.is_file() else 'py','-m','gflow_cli','video',mode]
     if mode=='r2v':args+=['--ref',str(reference)]
     args+=['--aspect',cfg['ratio'],'--model',MODELS[cfg['model']],'--count','1',
-           '--project',project,'--profile',profile,'--out-dir',str(output),'--json','--']
+           '--profile',profile,'--out-dir',str(output),'--json','--']
+    if project:args[-1:-1]=['--project',project]
+    else:args[-1:-1]=['--project-name','SceneForge']
     if cfg['model']=='omni-1.2-flash':args[-1:-1]=['--duration','8']
     if mode=='i2v':args.append(str(reference))
     return args+[prompt]
@@ -204,7 +206,7 @@ def record_generation_failure(service, rid, result):
     return message
 
 
-async def generate(service, rid, payload, reference):
+async def generate(service, rid, payload, reference, *, direct=False):
     from .simple_flow import SimpleStopped
     binding=service.account_bridge.binding(payload['account_id'])
     if not binding:raise SimpleStopped('Tài khoản đã chọn không còn hợp lệ; chưa gọi CLI.')
@@ -223,15 +225,28 @@ async def generate(service, rid, payload, reference):
         raise SimpleStopped(str(exc)) from None
     service.ledger.set_metadata(rid,{'cli_discovery':{'state':'resolved',**discovery}})
     repo = repo.resolve()
-    prepared = service.pair_report or {}
-    project = prepared.get('project_id') or prepared.get('uploaded_media_project')
-    source_hash = prepared.get('reference_sha256') if prepared.get('preparation_method') == 'cli_reference_pipeline' else prepared.get('uploaded_media_source_sha256')
-    if (prepared.get('request_id') != payload.get('prepared_request_id') or
-            not re.fullmatch(r'[a-fA-F0-9-]{36}', str(project)) or
-            source_hash != hashlib.sha256(reference.read_bytes()).hexdigest()):
-        raise SimpleStopped('Ảnh/dự án đã chuẩn bị không khớp; chưa gọi CLI.')
-    await service.assert_ready()
-    await service.disconnect_browser()
+    if direct:
+        # Original CLI owns browser startup, project selection/creation, upload,
+        # submission, waiting and download. No SceneForge browser preflight.
+        from .flow_video_options import request_settings
+        prepared={'request_id':rid+'-inputs','preparation_method':'cli_reference_pipeline',
+            'reference_sha256':hashlib.sha256(reference.read_bytes()).hexdigest(),
+            'settings':request_settings(payload),'room_id':payload['room_id'],
+            'scene_id':payload['scene_id'],'part':payload['part'],'account_id':payload['account_id'],
+            'generation_submitted':False,'native_stage':'cli_owns_preparation'}
+        project=None
+        service.ledger.set_metadata(rid,{'native_inputs':dict(prepared)})
+        await service.disconnect_browser()
+    else:
+        prepared = service.pair_report or {}
+        project = prepared.get('project_id') or prepared.get('uploaded_media_project')
+        source_hash = prepared.get('reference_sha256') if prepared.get('preparation_method') == 'cli_reference_pipeline' else prepared.get('uploaded_media_source_sha256')
+        if (prepared.get('request_id') != payload.get('prepared_request_id') or
+                not re.fullmatch(r'[a-fA-F0-9-]{36}', str(project)) or
+                source_hash != hashlib.sha256(reference.read_bytes()).hexdigest()):
+            raise SimpleStopped('Ảnh/dự án đã chuẩn bị không khớp; chưa gọi CLI.')
+        await service.assert_ready()
+        await service.disconnect_browser()
     if bundled:
         from .flow_cli_bundle import prepare_profile
         try:cli_home,profile=await asyncio.to_thread(prepare_profile,service.data,payload['account_id'],binding)
@@ -258,6 +273,11 @@ async def generate(service, rid, payload, reference):
         env.pop('PYTHONPATH', None)
         env['PYTHONNOUSERSITE'] = '1'
         env['GFLOW_CLI_HOME'] = str(cli_home if bundled else repo / 'data' / 'profiles')
+    current=service.account_bridge.selection()
+    if not current.get('available') or current.get('account_id')!=payload['account_id'] or service.account_bridge.binding(payload['account_id'])!=binding:
+        raise SimpleStopped('Tài khoản đã đổi trong lúc chuẩn bị CLI; chưa gửi tạo.')
+    if hashlib.sha256(reference.read_bytes()).hexdigest()!=prepared.get('reference_sha256',prepared.get('uploaded_media_source_sha256')):
+        raise SimpleStopped('Ảnh đã đổi trước khi gọi CLI; chưa gửi tạo.')
     service.ledger.set_metadata(rid, {'engine': 'gflow-cli-direct', 'clicked': True,
         'generation_granted': True, 'cli': {'cwd': str(repo), 'entrypoint': '-m gflow_cli video '+('r2v' if cfg['mode']=='ingredients' else 'i2v'), 'profile': profile, 'bundled':bundled, 'home':str(cli_home) if bundled else None}})
     service.sent = True
@@ -282,6 +302,12 @@ async def generate(service, rid, payload, reference):
         logs = {'exit_code': process.returncode, 'stdout': safe_log(stdout, payload['prompt']),
                 'stderr': safe_log(stderr, payload['prompt'])}
         service.ledger.set_metadata(rid, {'engine_diagnostics': logs})
+        if direct:
+            project=monitor.project
+            if not isinstance(project,str) or not re.fullmatch(r'[a-fA-F0-9-]{36}',project):
+                raise SimpleStopped('CLI chưa trả định danh dự án; giữ lượt để kiểm tra, không tự tạo lại.')
+            prepared['project_id']=project
+            service.ledger.set_metadata(rid,{'native_inputs':dict(prepared)})
         failure = confirmed_generation_failure(logs, service.ledger.metadata(rid).get('provider_task'), project)
         if failure:
             from .simple_flow import FlowGenerationFailed
