@@ -13,6 +13,7 @@ class VerificationRequired(SessionUnavailable):pass
 
 class FlowUiSession:
     identity_script=IDENTITY_SCRIPT
+    require_page_identity=True
     def __init__(self,data,profile_key=None):
         from .google_login import flow_profile_path
         self.data=Path(data);self.profile_key=profile_key
@@ -49,7 +50,7 @@ class FlowUiSession:
             raise SessionUnavailable('Cửa sổ Flow đã đóng. Chưa gửi tác vụ mới.')
         if not self.is_flow(self.page.url):raise SessionUnavailable('Tab Flow đã chuyển trang. Chưa gửi tác vụ mới.')
         identity=await self.page.evaluate(self.identity_script)
-        if not isinstance(identity,str)or identity.strip().casefold()!=self.email:
+        if (isinstance(identity,str) and identity.strip() and identity.strip().casefold()!=self.email) or (self.require_page_identity and (not isinstance(identity,str) or not identity.strip())):
             raise SessionUnavailable('Tài khoản trong tab đã đổi. Chưa gửi tác vụ mới.')
         # Pause for visible challenges. Never interact with or extract CAPTCHA data.
         for frame in self.page.frames:

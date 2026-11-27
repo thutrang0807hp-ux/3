@@ -1,4 +1,4 @@
-"""App-owned headless browser using the existing Accounts profile, no CDP listener."""
+"""App-owned browser using the existing Accounts profile, no CDP listener."""
 import asyncio,hashlib,json,re,time
 from urllib.parse import urlsplit
 from .flow_ui_session import FlowUiSession,SessionUnavailable
@@ -11,7 +11,7 @@ async def launch_background(pw,profile):
  options={'viewport':{'width':cfg['width'],'height':cfg['height']}}if cfg['enabled']else{}
  from .profile_cache import GATE,CACHE_ARGS
  async with GATE:
-  context=await pw.chromium.launch_persistent_context(str(profile),executable_path=installed_browser(),headless=True,accept_downloads=True,timeout=25000,args=CACHE_ARGS,**options)
+  context=await pw.chromium.launch_persistent_context(str(profile),executable_path=installed_browser(),headless=False,accept_downloads=True,timeout=25000,args=CACHE_ARGS,**options)
  await apply(context,cfg)
  return context
 
@@ -23,8 +23,9 @@ class BackgroundFlowSession(FlowUiSession):
    const found=[...node.textContent.matchAll(/"oPEP7c"\s*:\s*("(?:[^"\\]|\\.)*")/g)];
    return found.flatMap(m=>{try{const email=JSON.parse(m[1]);return typeof email==='string'&&email.includes('@')?[email.trim().toLowerCase()]:[];}catch{return [];}});
   });
-  const unique=[...new Set(matches)];return unique.length===1?unique[0]:'';
+  const unique=[...new Set(matches)];return unique.length===1?unique[0]:unique.length>1?'ambiguous-account':'';
  }"""
+ require_page_identity=False
  background=True
  def __init__(self,data,profile_key,expected_email):
   super().__init__(data,profile_key);self.expected_email=expected_email.strip().casefold();self.owned_context=None
@@ -37,16 +38,12 @@ class BackgroundFlowSession(FlowUiSession):
    self.browser=self.owned_context.browser
    self.page=self.owned_context.pages[0]if self.owned_context.pages else await self.owned_context.new_page()
    await self.page.goto('https://flow.google.com/',wait_until='domcontentloaded',timeout=60000)
-   deadline=time.monotonic()+15
-   while time.monotonic()<deadline:
-    if urlsplit(self.page.url).hostname=='accounts.google.com':raise SessionUnavailable('Phiên nền cần đăng nhập/xác minh lại. Xử lý một lần tại tab Tài khoản; chưa gửi tạo video.')
-    if not self.is_flow(self.page.url):raise SessionUnavailable('Phiên nền không còn ở Flow; chưa gửi tạo video.')
-    value=await self.page.evaluate(self.identity_script)
-    if isinstance(value,str)and '@'in value:
-     if value.strip().casefold()!=self.expected_email:raise SessionUnavailable('Tài khoản trong phiên nền không khớp tài khoản đang chọn. Đã dừng trước khi tạo video.')
-     self.email=self.expected_email;await self.assert_ready();return
-    await asyncio.sleep(.25)
-   raise SessionUnavailable('Chưa xác minh được tài khoản trong phiên nền. Chưa gửi tạo video.')
+   # Accounts selects the owned profile. Let the original CLI validate its
+   # session; WIZ email is optional page metadata, not a login prerequisite.
+   if urlsplit(self.page.url).hostname=='accounts.google.com':raise SessionUnavailable('Phiên Flow đang yêu cầu đăng nhập trên web. Chưa gọi CLI tạo video.')
+   if not self.is_flow(self.page.url):raise SessionUnavailable('Profile đã chọn chưa mở được Flow. Chưa gọi CLI tạo video.')
+   self.email=self.expected_email
+   await self.assert_ready()
   except BaseException:
    await self.disconnect();raise
  async def ensure_project(self,vault,aid,room):

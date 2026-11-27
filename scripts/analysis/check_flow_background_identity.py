@@ -1,9 +1,11 @@
 """Exercise actual account verification against Chromium Flow-page fixtures."""
 import asyncio,sys,tempfile
+from unittest.mock import patch,AsyncMock
+from types import SimpleNamespace
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[2]/'veo-node-v46'))
 from local_engine.flow_background_session import BackgroundFlowSession
-from local_engine.flow_ui_session import SessionUnavailable
+from local_engine.flow_ui_session import SessionUnavailable,FlowUiSession
 from playwright.async_api import async_playwright
 
 async def main():
@@ -19,7 +21,13 @@ async def main():
   assert await s.assert_ready()
   await fixture('<script type="application/json">{"oPEP7c":"SELECTED@example.com"}</script>')
   assert await s.assert_ready()
-  for markup in ['<p>selected@example.com</p>','<script type="application/json">{"oPEP7c":"other@example.com"}</script>','<script type="application/json">{"oPEP7c":"selected@example.com","nested":{"oPEP7c":"other@example.com"}}</script>']:
+  await fixture('<p>Flow workspace without email metadata</p>')
+  assert await s.assert_ready()
+  strict=FlowUiSession(tempfile.mkdtemp());strict.page=page;strict.browser=browser;strict.email=s.email
+  try:await strict.assert_ready()
+  except SessionUnavailable:pass
+  else:raise AssertionError('Legacy strict session changed')
+  for markup in ['<script type="application/json">{"oPEP7c":"other@example.com"}</script>','<script type="application/json">{"oPEP7c":"selected@example.com","nested":{"oPEP7c":"other@example.com"}}</script>']:
    await fixture(markup)
    try:await s.assert_ready()
    except SessionUnavailable:pass
@@ -30,6 +38,14 @@ async def main():
   try:await s.assert_ready()
   except SessionUnavailable:pass
   else:raise AssertionError('Live account switch ignored')
+  # Exercise attach itself with a real intercepted Flow page, not just parser.
+  s.profile.mkdir(parents=True,exist_ok=True)
+  factory=lambda:SimpleNamespace(start=AsyncMock(return_value=pw))
+  with patch('local_engine.flow_background_session.launch_background',AsyncMock(return_value=page.context)):
+   await s.attach(factory)
+  assert s.email=='selected@example.com'
+  assert await s.assert_ready()
+  assert not s.require_page_identity
   await browser.close()
- print('PASS live-global and bootstrap identities; absent/wrong/ambiguous accounts and account switching rejected; actual Chromium, no Google calls')
+ print('PASS actual attach without email metadata; live/global and bootstrap identity, wrong/ambiguous accounts/switches rejected; legacy strict verification preserved; Chromium fixtures, no Google calls')
 asyncio.run(main())
