@@ -99,12 +99,16 @@ async def main():
    assert abs((await page.evaluate('SFAudioNodes.getState().captionPreview.total'))-5.44)<.02
    await ensure_review_tab(page,'[data-cap-export]');await dialog.locator('[data-cap-export]').click();await expect(dialog.locator('[data-cap-export-status]')).to_contain_text('Đã hủy chọn nơi lưu',timeout=60000)
    model=models[-1];assert abs(model['duration']-5.44)<.04,model
-   videos=[r for r in model['clips'] if r['kind']=='video'];audios=[r for r in model['clips'] if r['kind']=='audio'];assert abs(videos[-1]['duration']-5.24)<.04 and abs(videos[-1]['mediaDuration']-.2)<.01,model
+   videos=[r for r in model['clips'] if r['kind']=='video'];audios=[r for r in model['clips'] if r['kind']=='audio'];assert all(abs(v['duration']-2.72)<.04 and not v.get('mediaDuration') for v in videos),model
    assert len(audios)==1 and abs(audios[0]['duration']-5.44)<.04 and audios[0].get('speed',1)==1,model
    assert any(r['kind']=='image' and r['start']>=4.5 for r in model['clips']),model
    final=storage.file('export-'+list(jobs)[-1]);probe=json.loads(subprocess.check_output(['ffprobe','-v','error','-show_format','-show_streams','-of','json',str(final)]));assert float(probe['format']['duration'])>=5.4 and any(r['codec_type']=='audio' for r in probe['streams']),probe
    def gray(path,at):return subprocess.check_output(['ffmpeg','-v','error','-ss',str(at),'-i',str(path),'-frames:v','1','-vf','scale=32:32','-f','rawvideo','-pix_fmt','gray','-'])
-   held=gray(final,4);expected=gray(file,.16);assert sum(abs(a-b) for a,b in zip(held,expected))/len(held)<18,'extended tail did not hold the chosen cut frame'
+   moving=gray(final,4);expected=gray(file,1.28);assert sum(abs(a-b) for a,b in zip(moving,expected))/len(moving)<18,'export did not use remaining source motion'
+   later=gray(final,5);assert sum(abs(a-b) for a,b in zip(moving,later))/len(moving)>1,'video froze during the extra dialogue'
+   await dialog.locator('[data-cap-close]').click();await page.evaluate("project.voiceOver.duration=7;render();const n=document.querySelector('#node-captions');view.x=30-n.offsetLeft;view.y=50-n.offsetTop;applyView()")
+   await page.locator('#node-captions [data-an=caption-preview]').click();dialog=page.locator('#anCaptionDialog');await expect(dialog).to_be_visible();before=len(models)
+   await ensure_review_tab(page,'[data-cap-export]');await dialog.locator('[data-cap-export]').click();await expect(dialog.locator('[data-cap-export-status]')).to_contain_text('app không tự giữ ảnh đứng');assert len(models)==before,'insufficient motion started a frozen export'
    await dialog.locator('[data-cap-close]').click();assert not errors,errors;await browser.close();await client.aclose()
  print('PASS real MP4 Save As with mocked native choice, Unicode path and overwrite; native/browser cancel, failed write and retry preserve one rendered file; picker has click activation; SHA matches; no automatic downloads; route rejects destination injection; failed copy preserves old file')
 if __name__=='__main__':asyncio.run(main())
