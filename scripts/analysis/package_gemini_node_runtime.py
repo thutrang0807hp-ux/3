@@ -14,6 +14,6 @@ def main():
    if f.is_file():z.write(f,'repo_bridge.py'if f.name=='upstream-browser-bridge.py'else'runtime/'+f.name)
   for f in sorted(modules.rglob('*')):
    if f.is_file():z.write(f,'runtime/node_modules/'+str(f.relative_to(modules)))
- meta={'sha256':sha(out.read_bytes()),'node':'22.23.5','node_archive_sha256':sha(node.read_bytes()),'playwright_core':'1.62.1','upstream_repository':'https://github.com/thutrang0807hp-ux/test-gemoni-chat','upstream_commit':'75f43c9','upstream_gemini_sha256':sha((runtime/'upstream-gemini.mjs').read_bytes()),'adapter_sha256':sha((runtime/'gemini.mjs').read_bytes())}
+ meta={'sha256':sha(out.read_bytes()),'node':'22.23.5','node_archive_sha256':sha(node.read_bytes()),'playwright_core':'1.62.1','upstream_repository':'https://github.com/thutrang0807hp-ux/test-gemoni-chat','upstream_commit':'af0c748','multiple_reference_extension':True,'extension_commit':'b5ed789','upstream_gemini_sha256':sha((runtime/'upstream-gemini.mjs').read_bytes()),'adapter_sha256':sha((runtime/'gemini.mjs').read_bytes())}
  out.with_suffix('.json').write_text(json.dumps(meta,indent=2));print('Packaged',out.stat().st_size,meta['sha256'])
 if __name__=='__main__':main()

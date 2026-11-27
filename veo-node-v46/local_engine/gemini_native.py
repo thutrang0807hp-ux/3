@@ -1,7 +1,7 @@
-"""Thin launcher for the user's original Node/CDP Gemini connector (75f43c9).
-Python maps account profiles to the original GeminiWorkspace; its create_image/request/start methods run unchanged.
+"""Thin launcher for the user's original Node/CDP Gemini connector (af0c748 + ordered reference list).
+Python maps account profiles to the original GeminiWorkspace; its submit/receive functions are retained; scene files are mapped to ordered local paths.
 """
-import asyncio,hashlib,json,os,shutil,tempfile,zipfile
+import asyncio,base64,hashlib,json,os,shutil,tempfile,zipfile
 from pathlib import Path
 from fastapi import HTTPException
 
@@ -51,8 +51,17 @@ class NativeGemini:
    class Workspace(repo.GeminiWorkspace):
     references=();request_id='';request_ratio='9:16';trace_path=None
     def request(self,action,**values):
-     if action in ('image','text'):values.update(references=list(self.references),request_id=self.request_id,ratio=self.request_ratio,trace_path=self.trace_path)
-     return super().request(action,**values)
+     if action not in ('image','text'):return super().request(action,**values)
+     # Preserve the exact order used by the compiled REFERENCE_BINDINGS.
+     with tempfile.TemporaryDirectory(dir=self.folder,prefix='scene-references-')as tmp:
+      paths=[]
+      for index,ref in enumerate(self.references,1):
+       suffix={'image/png':'png','image/jpeg':'jpg','image/webp':'webp','video/mp4':'mp4','video/webm':'webm','video/quicktime':'mov'}.get(ref.get('mime_type'))
+       if not suffix:raise repo.WorkspaceError('Định dạng tham chiếu không hợp lệ; chưa gửi prompt.')
+       path=Path(tmp)/('SceneForge-reference-%02d.'%index+suffix)
+       path.write_bytes(base64.b64decode(ref['data'],validate=True));paths.append(str(path))
+      values.update(references=paths,request_id=self.request_id,ratio=self.request_ratio,trace_path=self.trace_path)
+      return super().request(action,**values)
    folder=Path(self.service.data)/'gemini-repo-workspaces'/aid;folder.mkdir(parents=True,exist_ok=True)
    workspace=Workspace(folder);workspace.profile=manager.path(entry['service'],entry['key'])
    await asyncio.to_thread(workspace.start)

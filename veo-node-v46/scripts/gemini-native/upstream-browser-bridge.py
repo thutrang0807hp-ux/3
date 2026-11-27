@@ -9,7 +9,7 @@ from tempfile import TemporaryDirectory
 from contextlib import closing
 from http.client import HTTPConnection, HTTPException
 
-from PIL import Image
+from PIL import Image, ImageOps
 
 GEMINI_URL = "https://gemini.google.com/app"
 
@@ -59,6 +59,7 @@ class GeminiWorkspace:
         self.login = None
         self.browser = None
         self.port = None
+        self.browser_visible = False
 
     def open_login(self):
         if self.login is not None and self.login.poll() is None:
@@ -76,23 +77,27 @@ class GeminiWorkspace:
         ], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         self.port = None
 
-    def start(self):
+    def start(self, *, visible=False):
         if self.login is not None and self.login.poll() is None:
             raise WorkspaceError("Đăng nhập xong hãy đóng cửa sổ đăng nhập trước, rồi bấm Kiểm tra kết nối.")
         if not self.profile.is_dir():
             raise WorkspaceError("Bấm Đăng nhập Gemini để kết nối tài khoản trước.")
         if self.browser is not None and self.browser.poll() is None:
-            if self.port:
+            if self.port and not self.browser_visible and not visible:
                 return
-            raise WorkspaceError("Hồ sơ Gemini của app chưa sẵn sàng. Hãy đóng cửa sổ đó rồi thử lại.")
+            self.close()
+            if self.browser.poll() is None:
+                raise WorkspaceError("Hãy đóng cửa sổ Gemini của app rồi thử lại.")
         chrome = discover_chrome()
         metadata = self.profile / "DevToolsActivePort"
         if browser_port(metadata):
             raise WorkspaceError("Hồ sơ này còn mở từ bản trước. Hãy thoát app cũ và đóng cửa sổ Chrome riêng của nó.")
         metadata.unlink(missing_ok=True)
+        mode = ["--new-window"] if visible else ["--headless=new"]
+        self.browser_visible = visible
         self.browser = subprocess.Popen([
             str(chrome), f"--user-data-dir={self.profile}", "--remote-debugging-address=127.0.0.1",
-            "--remote-debugging-port=0", "--headless=new", "--no-first-run", "--no-default-browser-check",
+            "--remote-debugging-port=0", *mode, "--no-first-run", "--no-default-browser-check",
             "--disable-background-mode", "about:blank",
         ], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
@@ -116,7 +121,8 @@ class GeminiWorkspace:
             completed = subprocess.run(
                 [command, str(runtime / "gemini.mjs")],
                 input=json.dumps({"port": self.port, "request": {"action": action, **values}}),
-                encoding="utf-8", capture_output=True, timeout=300,
+                encoding="utf-8", capture_output=True,
+                timeout=450 if values.get("reference") or values.get("references") else 300,
                 creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
             )
             response = json.loads(completed.stdout)
@@ -149,11 +155,34 @@ class GeminiWorkspace:
             raise WorkspaceError("Gemini chưa trả prompt.")
         return text
 
-    def create_image(self, prompt):
-        self.start()
+    def create_image(self, prompt, *, reference=None, references=(), diagnose_upload=False):
         with TemporaryDirectory(dir=self.folder, prefix="gemini-image-") as temp:
             output = Path(temp) / "response"
-            result = self.request("image", prompt=prompt, output=str(output))
+            values = {"prompt": prompt, "output": str(output)}
+            selected = list(references)
+            if reference is not None:
+                selected.insert(0, reference)
+            attachments = []
+            for index, reference in enumerate(selected, 1):
+                attachment = Path(temp) / f"reference-{index:02d}.jpg"
+                try:
+                    with Image.open(reference, formats=["PNG", "JPEG", "WEBP"]) as source:
+                        if source.width * source.height > 40_000_000:
+                            raise WorkspaceError("Ảnh tham chiếu quá lớn. Hãy chọn ảnh dưới 40 megapixel.")
+                        image = ImageOps.exif_transpose(source)
+                        image.thumbnail((2048, 2048))
+                        image.convert("RGB").save(attachment, quality=92)
+                except (OSError, ValueError, Image.DecompressionBombError) as error:
+                    raise WorkspaceError("Không đọc được ảnh tham chiếu. Hãy chọn ảnh PNG, JPG hoặc WebP.") from error
+                attachments.append(str(attachment))
+            if attachments:
+                values["references"] = attachments
+            self.start(visible=diagnose_upload)
+            if diagnose_upload:
+                values["diagnoseUpload"] = True
+            result = self.request("image", **values)
+            if diagnose_upload:
+                return
             if not result.get("saved") or not output.is_file():
                 raise WorkspaceError("Gemini chưa trả ảnh.")
             with Image.open(output) as image:

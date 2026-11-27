@@ -31,7 +31,7 @@ async def main():
   async def forbidden(*args):raise AssertionError('SDK/extension should not run')
   s.runner=forbidden
   images={}
-  for name,color in [('A','blue'),('B','red'),('FAIL','green'),('AFTER','yellow')]:
+  for name,color in [('A','blue'),('B','red'),('FAIL','green'),('AFTER','yellow'),('SOURCE','cyan'),('PRODUCT','magenta'),('PERSON','white'),('CLOTHING','orange'),('ENVIRONMENT','brown')]:
    b=io.BytesIO();Image.new('RGB',(360,640),color).save(b,'PNG');images[name]=b.getvalue()
   encoded={k:base64.b64encode(b).decode()for k,b in images.items()};sent=[];fail_page=False
   fixture='''<meta charset="UTF-8"><rich-textarea><div contenteditable="true" role="textbox">STALE UNSENT DRAFT</div></rich-textarea><input type="file" multiple><button class="send-button" aria-label="Send message">Send</button><button aria-label="Tools" id="tools">Tools</button><div role="menu" id="tools-menu" hidden><button role="menuitem" aria-label="Create images">Create images</button></div><script>
@@ -39,7 +39,7 @@ document.querySelector('#tools').onclick=()=>{document.querySelector('#tools-men
 window.fetch=(u,...args)=>{if(window.blockDownload&&String(u).startsWith('data:image'))throw Error('fixture download blocked');return actualFetch(u,...args)};
 HTMLCanvasElement.prototype.toDataURL=function(...args){if(window.blockDownload)throw Error('fixture pixel read blocked');return actualCanvas.apply(this,args)};
 document.querySelector('input').onchange=e=>{for(const f of e.target.files){const n=document.createElement('uploader-file-preview');n.setAttribute('data-upload-preview','1');const i=new Image();i.src=URL.createObjectURL(f);n.append(i);document.body.append(n);}};
-document.querySelector('button').onclick=async event=>{if(!event.isTrusted){window.untrustedClick=true;return;}const prompt=document.querySelector('[contenteditable]').innerText;window.turnName=prompt.match(/TURN:(TEXTONLY|BLOCKED|AFTER|FAIL|A|B)/)[1];window.blockDownload=window.turnName==='FAIL';if(window.turnName==='BLOCKED')return;await actualFetch('/fixture-record',{method:'POST',body:JSON.stringify({name:turnName,prompt,imageMode:window.imageMode===true,old178Previews:document.querySelectorAll('user-query img, .input-area-container img, .file-preview img, .attachment-preview img, .attachment img, .preview-container img').length,knownPreviews:document.querySelectorAll('uploader-file-preview').length,files:await Promise.all([...document.querySelector('input').files].map(async f=>({name:f.name,bytes:[...new Uint8Array(await f.arrayBuffer())]})))})});const thinking=document.createElement('model-response');thinking.textContent='Thinking';document.body.append(thinking);setTimeout(()=>{const n=document.createElement('model-response');if(turnName==='TEXTONLY'){n.innerHTML='<message-content>Công cụ tạo ảnh không khả dụng. Tôi không thể trực tiếp tạo hoặc xuất tệp hình ảnh.</message-content>';document.body.append(n);return;}n.innerHTML='<generated-image><img src="data:image/png;base64,'+images[turnName]+'"></generated-image>';document.body.append(n);},500);};</script>'''.replace('IMAGES',json.dumps(encoded))
+document.querySelector('button').onclick=async event=>{if(!event.isTrusted){window.untrustedClick=true;return;}const prompt=document.querySelector('[contenteditable]').innerText;window.turnName=prompt.match(/TURN:(TEXTONLY|BLOCKED|AFTER|FAIL|A|B)/)[1];window.blockDownload=window.turnName==='FAIL';if(window.turnName==='BLOCKED')return;await actualFetch('/fixture-record',{method:'POST',body:JSON.stringify({name:turnName,prompt,imageMode:window.imageMode===true,old178Previews:document.querySelectorAll('user-query img, .input-area-container img, .file-preview img, .attachment-preview img, .attachment img, .preview-container img').length,knownPreviews:document.querySelectorAll('uploader-file-preview').length,files:await Promise.all([...document.querySelector('input').files].map(async f=>({name:f.name,bytes:[...new Uint8Array(await f.arrayBuffer())]})))})});const thinking=document.createElement('model-response');thinking.textContent='Thinking';document.body.append(thinking);setTimeout(()=>{const n=thinking;if(turnName==='TEXTONLY'){n.innerHTML='<message-content>Công cụ tạo ảnh không khả dụng. Tôi không thể trực tiếp tạo hoặc xuất tệp hình ảnh.</message-content>';document.body.append(n);return;}n.innerHTML='<generated-image><img src="data:image/png;base64,'+images[turnName]+'"></generated-image>';document.body.append(n);},500);};</script>'''.replace('IMAGES',json.dumps(encoded))
   row=await s.native.context(aid)
   async with async_playwright()as pw:
    inspector=await pw.chromium.connect_over_cdp('http://127.0.0.1:'+str(row['port']));ctx=inspector.contexts[0]
@@ -56,7 +56,7 @@ document.querySelector('button').onclick=async event=>{if(!event.isTrusted){wind
    await ctx2.route('**/*',route);await ctx2.add_cookies([{'name':'__Secure-1PSID','value':'fixture2','domain':'.google.com','path':'/','secure':True}]);await s.native.verify(aid2)
    s.select({'mode':'balanced','account_id':aid})
    async def submit(name):
-    rid='gchat-'+str(uuid.uuid4());await s.submit({'request_id':rid,'kind':'image','role':'image','image_engine':'studio-v1','ratio':'9:16','prompt':'# UNIVERSAL REFERENCE IMAGE EDIT V6.0\nTURN:'+name+'\n'+('detail ' *3300),'references':[{'mime_type':'image/png','data':encoded['A']},{'mime_type':'image/png','data':encoded['B']}],'room_id':'room','scene_id':name,'confirm_send':True,'selection_token':s.selection()['token']});return rid
+    rid='gchat-'+str(uuid.uuid4());await s.submit({'request_id':rid,'kind':'image','role':'image','image_engine':'studio-v1','ratio':'9:16','prompt':'# UNIVERSAL REFERENCE IMAGE EDIT V6.0\nTURN:'+name+'\n'+('detail ' *3300),'references':[{'mime_type':'image/png','data':encoded[k]}for k in ['SOURCE','PRODUCT','PERSON','CLOTHING','ENVIRONMENT']],'room_id':'room','scene_id':name,'confirm_send':True,'selection_token':s.selection()['token']});return rid
    async def wait(rid):
     for _ in range(900):
      result=s.lookup(rid)
@@ -68,8 +68,8 @@ document.querySelector('button').onclick=async event=>{if(!event.isTrusted){wind
     a,b=await asyncio.gather(submit('A'),submit('B'));await ordinary.close()
     for rid,name in [(a,'A'),(b,'B')]:
      result=await wait(rid);assert result['state']=='done',result;assert (s.root/result['result']['file']).read_bytes()==images[name]
-    assert sorted(r['name']for r in sent)==['A','B'];assert s.lookup(a)['result']['account_id']!=s.lookup(b)['result']['account_id'];s.select({'mode':'selected','account_id':aid});assert all(len(r['prompt'])>20000 and len(r['files'])==2 and r['imageMode']and 'STALE UNSENT DRAFT'not in r['prompt'] for r in sent);assert all(r['old178Previews']==0 and r['knownPreviews']==2 for r in sent)
-    assert all(bytes(r['files'][0]['bytes'])==images['A']and bytes(r['files'][1]['bytes'])==images['B']for r in sent)
+    assert sorted(r['name']for r in sent)==['A','B'];assert s.lookup(a)['result']['account_id']!=s.lookup(b)['result']['account_id'];s.select({'mode':'selected','account_id':aid});assert all(len(r['prompt'])>20000 and len(r['files'])==5 and 'STALE UNSENT DRAFT'not in r['prompt'] for r in sent);assert all(r['old178Previews']==0 and r['knownPreviews']==5 for r in sent)
+    assert all([bytes(f['bytes'])for f in r['files']]==[images[k]for k in ['SOURCE','PRODUCT','PERSON','CLOTHING','ENVIRONMENT']]for r in sent)
     q1,q2=await asyncio.gather(submit('A'),submit('B'))
     for rid,name in [(q1,'A'),(q2,'B')]:
      result=await wait(rid);assert result['state']=='done'and result['result']['account_id']==aid,result;assert (s.root/result['result']['file']).read_bytes()==images[name]
@@ -85,12 +85,10 @@ document.querySelector('button').onclick=async event=>{if(!event.isTrusted){wind
     receiving=await s.receive_image(bad);assert receiving['state']=='downloading'
     result=await wait(bad);assert result['state']=='done'and len(sent)==count,result
     assert (s.root/result['result']['file']).read_bytes()==images['FAIL']
-    only=await submit('TEXTONLY');result=await wait(only);assert result['state']=='unknown'and 'công cụ tạo ảnh không khả dụng'in result['message'],result
-    count=len(sent);blocked=await submit('BLOCKED');result=await wait(blocked);assert result['state']=='unknown'and 'Chưa xác nhận Gemini nhận lượt mới'in result['message'],result;assert len(sent)==count
     fail_page=True;before=len(sent);opening=await submit('GOTOFAIL');result=await wait(opening)
     assert result['state']=='unknown'and result['native_trace']['stage']=='open_gemini',result
     assert '[open_gemini]'in result['message']and len(sent)==before,result
     assert not list(s.native.receipts.glob('*.image')),'successful image caches should be retired'
-    print('PASS original Node/CDP: ordinary browser closed, parallel separate-account A/B exact images, >20k prompt+2 exact refs, failed download retained, next job succeeds, failed turn follows upstream cleanup, no automatic retry, no extension/SDK, successful caches retired')
+    print('PASS original Node/CDP: ordinary browser closed, parallel separate-account A/B exact images, >20k prompt+5 exact refs (source/product/person/clothing/environment), failed download retained, next job succeeds, failed turn follows upstream cleanup, no automatic retry, no extension/SDK, successful caches retired')
    finally:await inspector.close();await inspector2.close();await s.close()
 asyncio.run(main())

@@ -29,6 +29,110 @@ async function editorFor(page) {
   return editor;
 }
 
+export async function attachReference(page, path) {
+  const references = Array.isArray(path) ? path : [path];
+  if (!references.length) return;
+  let stage = "tìm ô tải ảnh";
+  try {
+    // Prefer an image picker, never an unrelated audio/video/directory picker.
+    const findInput = async () => {
+      const inputs = page.locator('input[type="file"]');
+      const index = await inputs.evaluateAll(nodes => nodes.map((node, index) => {
+        const accept = node.accept.toLowerCase();
+        const image = !accept || accept === "*/*" || /image|\.png|\.jpe?g|\.webp/.test(accept);
+        return {index, score: !node.disabled && !node.webkitdirectory && image ?
+          (accept.includes("image") ? 20 : 10) + (node.multiple ? 5 : 0) : -1};
+      }).filter(item => item.score >= 0).sort((a, b) => b.score - a.score)[0]?.index ?? -1);
+      return index < 0 ? null : inputs.nth(index);
+    };
+    let input = await findInput();
+    if (!input) {
+      let chooser;
+      const opened = value => { chooser = value; };
+      // Subscribe before clicking: some versions open the OS chooser directly,
+      // others create a file input only after the local-upload menu item is used.
+      page.on("filechooser", opened);
+      try {
+        stage = "mở nút đính kèm của Gemini";
+        const named = page.getByRole("button", {name:/upload|attach|add (?:files?|photos?|images?)|open.*file|tải.*(?:tệp|ảnh)|(?:thêm|đính kèm).*(?:tệp|ảnh)/i}).filter({visible:true});
+        const icons = page.locator('mat-icon, .google-symbols, .material-symbols-outlined, .material-icons').filter({hasText:/^(add|attach_file|upload_file|add_circle|add_2)$/});
+        const iconButton = page.getByRole("button").filter({has:icons}).filter({visible:true});
+        const opener = page.locator("button.upload-card-button, button[data-test-id=upload-button]").or(named).or(iconButton).filter({visible:true}).first();
+        await opener.click({timeout:10000});
+        input = await findInput();
+        if (!input && !chooser) {
+          stage = "chọn tải ảnh từ máy tính";
+          const label = /^(upload files?|upload from (?:computer|device)|from computer|tải (?:tệp|ảnh)(?: lên)?|tải lên từ (?:máy tính|thiết bị)|(?:chọn|tải) (?:tệp|ảnh) từ máy tính)$/i;
+          const item = page.locator("[data-test-id='local-images-files-uploader-button']").or(page.getByRole("menuitem", {name:label}).or(page.getByRole("button", {name:label}))).filter({visible:true}).first();
+          await item.click({timeout:10000});
+        }
+        const deadline = Date.now() + 10000;
+        while (!input && !chooser && Date.now() < deadline) {
+          input = await findInput();
+          if (!input && !chooser) await page.waitForTimeout(100);
+        }
+        if (chooser) {
+          const selected = chooser;
+          input = {setInputFiles:(files, options) => selected.setFiles(files, options)};
+        }
+      } finally {
+        page.off("filechooser", opened);
+      }
+    }
+    if (!input) throw new Error("Không tìm thấy ô tải ảnh của Gemini; chưa gửi prompt.");
+    const before = await page.locator("img").evaluateAll(nodes => nodes.map(node => node.currentSrc || node.src));
+    const previewSelector = 'uploader-file-preview, file-preview, .file-preview, .attachment-preview';
+    const previousPreviews = await page.locator(previewSelector).filter({visible:true}).count();
+    const pending = new Set();
+    let lastUpload = 0;
+    let uploadFailed = false;
+    const started = request => {
+      if (/upload|content-push/i.test(request.url()) && !["GET", "OPTIONS"].includes(request.method())) {
+        pending.add(request); lastUpload = Date.now();
+      }
+    };
+    const finished = request => { if (pending.delete(request)) lastUpload = Date.now(); };
+    const failed = request => { if (pending.has(request)) uploadFailed = true; finished(request); };
+    const response = response => { if (pending.has(response.request()) && response.status() >= 400) uploadFailed = true; };
+    page.on("request", started);
+    page.on("response", response);
+    page.on("requestfinished", finished);
+    page.on("requestfailed", failed);
+    try {
+      stage = "chuyển file ảnh tham chiếu vào Gemini";
+      await input.setInputFiles(references, {timeout:20000});
+      stage = "chờ ảnh tham chiếu tải xong";
+      lastUpload = Date.now();
+      // Accept real thumbnails or visible file names too. Gemini component names
+      // vary; hidden progress elements must not keep a completed upload blocked.
+      await page.waitForFunction(({before, names, previewSelector, previousPreviews}) => {
+        const visible = node => Boolean(node.getClientRects().length) && getComputedStyle(node).visibility !== "hidden";
+        const progress = [...document.querySelectorAll('[role="progressbar"], .upload-progress')].some(visible);
+        const previews = [...document.querySelectorAll(previewSelector)].filter(visible).length;
+        const thumbnails = [...document.images].filter(image =>
+          visible(image) && image.complete && image.naturalWidth > 0 && !before.includes(image.currentSrc || image.src)).length;
+        const text = document.body.innerText;
+        const named = names.every(name => text.includes(name));
+        return !progress && (previews >= previousPreviews + names.length || thumbnails >= names.length || named);
+      }, {before, names:references.map(file => file.split(/[\\/]/).pop()), previewSelector, previousPreviews}, {timeout:60000});
+      const deadline = Date.now() + 60000;
+      while (pending.size || (lastUpload && Date.now() - lastUpload < 750)) {
+        if (Date.now() > deadline) throw new Error("Ảnh tham chiếu chưa tải xong; chưa gửi prompt.");
+        await page.waitForTimeout(150);
+      }
+      if (uploadFailed) throw new Error("Gemini từ chối tải ảnh tham chiếu; chưa gửi prompt.");
+    } finally {
+      page.off("request", started);
+      page.off("response", response);
+      page.off("requestfinished", finished);
+      page.off("requestfailed", failed);
+    }
+  } catch (error) {
+    if (error.name !== "TimeoutError") throw error;
+    throw new Error(`Gemini hết thời gian ở bước ${stage}. App chưa gửi prompt.`);
+  }
+}
+
 async function submit(page, editor, prompt) {
   const count = await page.locator(responses).count();
   await editor.fill(prompt);
@@ -171,71 +275,11 @@ async function saveResult(context, page, answer, image, output) {
   await writeFile(output, bytes, {flag:"wx"});
 }
 
-// Diagnostic state only: never persist prompt, references, cookies or signed URLs.
+// SceneForge trace only; no prompt, image bytes, cookies or signed URLs persisted.
 let tracePath=null,currentStage='starting';
-function trace(stage,details={}){
- currentStage=stage;
- if(!tracePath)return;
- try{writeFileSync(tracePath+'.tmp',JSON.stringify({stage,at:Date.now(),...details}));renameSync(tracePath+'.tmp',tracePath);}catch{}
-}
-// SceneForge's existing sender; only the receiver/download path comes from this repo.
-const sceneSend = new Function('return ('+readFileSync(new URL('./scene-send.js',import.meta.url),'utf8')+')')();
-async function prepareImageMode(page){
- const tools=page.getByRole('button',{name:/^(tools|công cụ)$/i}).first();
- if(!await tools.isVisible())return;
- await tools.click({timeout:5000});
- const menu=page.getByRole('menu').or(page.getByRole('listbox')).last();
- try{await menu.waitFor({state:'visible',timeout:1500});}catch{await page.keyboard.press('Escape');return;}
- const name=/^(create images?|tạo (hình )?ảnh)(\b|\s|$)/i;
- const item=menu.getByRole('menuitem',{name}).or(menu.getByRole('menuitemradio',{name})).or(menu.getByRole('option',{name})).or(menu.getByRole('button',{name})).first();
- if(!await item.isVisible()){await page.keyboard.press('Escape');return;}
- if(!await item.isEnabled()){await page.keyboard.press('Escape');throw new Error('Gemini đang khóa công cụ Tạo ảnh cho phiên này; chưa gửi prompt.');}
- if(await item.getAttribute('aria-checked')==='true'||await item.getAttribute('aria-pressed')==='true'){await page.keyboard.press('Escape');return;}
- await item.click({timeout:5000});
-}
-async function sendKnownFrame(page,request){
- if(request.action==='image'){trace('select_image_mode');try{await prepareImageMode(page);}catch(error){throw new Error('Chưa chọn được chế độ Tạo ảnh; chưa gửi prompt: '+error.message.split('\n')[0]);}}
- trace('attach_references');
- const result=await page.evaluate(sceneSend,{...request,kind:request.action==='image'?'image':'text'});
- if(!result?.selector)throw new Error(result?.code||'Không đính kèm được ảnh của cảnh.');
- trace('find_editor');
- const editor=await editorFor(page);
- const message=request.action==='image'?'Hãy tạo một ảnh theo đúng prompt này. Tỷ lệ ảnh: '+(request.ratio||'9:16')+'\n\n'+request.prompt:request.prompt;
- try {
-  // The upstream submit uses real browser fill/click, not HTMLElement.click().
-  trace('fill_and_click_send');
-  await submit(page,editor,message);
- }catch(error){throw new Error('Chưa hoàn tất thao tác gửi Gemini: '+error.message.split('\n')[0]);}
- try {
-  trace('confirm_submission');
-  await page.waitForFunction(({selector,before})=>!!document.querySelector(selector)||document.querySelectorAll('user-query,.user-query,[data-message-role="user"]').length>before,{selector:result.selector,before:result.userQueries},{timeout:30000});
- }catch{throw new Error('Chưa xác nhận Gemini nhận lượt mới sau khi bấm gửi. App không tự gửi lại.');}
- return page.locator(result.selector).last();
-}
-async function receiveSceneImage(page,answer){
- let finished=false;
- const rejectTextOnly=(async()=>{
-  let last='',changed=Date.now();
-  while(!finished){
-   try {
-    const status=await answer.evaluate(node=>({text:node.innerText||'',images:[...node.querySelectorAll('img')].filter(i=>i.complete&&i.naturalWidth>=256&&i.naturalHeight>=256).length,pending:!!node.querySelector('generated-image,generated-image-container,single-image,image-generation')}),null,{timeout:1000});
-    if(status.text!==last){last=status.text;changed=Date.now();}
-    const busy=await page.getByRole('button',{name:/^(stop|dừng|ngừng)(\b|\s)/i}).first().isVisible();
-    const unavailable=/công cụ tạo ảnh (?:không|chưa) khả dụng|không thể trực tiếp tạo hoặc xuất tệp hình ảnh|image generation (?:is )?(?:not available|unavailable)|cannot (?:directly )?(?:create|generate|export) images/iu.test(last);
-    const promptOnly=/(?:dưới đây|here is|here's)[\s\S]{0,200}(?:prompt|mô tả chi tiết)|^prompt tạo ảnh/im.test(last);
-    if(!busy&&!status.images&&Date.now()-changed>2000&&(unavailable||(!status.pending&&promptOnly))){
-     throw Object.assign(new Error(unavailable?'Gemini báo công cụ tạo ảnh không khả dụng ở lượt này; chỉ có văn bản, không có ảnh để tải.':'Gemini đang trả prompt bằng văn bản, chưa có ảnh kết quả để tải.'),{sceneTextOnly:true});
-    }
-   }catch(error){if(error.sceneTextOnly)throw error;if(finished)return;}
-   await new Promise(resolve=>setTimeout(resolve,350));
-  }
- })();
- try{return await Promise.race([waitForImage(answer),rejectTextOnly]);}
- finally{finished=true;}
-}
+function trace(stage,details={}){currentStage=stage;if(tracePath)try{writeFileSync(tracePath+'.tmp',JSON.stringify({stage,at:Date.now(),...details}));renameSync(tracePath+'.tmp',tracePath);}catch{}}
 
 async function run(port, request) {
-  trace('connect_browser');
   const browser = await chromium.connectOverCDP("http://127.0.0.1:" + port, {timeout:12000});
   try {
     if (request.action === "shutdown") {
@@ -248,33 +292,55 @@ async function run(port, request) {
     const page = context.pages().find(item => item.url() === "about:blank");
     if (!page) throw new Error("Không tìm thấy tab xử lý nền. Hãy thoát app và mở lại.");
     try {
-      trace('open_gemini');
+      trace("open_gemini");
       await page.goto(gemini + "/app", {waitUntil:"domcontentloaded", timeout:30000});
       if (new URL(page.url()).origin !== gemini) throw new Error("Hãy hoàn tất đăng nhập bằng nút Đăng nhập Gemini.");
-      trace('check_session');
       const cookies = await context.cookies(gemini + "/app");
       if (!cookies.some(({name}) => name === "__Secure-1PSID")) {
         throw new Error("Chưa thấy phiên Google đã đăng nhập trong hồ sơ Gemini của app.");
       }
-      trace('find_editor');
+      trace("find_editor");
       const editor = await editorFor(page);
       if (request.action === "verify") return {signedIn:true};
-      if(request.action === "text")return {text:await waitForText(page,await sendKnownFrame(page,request))};
+      if (request.action === "text") {
+        if (request.references?.length) {trace("attach_references");await attachReference(page, request.references);}
+        trace("fill_and_click_send");
+        const answer = await submit(page,editor,request.prompt);
+        return {text:await waitForText(page,answer)};
+      }
       if (request.action === "prompt") {
         const instruction = "Viết lại mô tả dưới đây thành một prompt tạo ảnh chi tiết. Giữ nguyên ngôn ngữ, " +
           "chủ thể và ý định chính. Mô tả rõ bố cục và ánh sáng nếu phù hợp. Chỉ trả prompt.\n\n" + request.prompt;
         return {text: await waitForText(page, await submit(page, editor, instruction))};
       }
       if (request.action !== "image") throw new Error("Yêu cầu Gemini không hợp lệ.");
-      const answer = await sendKnownFrame(page,request);
-      trace('wait_image');
-      const image = await receiveSceneImage(page,answer);
-      trace('download_image');
+      let instruction = imageInstruction(request.prompt);
+      const references = request.references || (request.reference ? [request.reference] : []);
+      if (references.length) {
+        try {
+          trace("attach_references");
+          await attachReference(page, references);
+        } catch (error) {
+          if (request.diagnoseUpload) {
+            throw new Error("Hãy xem cửa sổ Gemini để kiểm tra ảnh xem trước hoặc thông báo lỗi. App chưa gửi prompt.");
+          }
+          throw error;
+        }
+        if (request.diagnoseUpload) return {attached:true};
+        instruction = "Hãy tạo một ảnh mới dựa trên ảnh tham chiếu đính kèm. Giữ các đặc điểm nhận diện của chủ thể trong ảnh, trừ những phần mà mô tả yêu cầu thay đổi. Trả về ảnh theo yêu cầu sau.\n\n" + request.prompt;
+      }
+      trace("fill_and_click_send");
+      const answer = await submit(page, editor, instruction);
+      trace("wait_image");
+      const image = await waitForImage(answer);
+      trace("download_image");
       await saveResult(context, page, answer, image, request.output);
-      trace('image_received');
+      trace("image_received");
       return {saved:true};
     } finally {
-      await page.goto("about:blank", {timeout:5000, waitUntil:"commit"}).catch(() => {});
+      if (!request.diagnoseUpload) {
+        await page.goto("about:blank", {timeout:5000, waitUntil:"commit"}).catch(() => {});
+      }
     }
   } finally {
     await browser.close().catch(() => {});
@@ -284,11 +350,11 @@ async function run(port, request) {
 async function main() {
   try {
     const {port, request} = JSON.parse(readFileSync(0, "utf8"));
-    tracePath=request.trace_path||null;
+    tracePath=request.trace_path||null;trace("connect_browser");
     if (!Number.isInteger(port) || port < 1024 || port > 65535) throw new Error("Chrome chưa sẵn sàng.");
     process.stdout.write(JSON.stringify({result:await run(port, request)}));
   } catch (error) {
-    const message=('['+currentStage+'] '+error.message.split('\n')[0]).replace(/https?:\/\/[^\s]+/g,'[địa chỉ ẩn]');
+    const message = "["+currentStage+"] "+error.message;
     trace(currentStage,{failed:true,error_type:error.name});
     process.stdout.write(JSON.stringify({error:message.split("\n")[0].slice(0,300)}));
     process.exitCode = 1;
