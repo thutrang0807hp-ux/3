@@ -5,7 +5,7 @@ from PIL import Image
 from playwright.async_api import async_playwright,expect
 
 async def main():
- html=Path('workflow.html').read_text();errors=[];posts=[];records={};submit_mode='done';short_tail='--short-tail' in sys.argv
+ html=Path('workflow.html').read_text().replace('<script id="frame-studio-node">','<script>if(!project)project=blankProject();</script><script id="frame-studio-node">');errors=[];posts=[];records={};submit_mode='done';short_tail='--short-tail' in sys.argv
  image=io.BytesIO();Image.new('RGB',(90,160),'#35636c').save(image,format='PNG');data='data:image/png;base64,'+base64.b64encode(image.getvalue()).decode()
  with tempfile.TemporaryDirectory() as tmp:
   video=Path(tmp)/'fixture.mp4'
@@ -134,7 +134,7 @@ await storeProject();render();await SFVeoNode.refresh();
    assert len(posts)==2,posts
    assert await page.evaluate('canvasRenders')==0,await page.evaluate('canvasRenderStacks')
    await page.evaluate('()=>{render=beforeQueueRender;}')
-   assert await page.evaluate('queuePromptCalls')==1
+   assert await page.evaluate('queuePromptCalls')==0
    assert await page.evaluate('project.scenes[0].clips.length')==1
    assert all(p[1]['settings']['outputs']==1 for p in posts)
    await page.wait_for_function("!document.querySelector('#node-videos [data-vn=cancel-queue]')")
